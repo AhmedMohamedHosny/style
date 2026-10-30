@@ -178,54 +178,122 @@ function todayISO() {
 }
 
 /* ============================================================================
-   5. FIREBASE INITIALIZATION & REAL CONNECTION HANDLER
+   5. DIRECT FIREBASE CONNECTION (style-a422d) & LUXURY PARTICLES ENGINE
    ============================================================================ */
-function getStoredFirebaseConfig() {
-  try {
-    const raw = localStorage.getItem("MY_LIFE_OS_FIREBASE_CONFIG");
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed && parsed.apiKey && parsed.projectId) return parsed;
-  } catch (e) {
-    return null;
-  }
-  return null;
-}
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCTmLj1P9e-xfyAxpHMslydcyxQa-KPYxI",
+  authDomain: "style-a422d.firebaseapp.com",
+  projectId: "style-a422d",
+  storageBucket: "style-a422d.firebasestorage.app",
+  messagingSenderId: "262616799685",
+  appId: "1:262616799685:web:fbed02ec2160dfbee253ac",
+  measurementId: "G-0JFRK4J2SL"
+};
 
 async function initFirebaseSystem() {
   const badge = document.getElementById("fb-connection-badge");
   const statusText = document.getElementById("fb-status-text");
-  const configPanel = document.getElementById("firebase-config-panel");
-  const config = getStoredFirebaseConfig();
-
-  if (!config) {
-    badge.className = "badge badge-warning";
-    statusText.textContent = "يرجى إدخال إعدادات مشروع Firebase للبدء";
-    configPanel.classList.remove("hidden");
-    return false;
-  }
 
   try {
     if (getApps().length > 0) {
       await Promise.all(getApps().map(a => deleteApp(a)));
     }
-    AppState.app = initializeApp(config);
+    AppState.app = initializeApp(FIREBASE_CONFIG);
     AppState.auth = getAuth(AppState.app);
     AppState.db = getFirestore(AppState.app);
     AppState.storage = getStorage(AppState.app);
 
-    badge.className = "badge badge-emerald";
-    statusText.textContent = `متصل بـ Firebase (${config.projectId})`;
-    configPanel.classList.add("hidden");
+    // تفعيل Firebase Analytics بأمان عند دعم المتصفح
+    import("https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js")
+      .then(({ getAnalytics, isSupported }) => isSupported().then(yes => yes && getAnalytics(AppState.app)))
+      .catch(() => {});
+
+    if (badge) badge.className = "badge badge-emerald";
+    if (statusText) statusText.textContent = `متصل سحابياً • ${FIREBASE_CONFIG.projectId}`;
 
     bindAuthListener();
     return true;
   } catch (err) {
-    badge.className = "badge badge-danger";
-    statusText.textContent = "خطأ في إعدادات Firebase";
-    showToast("فشل تهيئة Firebase: تحقق من صحة كائن الإعدادات", "error");
+    if (badge) badge.className = "badge badge-danger";
+    if (statusText) statusText.textContent = "خطأ في الاتصال بـ Firebase";
+    showToast("فشل تهيئة Firebase: " + err.message, "error");
     return false;
   }
+}
+
+function initLuxuryParticles() {
+  const canvas = document.getElementById("luxury-bg-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  let w = (canvas.width = window.innerWidth);
+  let h = (canvas.height = window.innerHeight);
+
+  window.addEventListener("resize", () => {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  });
+
+  const mouse = { x: w / 2, y: h / 2 };
+  window.addEventListener("mousemove", (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  const count = Math.min(55, Math.floor((w * h) / 22000));
+  const particles = Array.from({ length: count }, () => ({
+    x: Math.random() * w,
+    y: Math.random() * h,
+    vx: (Math.random() - 0.5) * 0.55,
+    vy: -Math.random() * 0.65 - 0.15, // تطير للأعلى بنعومة
+    r: Math.random() * 2.2 + 0.8,
+    gold: Math.random() > 0.28
+  }));
+
+  function animate() {
+    ctx.clearRect(0, 0, w, h);
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+
+      if (p.y < -10) p.y = h + 10;
+      if (p.x < -10) p.x = w + 10;
+      if (p.x > w + 10) p.x = -10;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.gold ? "rgba(212, 175, 55, 0.65)" : "rgba(16, 185, 129, 0.55)";
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = p.gold ? "#d4af37" : "#10b981";
+      ctx.fill();
+
+      // خطوط الشبكة الذكية عند اقتراب الجزيئات أو الماوس
+      for (let j = i + 1; j < particles.length; j++) {
+        const p2 = particles[j];
+        const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+        if (dist < 125) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = `rgba(212, 175, 55, ${(1 - dist / 125) * 0.16})`;
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+        }
+      }
+
+      const mDist = Math.hypot(p.x - mouse.x, p.y - mouse.y);
+      if (mDist < 150) {
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(mouse.x, mouse.y);
+        ctx.strokeStyle = `rgba(212, 175, 55, ${(1 - mDist / 150) * 0.3})`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+    }
+    requestAnimationFrame(animate);
+  }
+  animate();
 }
 
 /* ============================================================================
@@ -1447,31 +1515,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Init Firebase
   initFirebaseSystem();
 
-  // Toggle Firebase Setup Panel
-  document.getElementById("btn-toggle-fb-config").onclick = () => {
-    document.getElementById("firebase-config-panel").classList.toggle("hidden");
-  };
-
-  document.getElementById("btn-save-fb-config").onclick = async () => {
-    const raw = document.getElementById("fb-config-input").value.trim();
-    try {
-      const normalized = raw
-        .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":')
-        .replace(/'/g, '"');
-      const parsed = JSON.parse(normalized);
-      localStorage.setItem("MY_LIFE_OS_FIREBASE_CONFIG", JSON.stringify(parsed));
-      await initFirebaseSystem();
-      showToast("تم الاتصال بمشروع Firebase بنجاح", "success");
-    } catch (e) {
-      showToast("صيغة JSON غير صحيحة. تأكد من نسخ كائن firebaseConfig بشكل سليم.", "error");
-    }
-  };
-
-  document.getElementById("btn-clear-fb-config").onclick = () => {
-    localStorage.removeItem("MY_LIFE_OS_FIREBASE_CONFIG");
-    document.getElementById("fb-config-input").value = "";
-    showToast("تم مسح إعدادات Firebase المحفوظة", "info");
-  };
+// تشغيل اتصال Firebase التلقائي + أنيميشن الجزيئات الطائرة
+  initFirebaseSystem();
+  initLuxuryParticles();
 
   // Auth Mode Tabs
   let authMode = "login";
