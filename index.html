@@ -32,42 +32,39 @@
     <span data-i18n="offline_warning">أنت غير متصل بالإنترنت حالياً. لن يتم اعتماد العمليات حتى نجاح المزامنة مع Firebase.</span>
   </div>
 
+<!-- خلفية الأنيميشن السينمائي والجزيئات الطائرة -->
+  <canvas id="luxury-bg-canvas" class="luxury-bg-canvas"></canvas>
+  <div class="floating-icons-layer" aria-hidden="true">
+    <i class="fa-solid fa-microchip float-icon f-1"></i>
+    <i class="fa-solid fa-wand-magic-sparkles float-icon f-2"></i>
+    <i class="fa-solid fa-code float-icon f-3"></i>
+    <i class="fa-solid fa-graduation-cap float-icon f-4"></i>
+    <i class="fa-solid fa-mosque float-icon f-5"></i>
+    <i class="fa-solid fa-bolt float-icon f-6"></i>
+    <i class="fa-solid fa-layer-group float-icon f-7"></i>
+    <i class="fa-solid fa-shield-halved float-icon f-8"></i>
+  </div>
+
   <!-- =========================================================
-       1. AUTHENTICATION & FIREBASE SETUP VIEW
+       1. AUTHENTICATION VIEW (AUTO-CONNECTED TO style-a422d)
   ========================================================== -->
   <section id="auth-view" class="auth-wrapper">
-    <div class="auth-card">
+    <div class="auth-card luxury-glass-card">
       <div class="auth-brand">
-        <div class="brand-logo-circle">
-          <i class="fa-solid fa-Compass-drafting"></i>
+        <div class="brand-logo-circle pulse-gold-ring">
+          <i class="fa-solid fa-compass-drafting"></i>
         </div>
-        <h1>MY LIFE <span>OS</span></h1>
+        <h1 class="shimmer-title">MY LIFE <span>OS</span></h1>
         <p data-i18n="auth_subtitle">نظام التشغيل الشخصي المتكامل لإدارة حياتك بذكاء</p>
       </div>
 
-      <!-- Firebase Configuration Status / Setup Toggle -->
-      <div class="firebase-config-bar">
-        <span id="fb-connection-badge" class="badge badge-warning">
-          <i class="fa-solid fa-database"></i> <span id="fb-status-text">فحص إعدادات Firebase...</span>
+      <!-- مؤشر الاتصال التلقائي المباشر بـ Firebase -->
+      <div class="firebase-config-bar live-connected-bar">
+        <span id="fb-connection-badge" class="badge badge-emerald">
+          <span class="live-dot"></span>
+          <span id="fb-status-text">متصل سحابياً • style-a422d</span>
         </span>
-        <button type="button" id="btn-toggle-fb-config" class="btn-text-gold">
-          <i class="fa-solid fa-gear"></i> <span data-i18n="configure_firebase">إعداد مشروع Firebase</span>
-        </button>
-      </div>
-
-      <!-- Firebase JSON Config Form (Collapsible) -->
-      <div id="firebase-config-panel" class="config-panel hidden">
-        <h4 data-i18n="fb_setup_title">ربط قاعدة بيانات Firebase الحقيقية</h4>
-        <p class="small-muted" data-i18n="fb_setup_desc">الصق كائن firebaseConfig الخاص بمشروعك من Firebase Console للاتصال المباشر.</p>
-        <textarea id="fb-config-input" rows="6" dir="ltr" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'></textarea>
-        <div class="config-actions">
-          <button type="button" id="btn-save-fb-config" class="btn btn-gold btn-sm">
-            <i class="fa-solid fa-plug"></i> <span data-i18n="connect_firebase">حفظ واتصال</span>
-          </button>
-          <button type="button" id="btn-clear-fb-config" class="btn btn-outline btn-sm">
-            <i class="fa-solid fa-trash"></i> <span data-i18n="clear">مسح</span>
-          </button>
-        </div>
+        <span class="small-muted"><i class="fa-solid fa-shield-halved gold-text"></i> مشفر وآمن</span>
       </div>
 
       <!-- Auth Tabs -->
@@ -83,7 +80,7 @@
           <label for="auth-name" data-i18n="full_name">الاسم الكامل</label>
           <div class="input-icon-wrap">
             <i class="fa-regular fa-user"></i>
-            <input type="text" id="auth-name" placeholder="Eng. Ahmed M Hosny" />
+            <input type="text" id="auth-name" placeholder="Eng: Ahmed M Hosny" />
           </div>
         </div>
 
@@ -103,7 +100,7 @@
           </div>
         </div>
 
-        <button type="submit" id="btn-auth-submit" class="btn btn-gold btn-block">
+        <button type="submit" id="btn-auth-submit" class="btn btn-gold btn-block btn-luxury-shine">
           <i class="fa-solid fa-right-to-bracket"></i>
           <span id="auth-submit-label" data-i18n="login">تسجيل الدخول</span>
         </button>
