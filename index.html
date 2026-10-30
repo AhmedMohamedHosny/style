@@ -45,69 +45,60 @@
     <i class="fa-solid fa-shield-halved float-icon f-8"></i>
   </div>
 
-  <!-- =========================================================
-       1. AUTHENTICATION VIEW (AUTO-CONNECTED TO style-a422d)
+<!-- =========================================================
+       1. AUTHENTICATION VIEW (SLEEK FACEBOOK-STYLE UI + LOGO.PNG)
   ========================================================== -->
   <section id="auth-view" class="auth-wrapper">
     <div class="auth-card luxury-glass-card">
       <div class="auth-brand">
         <div class="brand-logo-circle pulse-gold-ring">
-          <i class="fa-solid fa-compass-drafting"></i>
+          <img src="logo.png" alt="MY LIFE OS" class="brand-logo-img" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block';" />
+          <i class="fa-solid fa-layer-group" style="display:none;"></i>
         </div>
         <h1 class="shimmer-title">MY LIFE <span>OS</span></h1>
-        <p data-i18n="auth_subtitle">نظام التشغيل الشخصي المتكامل لإدارة حياتك بذكاء</p>
-      </div>
-
-      <!-- مؤشر الاتصال التلقائي المباشر بـ Firebase -->
-      <div class="firebase-config-bar live-connected-bar">
-        <span id="fb-connection-badge" class="badge badge-emerald">
-          <span class="live-dot"></span>
-          <span id="fb-status-text">متصل سحابياً • style-a422d</span>
-        </span>
-        <span class="small-muted"><i class="fa-solid fa-shield-halved gold-text"></i> مشفر وآمن</span>
-      </div>
-
-      <!-- Auth Tabs -->
-      <div class="auth-tabs">
-        <button type="button" class="auth-tab active" data-auth-mode="login" data-i18n="login">تسجيل الدخول</button>
-        <button type="button" class="auth-tab" data-auth-mode="register" data-i18n="register">إنشاء حساب</button>
-        <button type="button" class="auth-tab" data-auth-mode="reset" data-i18n="reset_password">استعادة كلمة المرور</button>
+        <p id="auth-subtitle-text">نظام التشغيل الشخصي المتكامل لإدارة حياتك ودراستك بذكاء</p>
       </div>
 
       <!-- Auth Form -->
       <form id="auth-form" autocomplete="on">
         <div id="auth-name-group" class="form-group hidden">
-          <label for="auth-name" data-i18n="full_name">الاسم الكامل</label>
           <div class="input-icon-wrap">
             <i class="fa-regular fa-user"></i>
-            <input type="text" id="auth-name" placeholder="Eng: Ahmed M Hosny" />
+            <input type="text" id="auth-name" placeholder="الاسم الكامل (مثال: Ahmed M Hosny)" />
           </div>
         </div>
 
         <div class="form-group">
-          <label for="auth-email" data-i18n="email">البريد الإلكتروني</label>
           <div class="input-icon-wrap">
             <i class="fa-regular fa-envelope"></i>
-            <input type="email" id="auth-email" required placeholder="name@domain.com" dir="ltr" />
+            <input type="email" id="auth-email" required placeholder="البريد الإلكتروني" dir="ltr" />
           </div>
         </div>
 
         <div id="auth-password-group" class="form-group">
-          <label for="auth-password" data-i18n="password">كلمة المرور</label>
           <div class="input-icon-wrap">
             <i class="fa-solid fa-lock"></i>
-            <input type="password" id="auth-password" minlength="6" placeholder="••••••••" dir="ltr" />
+            <input type="password" id="auth-password" minlength="6" placeholder="كلمة السر" dir="ltr" />
           </div>
         </div>
 
         <button type="submit" id="btn-auth-submit" class="btn btn-gold btn-block btn-luxury-shine">
-          <i class="fa-solid fa-right-to-bracket"></i>
-          <span id="auth-submit-label" data-i18n="login">تسجيل الدخول</span>
+          <span id="auth-submit-label">تسجيل الدخول</span>
         </button>
       </form>
+
+      <!-- روابط التنقل الأنيقة على طريقة فيسبوك -->
+      <div class="fb-style-auth-footer">
+        <button type="button" id="btn-forgot-pass-link" class="fb-forgot-link">هل نسيت كلمة السر؟</button>
+
+        <div class="fb-auth-divider"><span>أو</span></div>
+
+        <button type="button" id="btn-switch-auth-mode" class="btn btn-create-account">
+          إنشاء حساب جديد
+        </button>
+      </div>
     </div>
   </section>
-
   <!-- =========================================================
        2. MAIN APPLICATION SHELL (PROTECTED)
   ========================================================== -->
@@ -117,8 +108,9 @@
     <aside id="sidebar" class="sidebar">
       <div class="sidebar-header">
         <div class="brand-box">
-          <div class="brand-icon"><i class="fa-solid fa-layer-group"></i></div>
-          <div>
+<div class="brand-icon">
+  <img src="logo.png" alt="Logo" class="sidebar-logo-img" />
+</div>          <div>
             <h2>MY LIFE <span>OS</span></h2>
             <small id="sidebar-user-status">Online • Synced</small>
           </div>
@@ -221,11 +213,7 @@
         </div>
       </header>
 
-      <!-- Email Verification Alert -->
-      <div id="email-verify-banner" class="verify-banner hidden">
-        <span><i class="fa-solid fa-envelope-circle-check"></i> بريدك الإلكتروني غير مؤكد بعد.</span>
-        <button id="btn-send-verification" class="btn btn-sm btn-outline">إرسال رابط التأكيد</button>
-      </div>
+
 
       <!-- =====================================================
            VIEW 1: DASHBOARD
@@ -708,13 +696,13 @@
       <section id="view-ai" class="view-section">
         <div class="ai-layout">
           <div class="card ai-chat-card">
-            <div class="card-header">
+<div class="card-header">
               <div>
                 <h3><i class="fa-solid fa-wand-magic-sparkles gold-text"></i> المساعد الشخصي الذكي (AI Life Assistant)</h3>
-                <small class="small-muted">يحلل بياناتك المصرح بها وينفذ الإجراءات في Firebase بعد تأكيدك الصريح</small>
+                <small class="small-muted">متصل بالذكاء الاصطناعي الحقيقي لمحادثتك وتنظيم جدولك وتنفيذ أوامرك فوراً</small>
               </div>
               <button id="btn-ai-settings" class="btn btn-outline btn-sm">
-                <i class="fa-solid fa-server"></i> إعداد نقطة اتصال AI Backend
+                <i class="fa-solid fa-key"></i> مفتاح Gemini (اختياري)
               </button>
             </div>
 

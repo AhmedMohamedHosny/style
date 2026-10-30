@@ -1127,3 +1127,98 @@ html[data-theme="light"] .item-card {
   0% { left: -100%; }
   40%, 100% { left: 165%; }
 }
+/* ==========================================================================
+   FACEBOOK-STYLE AUTH CARD & CUSTOM LOGO.PNG STYLING
+   ========================================================================== */
+
+.brand-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.sidebar-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+#auth-form .form-group input {
+  padding: 13px 14px;
+  padding-inline-start: 40px;
+  font-size: 0.96rem;
+  border-radius: 10px;
+  background: rgba(10, 14, 23, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+#auth-form .form-group input:focus {
+  border-color: var(--gold-primary);
+  background: rgba(15, 20, 32, 0.95);
+}
+
+#btn-auth-submit {
+  padding: 12px;
+  font-size: 1.02rem;
+  border-radius: 10px;
+  margin-top: 6px;
+}
+
+.fb-style-auth-footer {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.fb-forgot-link {
+  background: none;
+  border: none;
+  color: var(--gold-light);
+  font-family: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.fb-forgot-link:hover {
+  color: var(--gold-primary);
+  text-decoration: underline;
+}
+
+.fb-auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 16px 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.fb-auth-divider::before,
+.fb-auth-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.fb-auth-divider span {
+  padding: 0 12px;
+}
+
+.btn-create-account {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  font-weight: 700;
+  padding: 11px 24px;
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+  transition: var(--transition);
+}
+
+.btn-create-account:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.45);
+}

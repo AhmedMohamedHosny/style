@@ -415,17 +415,9 @@ function bindAuthListener() {
       if (user.photoURL) {
         document.getElementById("user-avatar-img").src = user.photoURL;
       } else {
-        document.getElementById("user-avatar-img").src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=d4af37&color=07090e`;
+        document.getElementById("user-avatar-img").src = "logo.png";
       }
 
-      const verifyBanner = document.getElementById("email-verify-banner");
-      if (!user.emailVerified) {
-        verifyBanner.classList.remove("hidden");
-      } else {
-        verifyBanner.classList.add("hidden");
-      }
-
-      // Sync User Profile Document
       await setDoc(doc(AppState.db, "users", user.uid), {
         ownerUid: user.uid,
         email: user.email,
@@ -786,7 +778,6 @@ function renderCalendar() {
     `).join("");
   }
 }
-
 /* --- 9.4 UNIVERSITY --- */
 function renderUniversity() {
   const subjBox = document.getElementById("subjects-container");
@@ -798,23 +789,26 @@ function renderUniversity() {
   const lectures = AppState.collections.lectures;
 
   if (!subjects.length) {
-    subjBox.innerHTML = renderEmptyState("لم تقم بإضافة موادك الدراسية بعد.");
+    subjBox.innerHTML = renderEmptyState("لم تقم بإضافة موادك الدراسية بعد. أضف اسم المادة بضغطة واحدة!");
   } else {
-    subjBox.innerHTML = subjects.map(s => `
-      <div class="item-card">
-        <div>
+    subjBox.innerHTML = subjects.map(s => {
+      const relatedCount = lectures.filter(l => (l.subjectName || "").trim() === (s.name || "").trim()).length;
+      return `
+        <div class="item-card">
           <div class="flex-between">
-            <span class="badge badge-gold">${escapeHTML(s.code || "COURSE")}</span>
+            <span class="badge badge-gold"><i class="fa-solid fa-book-open"></i> مادة دراسية</span>
             <button class="btn btn-xs btn-danger" data-action="delete-item" data-col="subjects" data-id="${s.id}">
               <i class="fa-solid fa-trash"></i>
             </button>
           </div>
-          <h4 class="mt-2">${escapeHTML(s.name)}</h4>
-          <p class="small-muted"><i class="fa-solid fa-chalkboard-user"></i> دكتور المادة: ${escapeHTML(s.professor || "غير محدد")}</p>
-          <p class="small-muted"><i class="fa-regular fa-clock"></i> الموعد: ${escapeHTML(s.schedule || "غير محدد")}</p>
+          <h3 class="mt-2 gold-text">${escapeHTML(s.name)}</h3>
+          ${s.notes ? `<p class="small-muted">${escapeHTML(s.notes)}</p>` : ""}
+          <div class="flex-between mt-2">
+            <small class="small-muted"><i class="fa-solid fa-layer-group"></i> المحاضرات والتكليفات المرتبطة: <strong>${relatedCount}</strong></small>
+          </div>
         </div>
-      </div>
-    `).join("");
+      `;
+    }).join("");
   }
 
   if (!lectures.length) {
@@ -1421,15 +1415,18 @@ async function downloadLegalDirectMedia(urlStr) {
 }
 
 /* ============================================================================
-   11. AI PERSONAL ASSISTANT WITH REAL ACTION EXTRACTION & USER CONFIRMATION
+   11. REAL GENERATIVE AI PERSONAL ASSISTANT + SMART ACTION EXECUTION
    ============================================================================ */
 function appendAIMessage(text, sender = "assistant") {
   const box = document.getElementById("ai-messages-box");
+  if (!box) return;
   const div = document.createElement("div");
   div.className = `ai-msg ${sender}`;
+  div.style.whiteSpace = "pre-line";
   div.textContent = text;
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
+  return div;
 }
 
 function parseNaturalLanguageAIAction(input) {
@@ -1438,26 +1435,37 @@ function parseNaturalLanguageAIAction(input) {
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowISO = tomorrow.toISOString().split("T")[0];
 
-  // 1. Detect Task / Study creation intent (e.g., "أضف مذاكرة دوائر كهربائية غداً الساعة 5")
-  if (/^(أضف|اضف|سجل مهمة|انشئ مهمة|مذاكرة)/i.test(text)) {
+  // 1. إضافة مادة دراسية مباشرة (مثال: "أضف مادة دوائر كهربائية")
+  const subjMatch = text.match(/^(?:أضف|اضف|سجل)\s+مادة\s+(.+)$/i);
+  if (subjMatch) {
+    const subjName = subjMatch[1].trim();
+    return {
+      collection: "subjects",
+      summary: `إضافة مادة دراسية جديدة باسم: "${subjName}"`,
+      payload: { name: subjName, notes: "تمت الإضافة عبر المساعد الذكي" }
+    };
+  }
+
+  // 2. إضافة مهمة أو مذاكرة (مثال: "أضف مذاكرة دوائر كهربائية غداً الساعة 5")
+  if (/^(أضف|اضف|سجل مهمة|انشئ مهمة|ذكرني بـ|مذاكرة)\s+/i.test(text)) {
     const isTomorrow = /غدا|غداً|بكرة/.test(text);
     const timeMatch = text.match(/الساعة\s*(\d{1,2})/);
-    const cleanTitle = text.replace(/^(أضف|اضف|سجل مهمة|انشئ مهمة)\s*/i, "");
+    const cleanTitle = text.replace(/^(أضف|اضف|سجل مهمة|انشئ مهمة|ذكرني بـ)\s*/i, "");
     return {
       collection: "tasks",
       summary: `إضافة مهمة جديدة: "${cleanTitle}" بتاريخ ${isTomorrow ? tomorrowISO : todayISO()}`,
       payload: {
         title: cleanTitle,
-        description: timeMatch ? `الموعد المقترح: الساعة ${timeMatch[1]}:00` : "تم إنشاؤها عبر المساعد الذكي",
+        description: timeMatch ? `الموعد: الساعة ${timeMatch[1]}:00` : "تم إنشاؤها عبر المساعد الذكي",
         dueDate: isTomorrow ? tomorrowISO : todayISO(),
         priority: "High",
         status: "Pending",
-        category: "Study"
+        category: "دراسة"
       }
     };
   }
 
-  // 2. Detect Expense / Income intent (e.g., "سجل مصروف 250 جنيه مراجع دراسية")
+  // 3. تسجيل مصروف أو دخل (مثال: "سجل مصروف 250 جنيه مراجع دراسية")
   const expMatch = text.match(/(مصروف|دفعت|اشتريت|دخل|استلمت)\s*(\d+)/i);
   if (expMatch) {
     const isIncome = /(دخل|استلمت)/.test(expMatch[1]);
@@ -1469,7 +1477,7 @@ function parseNaturalLanguageAIAction(input) {
         title: text,
         amount: amount,
         type: isIncome ? "income" : "expense",
-        category: "General",
+        category: "عام",
         date: todayISO()
       }
     };
@@ -1481,60 +1489,75 @@ function parseNaturalLanguageAIAction(input) {
 async function handleAIChatSubmit(userPrompt) {
   appendAIMessage(userPrompt, "user");
 
-  // Check if prompt requests a concrete database action
+  // أولاً: فحص ما إذا كان الطلب أمر تنفيذ مباشر (مهمة / مادة / مصروف)
   const detectedAction = parseNaturalLanguageAIAction(userPrompt);
   if (detectedAction) {
     AppState.pendingAIAction = detectedAction;
     document.getElementById("ai-confirm-summary").textContent = detectedAction.summary;
     document.getElementById("ai-confirm-payload").textContent = JSON.stringify(detectedAction.payload, null, 2);
     document.getElementById("ai-confirmation-card").classList.remove("hidden");
-    appendAIMessage("لقد استخرجت تفاصيل الإجراء المطلوب. يرجى مراجعة بطاقة التأكيد بالأسفل للموافقة على حفظه فعلياً في Firebase.", "assistant");
+    appendAIMessage("جهزت لك الإجراء المطلوب! اضغط على زر التأكيد بالأسفل لحفظه فوراً في حسابك.", "assistant");
     return;
   }
 
-  // Check if user configured a secure Cloud Function / Backend AI proxy URL
-  const customEndpoint = localStorage.getItem("MY_LIFE_OS_AI_ENDPOINT");
-  if (customEndpoint) {
-    try {
-      const res = await fetch(customEndpoint, {
+  // ثانياً: محادثة ذكاء اصطناعي حقيقية مع سياق بيانات المستخدم الفعلية
+  const loadingMsg = appendAIMessage("جاري التفكير...", "assistant");
+
+  const userName = AppState.user?.displayName || "يا هندسة";
+  const pendingTasks = AppState.collections.tasks.filter(t => t.status !== "Completed").map(t => t.title);
+  const subjectsList = AppState.collections.subjects.map(s => s.name);
+  const projectsList = AppState.collections.projects.map(p => `${p.title} (${p.progress || 0}%)`);
+
+  const systemContext = `أنت المساعد الشخصي الذكي داخل نظام MY LIFE OS الخاص بالمستخدم "${userName}".
+تحدث باللغة العربية بأسلوب راقٍ، ودود، وذكي جداً (وبروح مصرية هندسية مشجعة عند الترحيب).
+بيانات المستخدم الحالية في النظام:
+- المواد الدراسية المسجلة (${subjectsList.length}): ${subjectsList.join("، ") || "لا توجد مواد بعد"}
+- المهام غير المكتملة (${pendingTasks.length}): ${pendingTasks.join("، ") || "لا توجد مهام معلقة"}
+- المشاريع النشطة (${projectsList.length}): ${projectsList.join("، ") || "لا توجد مشاريع بعد"}
+أجب على سؤال المستخدم أو طلب التنظيم بشكل مباشر وعملي دون ذكر أي تفاصيل تقنية عن قواعد البيانات.`;
+
+  try {
+    const geminiKey = localStorage.getItem("MY_LIFE_OS_GEMINI_KEY");
+    let aiReply = "";
+
+    if (geminiKey) {
+      // الاتصال المباشر بـ Google Gemini API في حال إدخال المفتاح
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: userPrompt,
-          context: {
-            tasksCount: AppState.collections.tasks.length,
-            projectsCount: AppState.collections.projects.length
-          }
+          contents: [{ parts: [{ text: `${systemContext}\n\nرسالة المستخدم: ${userPrompt}` }] }]
         })
       });
       const data = await res.json();
-      appendAIMessage(data.reply || "تم استلام الرد من الخادم الآمن.", "assistant");
-      return;
-    } catch (e) {
-      appendAIMessage("تعذر الاتصال بنقطة AI Backend المخصصة، سأقوم بتحليل بياناتك محلياً.", "assistant");
+      aiReply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
     }
+
+    if (!aiReply) {
+      // محرك الذكاء الاصطناعي التوليدي المجاني المدمج (يعمل فوراً بدون مفتاح)
+      const res = await fetch("https://text.pollinations.ai/openai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "openai",
+          messages: [
+            { role: "system", content: systemContext },
+            { role: "user", content: userPrompt }
+          ]
+        })
+      });
+      const data = await res.json();
+      aiReply = data?.choices?.[0]?.message?.content || "";
+    }
+
+    loadingMsg.textContent = aiReply || `يا هلا بيك يا ${userName}! أنا معاك وجاهز لتنظيم يومك، موادك الدراسية، أو مشاريعك. تحب نبدأ بإيه النهاردة؟`;
+  } catch (err) {
+    loadingMsg.textContent = `يا هلا بيك يا ${userName}! أنا مساعدك الذكي في MY LIFE OS. حالياً لديك ${pendingTasks.length} مهام نشطة و ${subjectsList.length} مواد دراسية. قولي تحب نرتب جدول مذاكرتك إزاي أو أضيف لك مهمة جديدة؟`;
   }
-
-  // Intelligent Real Data Analysis from Firestore State
-  const tasks = AppState.collections.tasks;
-  const pending = tasks.filter(t => t.status !== "Completed");
-  const overdue = pending.filter(t => t.dueDate && t.dueDate < todayISO());
-  const projects = AppState.collections.projects;
-
-  const response = [
-    `تحليل بياناتك الفعلية المسجلة حالياً في Firebase:`,
-    `• لديك ${pending.length} مهام غير مكتملة (منها ${overdue.length} مهام متأخرة).`,
-    `• المشاريع النشطة: ${projects.length} مشاريع.`,
-    pending.length > 0
-      ? `• نصيحة الأولوية اليوم: ابدأ بـ "${pending[0].title}" لأنها ذات أولوية (${pending[0].priority}).`
-      : `• قائمة مهامك خالية حالياً! يمكنك كتابة: "أضف مذاكرة دوائر كهربائية غداً الساعة 5" وسأقوم بتجهيزها للتنفيذ الفوري.`
-  ].join("\n");
-
-  appendAIMessage(response, "assistant");
 }
 
 /* ============================================================================
-   12. UNIVERSAL MODAL BUILDER FOR ALL 14 MODULES
+   12. UNIVERSAL MODAL BUILDER (CLEAN BRANDING)
    ============================================================================ */
 function openFormModal(title, fieldsHtml, onSubmitCallback) {
   const modal = document.getElementById("universal-modal");
@@ -1542,7 +1565,7 @@ function openFormModal(title, fieldsHtml, onSubmitCallback) {
   document.getElementById("modal-title").textContent = title;
   form.innerHTML = fieldsHtml + `
     <div class="config-actions mt-4">
-      <button type="submit" class="btn btn-gold">حفظ فعلي في Firebase</button>
+      <button type="submit" class="btn btn-gold btn-block">حفظ البيانات</button>
     </div>
   `;
   modal.classList.remove("hidden");
@@ -1615,27 +1638,49 @@ document.addEventListener("DOMContentLoaded", () => {
   initFirebaseSystem();
   initLuxuryParticles();
 
-  // Auth Mode Tabs
+// نظام التنقل الأنيق بين تسجيل الدخول وإنشاء الحساب واستعادة كلمة السر (Facebook Style)
   let authMode = "login";
-  document.querySelectorAll(".auth-tab").forEach(tab => {
-    tab.onclick = () => {
-      document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
-      tab.classList.add("active");
-      authMode = tab.dataset.authMode;
-      document.getElementById("auth-name-group").classList.toggle("hidden", authMode !== "register");
-      document.getElementById("auth-password-group").classList.toggle("hidden", authMode === "reset");
-      document.getElementById("auth-submit-label").textContent =
-        authMode === "login" ? "تسجيل الدخول" : authMode === "register" ? "إنشاء حساب جديد" : "إرسال رابط الاستعادة";
-    };
-  });
+  const switchAuthBtn = document.getElementById("btn-switch-auth-mode");
+  const forgotPassLink = document.getElementById("btn-forgot-pass-link");
+  const nameGroup = document.getElementById("auth-name-group");
+  const passGroup = document.getElementById("auth-password-group");
+  const submitLabel = document.getElementById("auth-submit-label");
+
+  function updateAuthUI() {
+    if (authMode === "login") {
+      nameGroup.classList.add("hidden");
+      passGroup.classList.remove("hidden");
+      forgotPassLink.classList.remove("hidden");
+      submitLabel.textContent = "تسجيل الدخول";
+      switchAuthBtn.textContent = "إنشاء حساب جديد";
+    } else if (authMode === "register") {
+      nameGroup.classList.remove("hidden");
+      passGroup.classList.remove("hidden");
+      forgotPassLink.classList.add("hidden");
+      submitLabel.textContent = "إنشاء حساب";
+      switchAuthBtn.textContent = "لديك حساب بالفعل؟ تسجيل الدخول";
+    } else if (authMode === "reset") {
+      nameGroup.classList.add("hidden");
+      passGroup.classList.add("hidden");
+      forgotPassLink.classList.add("hidden");
+      submitLabel.textContent = "إرسال رابط استعادة كلمة السر";
+      switchAuthBtn.textContent = "العودة لتسجيل الدخول";
+    }
+  }
+
+  switchAuthBtn.onclick = () => {
+    authMode = authMode === "login" ? "register" : "login";
+    updateAuthUI();
+  };
+
+  forgotPassLink.onclick = () => {
+    authMode = "reset";
+    updateAuthUI();
+  };
 
   // Auth Form Submit
   document.getElementById("auth-form").onsubmit = async (e) => {
     e.preventDefault();
-    if (!AppState.auth) {
-      showToast("قم بإعداد مشروع Firebase أولاً من زر إعدادات Firebase بالأعلى", "error");
-      return;
-    }
     const email = document.getElementById("auth-email").value.trim();
     const password = document.getElementById("auth-password").value;
     const name = document.getElementById("auth-name").value.trim();
@@ -1643,25 +1688,19 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       if (authMode === "login") {
         await signInWithEmailAndPassword(AppState.auth, email, password);
-        showToast("تم تسجيل الدخول بنجاح", "success");
+        showToast("مرحباً بك في MY LIFE OS", "success");
       } else if (authMode === "register") {
         const cred = await createUserWithEmailAndPassword(AppState.auth, email, password);
         if (name) await updateProfile(cred.user, { displayName: name });
-        await sendEmailVerification(cred.user);
-        showToast("تم إنشاء الحساب وإرسال بريد التفعيل", "success");
+        showToast("تم إنشاء حسابك بنجاح!", "success");
       } else if (authMode === "reset") {
         await sendPasswordResetEmail(AppState.auth, email);
-        showToast("تم إرسال رابط استعادة كلمة المرور إلى بريدك", "success");
+        showToast("تم إرسال رابط استعادة كلمة السر إلى بريدك الإلكتروني", "success");
+        authMode = "login";
+        updateAuthUI();
       }
     } catch (err) {
-      showToast("خطأ مصادقة: " + err.message, "error");
-    }
-  };
-
-  document.getElementById("btn-send-verification").onclick = async () => {
-    if (AppState.user) {
-      await sendEmailVerification(AppState.user);
-      showToast("تم إرسال رابط التأكيد إلى بريدك الإلكتروني", "success");
+      showToast("يرجى التأكد من البريد الإلكتروني وكلمة السر", "error");
     }
   };
 
@@ -1745,12 +1784,16 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   });
 
-  document.getElementById("btn-add-subject").onclick = () => {
-    openFormModal("إضافة مادة دراسية", `
-      <div class="form-group"><label>اسم المادة</label><input name="name" required placeholder="Logic Design / دوائر كهربائية" /></div>
-      <div class="form-group"><label>كود المادة</label><input name="code" placeholder="EEC-201" /></div>
-      <div class="form-group"><label>اسم الدكتور / المحاضر</label><input name="professor" /></div>
-      <div class="form-group"><label>موعد المحاضرة والسكشن</label><input name="schedule" placeholder="الأحد 10 ص - الثلاثاء 12 م" /></div>
+document.getElementById("btn-add-subject").onclick = () => {
+    openFormModal("إضافة مادة دراسية جديدة", `
+      <div class="form-group">
+        <label>اسم المادة الدراسية</label>
+        <input name="name" required placeholder="مثال: دوائر كهربائية / Logic Design / برمجة ويب" autofocus />
+      </div>
+      <div class="form-group">
+        <label>ملاحظة سريعة أو هدفك في المادة (اختياري)</label>
+        <input name="notes" placeholder="مثال: التركيز على الشيتات والعملي" />
+      </div>
     `, (data) => createRecord("subjects", data));
   };
 
@@ -2050,18 +2093,19 @@ document.addEventListener("DOMContentLoaded", () => {
     appendAIMessage("تم إلغاء الإجراء بناءً على طلبك.", "assistant");
   };
 
-  document.getElementById("btn-ai-settings").onclick = () => {
-    openFormModal("إعداد نقطة اتصال AI Cloud Function الآمنة", `
+document.getElementById("btn-ai-settings").onclick = () => {
+    openFormModal("إعداد مفتاح Google Gemini API (اختياري)", `
       <div class="form-group">
-        <label>رابط Firebase Cloud Function أو Backend Proxy (لحماية مفتاح Gemini API)</label>
-        <input type="url" name="endpoint" dir="ltr" value="${escapeHTML(localStorage.getItem("MY_LIFE_OS_AI_ENDPOINT") || "")}" placeholder="https://us-central1-your-project.cloudfunctions.net/askGemini" />
+        <label>المساعد يعمل مجاناً بشكل تلقائي. إذا أردت ربطه بـ Gemini 1.5 Flash الخاص بك، الصق المفتاح هنا:</label>
+        <input type="password" name="apiKey" dir="ltr" value="${escapeHTML(localStorage.getItem("MY_LIFE_OS_GEMINI_KEY") || "")}" placeholder="AIzaSy..." />
       </div>
     `, async (data) => {
-      if (data.endpoint) {
-        localStorage.setItem("MY_LIFE_OS_AI_ENDPOINT", data.endpoint.trim());
-        showToast("تم حفظ نقطة اتصال AI الآمنة", "success");
+      if (data.apiKey && data.apiKey.trim()) {
+        localStorage.setItem("MY_LIFE_OS_GEMINI_KEY", data.apiKey.trim());
+        showToast("تم تفعيل محرك Gemini Flash بنجاح", "success");
       } else {
-        localStorage.removeItem("MY_LIFE_OS_AI_ENDPOINT");
+        localStorage.removeItem("MY_LIFE_OS_GEMINI_KEY");
+        showToast("تم التبديل إلى محرك الذكاء الاصطناعي التلقائي المجاني", "info");
       }
     });
   };
