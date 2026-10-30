@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark" data-font-size="normal">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta name="theme-color" content="#07090e" />
+  <meta name="description" content="MY LIFE OS — Complete Personal Life Operating System powered by Firebase & AI" />
+  <title>MY LIFE OS | نظام تشغيل الحياة الشخصي</title>
+
+  <!-- Google Fonts: Cairo & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Chart.js for Real Firestore Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Global Toast & Status Notification Bar -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Network Offline Banner -->
+  <div id="network-banner" class="network-banner hidden">
+    <i class="fa-solid fa-wifi-slash"></i>
+    <span data-i18n="offline_warning">أنت غير متصل بالإنترنت حالياً. لن يتم اعتماد العمليات حتى نجاح المزامنة مع Firebase.</span>
+  </div>
+
+  <!-- =========================================================
+       1. AUTHENTICATION & FIREBASE SETUP VIEW
+  ========================================================== -->
+  <section id="auth-view" class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="brand-logo-circle">
+          <i class="fa-solid fa-Compass-drafting"></i>
+        </div>
+        <h1>MY LIFE <span>OS</span></h1>
+        <p data-i18n="auth_subtitle">نظام التشغيل الشخصي المتكامل لإدارة حياتك بذكاء</p>
+      </div>
+
+      <!-- Firebase Configuration Status / Setup Toggle -->
+      <div class="firebase-config-bar">
+        <span id="fb-connection-badge" class="badge badge-warning">
+          <i class="fa-solid fa-database"></i> <span id="fb-status-text">فحص إعدادات Firebase...</span>
+        </span>
+        <button type="button" id="btn-toggle-fb-config" class="btn-text-gold">
+          <i class="fa-solid fa-gear"></i> <span data-i18n="configure_firebase">إعداد مشروع Firebase</span>
+        </button>
+      </div>
+
+      <!-- Firebase JSON Config Form (Collapsible) -->
+      <div id="firebase-config-panel" class="config-panel hidden">
+        <h4 data-i18n="fb_setup_title">ربط قاعدة بيانات Firebase الحقيقية</h4>
+        <p class="small-muted" data-i18n="fb_setup_desc">الصق كائن firebaseConfig الخاص بمشروعك من Firebase Console للاتصال المباشر.</p>
+        <textarea id="fb-config-input" rows="6" dir="ltr" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'></textarea>
+        <div class="config-actions">
+          <button type="button" id="btn-save-fb-config" class="btn btn-gold btn-sm">
+            <i class="fa-solid fa-plug"></i> <span data-i18n="connect_firebase">حفظ واتصال</span>
+          </button>
+          <button type="button" id="btn-clear-fb-config" class="btn btn-outline btn-sm">
+            <i class="fa-solid fa-trash"></i> <span data-i18n="clear">مسح</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Auth Tabs -->
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" data-auth-mode="login" data-i18n="login">تسجيل الدخول</button>
+        <button type="button" class="auth-tab" data-auth-mode="register" data-i18n="register">إنشاء حساب</button>
+        <button type="button" class="auth-tab" data-auth-mode="reset" data-i18n="reset_password">استعادة كلمة المرور</button>
+      </div>
+
+      <!-- Auth Form -->
+      <form id="auth-form" autocomplete="on">
+        <div id="auth-name-group" class="form-group hidden">
+          <label for="auth-name" data-i18n="full_name">الاسم الكامل</label>
+          <div class="input-icon-wrap">
+            <i class="fa-regular fa-user"></i>
+            <input type="text" id="auth-name" placeholder="Eng. Ahmed M Hosny" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="auth-email" data-i18n="email">البريد الإلكتروني</label>
+          <div class="input-icon-wrap">
+            <i class="fa-regular fa-envelope"></i>
+            <input type="email" id="auth-email" required placeholder="name@domain.com" dir="ltr" />
+          </div>
+        </div>
+
+        <div id="auth-password-group" class="form-group">
+          <label for="auth-password" data-i18n="password">كلمة المرور</label>
+          <div class="input-icon-wrap">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="auth-password" minlength="6" placeholder="••••••••" dir="ltr" />
+          </div>
+        </div>
+
+        <button type="submit" id="btn-auth-submit" class="btn btn-gold btn-block">
+          <i class="fa-solid fa-right-to-bracket"></i>
+          <span id="auth-submit-label" data-i18n="login">تسجيل الدخول</span>
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       2. MAIN APPLICATION SHELL (PROTECTED)
+  ========================================================== -->
+  <div id="app-shell" class="app-shell hidden">
+
+    <!-- Desktop Sidebar -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-box">
+          <div class="brand-icon"><i class="fa-solid fa-layer-group"></i></div>
+          <div>
+            <h2>MY LIFE <span>OS</span></h2>
+            <small id="sidebar-user-status">Online • Synced</small>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="dashboard">
+          <i class="fa-solid fa-gauge-high"></i> <span data-i18n="nav_dashboard">لوحة التحكم</span>
+        </button>
+        <button class="nav-item" data-view="tasks">
+          <i class="fa-solid fa-list-check"></i> <span data-i18n="nav_tasks">إدارة المهام</span>
+        </button>
+        <button class="nav-item" data-view="calendar">
+          <i class="fa-regular fa-calendar-days"></i> <span data-i18n="nav_calendar">التقويم والمواعيد</span>
+        </button>
+        <button class="nav-item" data-view="university">
+          <i class="fa-solid fa-graduation-cap"></i> <span data-i18n="nav_university">الجامعة والدراسة</span>
+        </button>
+        <button class="nav-item" data-view="islamic">
+          <i class="fa-solid fa-mosque"></i> <span data-i18n="nav_islamic">القرآن والعبادة</span>
+        </button>
+        <button class="nav-item" data-view="projects">
+          <i class="fa-solid fa-code-branch"></i> <span data-i18n="nav_projects">المشاريع والبرمجة</span>
+        </button>
+        <button class="nav-item" data-view="languages">
+          <i class="fa-solid fa-language"></i> <span data-i18n="nav_languages">تطوير الذات واللغات</span>
+        </button>
+        <button class="nav-item" data-view="finance">
+          <i class="fa-solid fa-wallet"></i> <span data-i18n="nav_finance">الإدارة المالية</span>
+        </button>
+        <button class="nav-item" data-view="notes">
+          <i class="fa-regular fa-note-sticky"></i> <span data-i18n="nav_notes">الملاحظات والمعرفة</span>
+        </button>
+        <button class="nav-item" data-view="files">
+          <i class="fa-solid fa-vault"></i> <span data-i18n="nav_files">خزنة الملفات</span>
+        </button>
+        <button class="nav-item" data-view="media">
+          <i class="fa-solid fa-circle-play"></i> <span data-i18n="nav_media">مركز الوسائط والروابط</span>
+        </button>
+        <button class="nav-item" data-view="ai">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="nav_ai">المساعد الذكي AI</span>
+        </button>
+        <button class="nav-item" data-view="reports">
+          <i class="fa-solid fa-chart-pie"></i> <span data-i18n="nav_reports">التقارير والإحصائيات</span>
+        </button>
+        <button class="nav-item" data-view="search">
+          <i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="nav_search">محرك البحث الشامل</span>
+        </button>
+        <button class="nav-item" data-view="settings">
+          <i class="fa-solid fa-sliders"></i> <span data-i18n="nav_settings">الإعدادات والحساب</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-mini-card" id="btn-open-profile">
+          <img id="user-avatar-img" src="https://ui-avatars.com/api/?name=User&background=d4af37&color=07090e" alt="Avatar" />
+          <div class="user-mini-info">
+            <strong id="user-display-name">...</strong>
+            <small id="user-display-email">...</small>
+          </div>
+        </div>
+        <button id="btn-logout-sidebar" class="btn-icon-danger" title="تسجيل الخروج">
+          <i class="fa-solid fa-power-off"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Area -->
+    <main class="main-content">
+
+      <!-- Top Header -->
+      <header class="topbar">
+        <div class="topbar-start">
+          <button id="btn-mobile-menu" class="btn-icon mobile-only" aria-label="Menu">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div>
+            <h1 id="current-view-title">لوحة التحكم</h1>
+            <p id="live-datetime" class="datetime-text">...</p>
+          </div>
+        </div>
+
+        <div class="topbar-end">
+          <button id="btn-quick-search" class="btn-icon" title="بحث شامل">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </button>
+          <button id="btn-quick-ai" class="btn-icon gold-glow" title="المساعد الذكي">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </button>
+          <button id="btn-theme-toggle" class="btn-icon" title="تبديل المظهر">
+            <i class="fa-solid fa-moon"></i>
+          </button>
+          <button id="btn-lang-toggle" class="btn-icon" title="تغيير اللغة">
+            <span class="lang-code">EN</span>
+          </button>
+          <button id="btn-install-pwa" class="btn btn-gold btn-sm hidden">
+            <i class="fa-solid fa-download"></i> <span data-i18n="install_app">تثبيت التطبيق</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Email Verification Alert -->
+      <div id="email-verify-banner" class="verify-banner hidden">
+        <span><i class="fa-solid fa-envelope-circle-check"></i> بريدك الإلكتروني غير مؤكد بعد.</span>
+        <button id="btn-send-verification" class="btn btn-sm btn-outline">إرسال رابط التأكيد</button>
+      </div>
+
+      <!-- =====================================================
+           VIEW 1: DASHBOARD
+      ====================================================== -->
+      <section id="view-dashboard" class="view-section active">
+        <div class="welcome-banner">
+          <div>
+            <h2><span data-i18n="welcome_back">مرحباً بعودتك،</span> <span id="dash-user-name" class="gold-text">...</span></h2>
+            <p data-i18n="dashboard_sub">مركز القيادة اليومي المحسوب مباشرة من بياناتك الفعلية.</p>
+          </div>
+          <div class="quick-actions-row">
+            <button class="btn btn-gold btn-sm" data-quick-add="task"><i class="fa-solid fa-plus"></i> مهمة</button>
+            <button class="btn btn-outline btn-sm" data-quick-add="expense"><i class="fa-solid fa-coins"></i> معاملة</button>
+            <button class="btn btn-outline btn-sm" data-quick-add="note"><i class="fa-solid fa-pen"></i> ملاحظة</button>
+            <button class="btn btn-outline btn-sm" data-quick-add="event"><i class="fa-regular fa-calendar-plus"></i> موعد</button>
+          </div>
+        </div>
+
+        <!-- KPI Real Metrics Grid -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon gold"><i class="fa-solid fa-list-check"></i></div>
+            <div class="kpi-info">
+              <span class="kpi-label">مهام اليوم المتبقية</span>
+              <h3 id="kpi-tasks-today">0</h3>
+              <small id="kpi-tasks-sub">0 مكتملة من 0</small>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon emerald"><i class="fa-solid fa-mosque"></i></div>
+            <div class="kpi-info">
+              <span class="kpi-label">الصلوات المسجلة اليوم</span>
+              <h3 id="kpi-prayers-today">0 / 5</h3>
+              <small id="kpi-quran-sub">الورد اليومي: 0 آية</small>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon blue"><i class="fa-solid fa-code-branch"></i></div>
+            <div class="kpi-info">
+              <span class="kpi-label">المشاريع النشطة</span>
+              <h3 id="kpi-active-projects">0</h3>
+              <small id="kpi-projects-sub">متوسط الإنجاز: 0%</small>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon purple"><i class="fa-solid fa-wallet"></i></div>
+            <div class="kpi-info">
+              <span class="kpi-label">صافي الرصيد الحالي</span>
+              <h3 id="kpi-net-balance">0 EGP</h3>
+              <small id="kpi-expense-month">مصروفات الشهر: 0</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard Widgets Grid -->
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-bolt gold-text"></i> أولويات ومهام اليوم</h3>
+              <button class="btn-link" data-goto="tasks">عرض الكل</button>
+            </div>
+            <div id="dash-priority-tasks" class="widget-body"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-regular fa-calendar-check gold-text"></i> المواعيد والامتحانات القادمة</h3>
+              <button class="btn-link" data-goto="calendar">التقويم</button>
+            </div>
+            <div id="dash-upcoming-events" class="widget-body"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-diagram-project gold-text"></i> تقدم المشاريع والمواد</h3>
+              <button class="btn-link" data-goto="projects">المشاريع</button>
+            </div>
+            <div id="dash-active-projects" class="widget-body"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-regular fa-note-sticky gold-text"></i> آخر الملاحظات المثبتة</h3>
+              <button class="btn-link" data-goto="notes">الملاحظات</button>
+            </div>
+            <div id="dash-recent-notes" class="widget-body"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           VIEW 2: TASK MANAGEMENT
+      ====================================================== -->
+      <section id="view-tasks" class="view-section">
+        <div class="section-toolbar">
+          <div class="filters-row">
+            <input type="search" id="task-search" class="input-sm" placeholder="ابحث في المهام..." />
+            <select id="task-filter-status" class="select-sm">
+              <option value="all">كل الحالات</option>
+              <option value="Pending">قيد الانتظار (Pending)</option>
+              <option value="In Progress">جاري التنفيذ (In Progress)</option>
+              <option value="Completed">مكتملة (Completed)</option>
+              <option value="Cancelled">ملغاة (Cancelled)</option>
+            </select>
+            <select id="task-filter-priority" class="select-sm">
+              <option value="all">كل الأولويات</option>
+              <option value="Urgent">عاجل (Urgent)</option>
+              <option value="High">مرتفع (High)</option>
+              <option value="Medium">متوسط (Medium)</option>
+              <option value="Low">منخفض (Low)</option>
+            </select>
+            <select id="task-filter-range" class="select-sm">
+              <option value="all">كل الأوقات</option>
+              <option value="today">مهام اليوم</option>
+              <option value="week">هذا الأسبوع</option>
+              <option value="month">هذا الشهر</option>
+              <option value="overdue">المتأخرة (Overdue)</option>
+            </select>
+          </div>
+          <button id="btn-open-task-modal" class="btn btn-gold">
+            <i class="fa-solid fa-plus"></i> إضافة مهمة جديدة
+          </button>
+        </div>
+
+        <div id="tasks-list-container" class="items-grid"></div>
+      </section>
+
+      <!-- =====================================================
+           VIEW 3: CALENDAR
+      ====================================================== -->
+      <section id="view-calendar" class="view-section">
+        <div class="section-toolbar">
+          <div class="calendar-nav">
+            <button id="cal-prev" class="btn btn-outline btn-sm"><i class="fa-solid fa-chevron-right"></i></button>
+            <h3 id="cal-current-label">...</h3>
+            <button id="cal-next" class="btn btn-outline btn-sm"><i class="fa-solid fa-chevron-left"></i></button>
+          </div>
+          <div class="filters-row">
+            <div class="btn-group">
+              <button class="btn btn-sm btn-outline active" data-cal-mode="month">شهري</button>
+              <button class="btn btn-sm btn-outline" data-cal-mode="week">أسبوعي</button>
+              <button class="btn btn-sm btn-outline" data-cal-mode="day">يومي</button>
+            </div>
+            <button id="btn-open-event-modal" class="btn btn-gold btn-sm">
+              <i class="fa-solid fa-plus"></i> إضافة حدث / موعد
+            </button>
+          </div>
+        </div>
+
+        <div class="calendar-layout">
+          <div class="card calendar-board-card">
+            <div id="calendar-grid-container"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3>الأحداث والمواعيد المسجلة</h3>
+            </div>
+            <div id="calendar-events-list" class="widget-body"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           VIEW 4: UNIVERSITY
+      ====================================================== -->
+      <section id="view-university" class="view-section">
+        <div class="section-toolbar">
+          <div class="btn-group">
+            <button class="btn btn-outline active" data-uni-tab="subjects">المواد والجدول</button>
+            <button class="btn btn-outline" data-uni-tab="lectures">المحاضرات والتكليفات</button>
+            <button class="btn btn-outline" data-uni-tab="grades">الامتحانات والدرجات</button>
+          </div>
+          <div class="filters-row">
+            <button id="btn-add-subject" class="btn btn-gold btn-sm"><i class="fa-solid fa-book-medical"></i> مادة جديدة</button>
+            <button id="btn-add-lecture" class="btn btn-outline btn-sm"><i class="fa-solid fa-file-circle-plus"></i> محاضرة / واجب</button>
+          </div>
+        </div>
+
+        <div id="uni-subjects-panel" class="uni-panel">
+          <div id="subjects-container" class="items-grid"></div>
+        </div>
+
+        <div id="uni-lectures-panel" class="uni-panel hidden">
+          <div id="lectures-container" class="items-grid"></div>
+        </div>
+
+        <div id="uni-grades-panel" class="uni-panel hidden">
+          <div class="card">
+            <div class="card-header">
+              <h3>سجل الدرجات وحساب المعدل الفعلي</h3>
+              <span id="uni-overall-avg" class="badge badge-gold">المتوسط التراكمي: 0%</span>
+            </div>
+            <div id="grades-container" class="widget-body"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           VIEW 5: ISLAMIC LIFE (QURAN & WORSHIP)
+      ====================================================== -->
+      <section id="view-islamic" class="view-section">
+        <div class="dashboard-grid">
+          <!-- Daily Prayers Card -->
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-mosque gold-text"></i> سجل الصلوات اليومي</h3>
+              <input type="date" id="prayer-date-picker" class="input-sm" />
+            </div>
+            <div class="prayer-tracker-list" id="prayer-tracker-list">
+              <!-- Populated dynamically with Fajr, Dhuhr, Asr, Maghrib, Isha -->
+            </div>
+          </div>
+
+          <!-- Quran Progress & Hifz Log -->
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-book-quran gold-text"></i> ورد القرآن والحفظ والمراجعة</h3>
+              <button id="btn-add-quran-log" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> تسجيل ورد</button>
+            </div>
+            <div id="quran-logs-container" class="widget-body"></div>
+          </div>
+        </div>
+
+        <!-- Authentic Adhkar & Islamic Knowledge -->
+        <div class="dashboard-grid mt-4">
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-sun gold-text"></i> الأذكار الصحيحة المأثورة</h3>
+              <div class="btn-group">
+                <button class="btn btn-xs btn-outline active" data-adhkar-time="morning">أذكار الصباح</button>
+                <button class="btn btn-xs btn-outline" data-adhkar-time="evening">أذكار المساء</button>
+              </div>
+            </div>
+            <div id="adhkar-list-container" class="widget-body"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-feather-pointed gold-text"></i> طلب العلم والفوائد العلمية</h3>
+              <button id="btn-add-islamic-note" class="btn btn-outline btn-sm"><i class="fa-solid fa-plus"></i> إضافة درس / فائدة</button>
+            </div>
+            <div id="islamic-study-container" class="widget-body"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           VIEW 6: PROJECTS & CODING
+      ====================================================== -->
+      <section id="view-projects" class="view-section">
+        <div class="section-toolbar">
+          <input type="search" id="project-search" class="input-sm" placeholder="ابحث في المشاريع والتقنيات..." />
+          <button id="btn-open-project-modal" class="btn btn-gold">
+            <i class="fa-solid fa-plus"></i> مشروع برمجي جديد
+          </button>
+        </div>
+        <div id="projects-container" class="items-grid"></div>
+      </section>
+
+      <!-- =====================================================
+           VIEW 7: SELF DEVELOPMENT & LANGUAGES
+      ====================================================== -->
+      <section id="view-languages" class="view-section">
+        <div class="section-toolbar">
+          <div class="filters-row">
+            <input type="search" id="vocab-search" class="input-sm" placeholder="ابحث في الكلمات أو المعاني..." />
+            <select id="vocab-lang-filter" class="select-sm">
+              <option value="all">كل اللغات</option>
+              <option value="English">English</option>
+              <option value="German">Deutsch</option>
+              <option value="French">Français</option>
+              <option value="Spanish">Español</option>
+            </select>
+          </div>
+          <div class="filters-row">
+            <button id="btn-add-vocab" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> كلمة جديدة</button>
+            <button id="btn-add-skill-log" class="btn btn-outline btn-sm"><i class="fa-solid fa-chart-line"></i> تسجيل ممارسة / دورة</button>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header"><h3>قاموس الكلمات والمفردات المحفوظة</h3></div>
+            <div id="vocab-container" class="widget-body"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>سجل المهارات الأربع والدورات</h3></div>
+            <div id="skills-log-container" class="widget-body"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           VIEW 8: FINANCE MANAGER
+      ====================================================== -->
+      <section id="view-finance" class="view-section">
+        <div class="section-toolbar">
+          <div class="filters-row">
+            <input type="search" id="finance-search" class="input-sm" placeholder="ابحث في المعاملات..." />
+            <select id="finance-type-filter" class="select-sm">
+              <option value="all">الكل (دخل ومصروفات)</option>
+              <option value="income">الدخل فقط</option>
+              <option value="expense">المصروفات فقط</option>
+            </select>
+          </div>
+          <div class="filters-row">
+            <button id="btn-set-budget" class="btn btn-outline btn-sm"><i class="fa-solid fa-bullseye"></i> تحديد الميزانية</button>
+            <button id="btn-add-transaction" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> تسجيل معاملة مالية</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon emerald"><i class="fa-solid fa-arrow-trend-up"></i></div>
+            <div class="kpi-info">
+              <span class="kpi-label">إجمالي الدخل</span>
+              <h3 id="fin-total-income">0</h3>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon danger"><i class="fa-solid fa-arrow-trend-down"></i></div>
+            <div class="kpi-info">
+              <span class="kpi-label">إجمالي المصروفات</span>
+              <h3 id="fin-total-expense">0</h3>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon gold"><i class="fa-solid fa-scale-balanced"></i></div>
+            <div class="kpi-info">
+              <span class="kpi-label">الميزانية الشهرية المحددة</span>
+              <h3 id="fin-monthly-budget">غير محددة</h3>
+              <small id="fin-budget-status">أضف ميزانيتك للمتابعة</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header"><h3>سجل المعاملات المالية</h3></div>
+            <div id="transactions-container" class="widget-body"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>مقارنة الدخل بالمصروفات</h3></div>
+            <div class="chart-wrapper">
+              <canvas id="finance-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           VIEW 9: NOTES & KNOWLEDGE BASE
+      ====================================================== -->
+      <section id="view-notes" class="view-section">
+        <div class="section-toolbar">
+          <div class="filters-row">
+            <input type="search" id="notes-search" class="input-sm" placeholder="ابحث في العناوين، المحتوى، أو الوسوم..." />
+          </div>
+          <div class="filters-row">
+            <button id="btn-voice-note" class="btn btn-outline btn-sm"><i class="fa-solid fa-microphone"></i> إملاء صوتي</button>
+            <button id="btn-add-note" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> ملاحظة جديدة</button>
+          </div>
+        </div>
+        <div id="notes-container" class="items-grid"></div>
+      </section>
+
+      <!-- =====================================================
+           VIEW 10: FILE VAULT (FIREBASE STORAGE)
+      ====================================================== -->
+      <section id="view-files" class="view-section">
+        <div class="section-toolbar">
+          <div class="filters-row">
+            <input type="search" id="files-search" class="input-sm" placeholder="ابحث في أسماء الملفات أو المجلدات..." />
+            <select id="files-folder-filter" class="select-sm">
+              <option value="all">كل المجلدات</option>
+              <option value="University">الجامعة (University)</option>
+              <option value="Projects">المشاريع (Projects)</option>
+              <option value="Documents">وثائق عامة (Documents)</option>
+              <option value="Media">وسائط (Media)</option>
+            </select>
+          </div>
+          <button id="btn-upload-file" class="btn btn-gold btn-sm">
+            <i class="fa-solid fa-cloud-arrow-up"></i> رفع ملف إلى الخزنة
+          </button>
+        </div>
+
+        <!-- Upload Progress Box -->
+        <div id="file-upload-progress-box" class="upload-progress-box hidden">
+          <div class="flex-between">
+            <span id="upload-filename-label">جاري الرفع...</span>
+            <span id="upload-percent-label">0%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div id="upload-progress-bar" class="progress-bar-fill" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div id="files-container" class="items-grid"></div>
+      </section>
+
+      <!-- =====================================================
+           VIEW 11: MEDIA CENTER & LEGAL DOWNLOADER
+      ====================================================== -->
+      <section id="view-media" class="view-section">
+        <div class="dashboard-grid">
+          <!-- Link Inspector & Legal Media Downloader -->
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-link gold-text"></i> فاحص الروابط، المشاركة، والتنزيل القانوني</h3>
+            </div>
+            <div class="form-group">
+              <label>الصق أي رابط (أو استقبله عبر مشاركة Android Web Share Target)</label>
+              <div class="input-action-row">
+                <input type="url" id="media-url-input" dir="ltr" placeholder="https://example.com/video.mp4 or YouTube/Social URL" />
+                <button id="btn-inspect-url" class="btn btn-gold btn-sm">فحص الرابط</button>
+              </div>
+            </div>
+
+            <!-- Detected URL Info Panel -->
+            <div id="media-inspect-result" class="inspect-box hidden">
+              <div class="flex-between">
+                <strong id="inspect-platform-name">...</strong>
+                <span id="inspect-type-badge" class="badge badge-gold">...</span>
+              </div>
+              <p id="inspect-url-display" class="small-muted break-all"></p>
+              <p id="inspect-legal-notice" class="small-note"></p>
+
+              <div id="media-preview-container" class="media-preview-box"></div>
+
+              <div class="config-actions mt-2">
+                <button id="btn-save-link-firestore" class="btn btn-outline btn-sm">
+                  <i class="fa-regular fa-bookmark"></i> حفظ في الروابط
+                </button>
+                <button id="btn-direct-download" class="btn btn-gold btn-sm hidden">
+                  <i class="fa-solid fa-download"></i> تنزيل الملف المسموح قانونياً
+                </button>
+                <button id="btn-cancel-download" class="btn btn-danger btn-sm hidden">
+                  <i class="fa-solid fa-xmark"></i> إلغاء التنزيل
+                </button>
+              </div>
+
+              <!-- Real Stream Download Progress -->
+              <div id="media-dl-progress-wrap" class="upload-progress-box hidden mt-2">
+                <div class="flex-between">
+                  <span id="media-dl-status">جاري التنزيل...</span>
+                  <span id="media-dl-bytes">0 KB</span>
+                </div>
+                <div class="progress-bar-track">
+                  <div id="media-dl-bar" class="progress-bar-fill" style="width:0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Playlist Manager & Local/Direct Player -->
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-list-music gold-text"></i> مدير قوائم التشغيل والمشغل</h3>
+              <button id="btn-add-playlist-item" class="btn btn-outline btn-sm"><i class="fa-solid fa-plus"></i> إضافة لقائمة التشغيل</button>
+            </div>
+            <div class="player-box">
+              <video id="main-media-player" controls class="media-player-element"></video>
+            </div>
+            <div id="playlist-container" class="widget-body mt-2"></div>
+          </div>
+        </div>
+
+        <div class="card mt-4">
+          <div class="card-header">
+            <h3>الروابط المحفوظة والمصنفة</h3>
+            <input type="search" id="saved-links-search" class="input-sm" placeholder="ابحث في الروابط المحفوظة..." />
+          </div>
+          <div id="saved-links-container" class="items-grid"></div>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           VIEW 12: AI PERSONAL ASSISTANT
+      ====================================================== -->
+      <section id="view-ai" class="view-section">
+        <div class="ai-layout">
+          <div class="card ai-chat-card">
+            <div class="card-header">
+              <div>
+                <h3><i class="fa-solid fa-wand-magic-sparkles gold-text"></i> المساعد الشخصي الذكي (AI Life Assistant)</h3>
+                <small class="small-muted">يحلل بياناتك المصرح بها وينفذ الإجراءات في Firebase بعد تأكيدك الصريح</small>
+              </div>
+              <button id="btn-ai-settings" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-server"></i> إعداد نقطة اتصال AI Backend
+              </button>
+            </div>
+
+            <!-- Quick AI Prompts -->
+            <div class="ai-suggestions">
+              <button class="chip" data-ai-prompt="نظم يومي واقترح جدولاً بناءً على مهامي الحالية">تنظيم اليوم</button>
+              <button class="chip" data-ai-prompt="حلل المهام المتأخرة واقترح الأولويات">تحليل المهام المتأخرة</button>
+              <button class="chip" data-ai-prompt="أضف مذاكرة دوائر كهربائية غداً الساعة 5">مثال إجراء: إضافة مهمة</button>
+              <button class="chip" data-ai-prompt="سجل مصروف 250 جنيه مراجع دراسية">مثال إجراء: تسجيل مصروف</button>
+              <button class="chip" data-ai-prompt="لخص إنجازاتي ومشاريعي النشطة">ملخص الإنجازات</button>
+            </div>
+
+            <!-- Chat Messages Log -->
+            <div id="ai-messages-box" class="ai-messages-box"></div>
+
+            <!-- Pending Action Confirmation Card (Shown before writing to Firebase) -->
+            <div id="ai-confirmation-card" class="ai-confirm-box hidden">
+              <h4><i class="fa-solid fa-shield-halved gold-text"></i> تأكيد تنفيذ الإجراء في Firebase</h4>
+              <p id="ai-confirm-summary">...</p>
+              <pre id="ai-confirm-payload" dir="ltr" class="code-preview"></pre>
+              <div class="config-actions">
+                <button id="btn-confirm-ai-action" class="btn btn-gold btn-sm">
+                  <i class="fa-solid fa-check"></i> تأكيد وتنفيذ في قاعدة البيانات
+                </button>
+                <button id="btn-cancel-ai-action" class="btn btn-outline btn-sm">
+                  <i class="fa-solid fa-xmark"></i> إلغاء
+                </button>
+              </div>
+            </div>
+
+            <!-- Chat Input -->
+            <form id="ai-chat-form" class="ai-input-row">
+              <input type="text" id="ai-user-input" required placeholder="اطلب تنظيم يومك، أو اكتب أمراً مثل: أضف مذاكرة دوائر كهربائية غداً الساعة 5..." />
+              <button type="submit" class="btn btn-gold">
+                <i class="fa-solid fa-paper-plane"></i> إرسال
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           VIEW 13: WEEKLY & MONTHLY REPORTS
+      ====================================================== -->
+      <section id="view-reports" class="view-section">
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header"><h3>توزيع حالات المهام الفعلية</h3></div>
+            <div class="chart-wrapper"><canvas id="report-tasks-chart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>تقدم المشاريع والمواد الدراسية</h3></div>
+            <div class="chart-wrapper"><canvas id="report-projects-chart"></canvas></div>
+          </div>
+        </div>
+        <div class="card mt-4">
+          <div class="card-header"><h3>ملخص الأداء الأسبوعي والشهري الحقيقي</h3></div>
+          <div id="reports-summary-metrics" class="kpi-grid"></div>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           VIEW 14: UNIFIED SEARCH ENGINE
+      ====================================================== -->
+      <section id="view-search" class="view-section">
+        <div class="card">
+          <div class="section-toolbar">
+            <input type="search" id="global-search-input" class="input-lg" placeholder="ابحث في المهام، الملاحظات، المشاريع، المواد، الملفات، الروابط، الكلمات، والأحداث..." />
+            <select id="global-search-scope" class="select-sm">
+              <option value="all">كل الأقسام</option>
+              <option value="tasks">المهام</option>
+              <option value="notes">الملاحظات</option>
+              <option value="projects">المشاريع</option>
+              <option value="subjects">المواد الدراسية</option>
+              <option value="files">الملفات</option>
+              <option value="links">الروابط</option>
+              <option value="vocab">الكلمات</option>
+              <option value="events">الأحداث</option>
+            </select>
+          </div>
+          <div id="global-search-results" class="items-grid mt-4"></div>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           VIEW 15: SETTINGS & ACCOUNT MANAGEMENT
+      ====================================================== -->
+      <section id="view-settings" class="view-section">
+        <div class="dashboard-grid">
+          <!-- Profile & Account -->
+          <div class="card">
+            <div class="card-header"><h3><i class="fa-regular fa-id-badge gold-text"></i> الملف الشخصي والحساب</h3></div>
+            <form id="settings-profile-form">
+              <div class="form-group">
+                <label>الاسم المعروض</label>
+                <input type="text" id="set-display-name" required />
+              </div>
+              <div class="form-group">
+                <label>رابط الصورة الشخصية (URL)</label>
+                <input type="url" id="set-photo-url" dir="ltr" />
+              </div>
+              <button type="submit" class="btn btn-gold btn-sm">حفظ التعديلات في الحساب</button>
+            </form>
+          </div>
+
+          <!-- Preferences -->
+          <div class="card">
+            <div class="card-header"><h3><i class="fa-solid fa-sliders gold-text"></i> التفضيلات والعرض</h3></div>
+            <div class="form-group">
+              <label>العملة الافتراضية</label>
+              <select id="set-currency" class="select-sm">
+                <option value="EGP">جنيه مصري (EGP)</option>
+                <option value="SAR">ريال سعودي (SAR)</option>
+                <option value="USD">دولار أمريكي (USD)</option>
+                <option value="EUR">يورو (EUR)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>حجم الخط</label>
+              <select id="set-font-size" class="select-sm">
+                <option value="small">صغير (Small)</option>
+                <option value="normal" selected>قياسي (Normal)</option>
+                <option value="large">كبير (Large)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>الإشعارات الذكية (Browser Notification API)</label>
+              <button type="button" id="btn-enable-notifications" class="btn btn-outline btn-sm">
+                <i class="fa-regular fa-bell"></i> تفعيل إشعارات المتصفح
+              </button>
+            </div>
+            <button id="btn-save-preferences" class="btn btn-gold btn-sm">حفظ الإعدادات في Firestore</button>
+          </div>
+
+          <!-- Backup, Export, Import & Danger Zone -->
+          <div class="card">
+            <div class="card-header"><h3><i class="fa-solid fa-database gold-text"></i> النسخ الاحتياطي وإدارة البيانات</h3></div>
+            <p class="small-muted">تصدير واستيراد جميع بياناتك الفعلية بصيغة JSON، أو مسح البيانات.</p>
+            <div class="config-actions mt-2">
+              <button id="btn-export-data" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-file-export"></i> تصدير بياناتي (JSON)
+              </button>
+              <label class="btn btn-outline btn-sm" style="cursor:pointer;">
+                <i class="fa-solid fa-file-import"></i> استيراد بيانات (JSON)
+                <input type="file" id="input-import-json" accept=".json" class="hidden" />
+              </label>
+            </div>
+            <hr class="divider" />
+            <div class="config-actions">
+              <button id="btn-delete-all-data" class="btn btn-danger btn-sm">
+                <i class="fa-solid fa-triangle-exclamation"></i> حذف جميع بياناتي من Firestore
+              </button>
+              <button id="btn-delete-account" class="btn btn-danger btn-sm">
+                <i class="fa-solid fa-user-slash"></i> حذف الحساب نهائياً
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Developer Footer Signature -->
+      <footer class="app-footer">
+        <p>MY LIFE OS &bull; تم تطوير هذا البرنامج بواسطة المهندس <strong>Eng:Ahmed M Hosny</strong></p>
+      </footer>
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="bottom-nav mobile-only">
+      <button class="bottom-nav-item active" data-view="dashboard">
+        <i class="fa-solid fa-gauge-high"></i><span>الرئيسية</span>
+      </button>
+      <button class="bottom-nav-item" data-view="tasks">
+        <i class="fa-solid fa-list-check"></i><span>المهام</span>
+      </button>
+      <button class="bottom-nav-item" data-view="university">
+        <i class="fa-solid fa-graduation-cap"></i><span>الجامعة</span>
+      </button>
+      <button class="bottom-nav-item" data-view="ai">
+        <i class="fa-solid fa-wand-magic-sparkles"></i><span>AI</span>
+      </button>
+      <button class="bottom-nav-item" data-view="settings">
+        <i class="fa-solid fa-sliders"></i><span>الإعدادات</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- =========================================================
+       3. UNIVERSAL DYNAMIC MODAL FOR ALL CRUD FORMS
+  ========================================================== -->
+  <div id="universal-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-title">إضافة عنصر</h3>
+        <button id="btn-close-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="universal-modal-form" class="modal-body"></form>
+    </div>
+  </div>
+
+  <!-- Main Application Script (ES Module) -->
+  <script type="module" src="script.js"></script>
+</body>
+</html>
