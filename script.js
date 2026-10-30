@@ -43,11 +43,12 @@ import {
    1. DYNAMIC PWA MANIFEST (WITH WEB SHARE TARGET) & SERVICE WORKER
    ============================================================================ */
 function injectPWAManifestAndSW() {
+  const cleanUrl = window.location.href.split("?")[0].split("#")[0];
   const manifestObj = {
     name: "MY LIFE OS — Personal Operating System",
     short_name: "MY LIFE OS",
     description: "Complete Personal Life Operating System Powered by Firebase & AI",
-    start_url: window.location.pathname || "./index.html",
+    start_url: cleanUrl,
     display: "standalone",
     background_color: "#07090e",
     theme_color: "#d4af37",
@@ -60,7 +61,7 @@ function injectPWAManifestAndSW() {
       }
     ],
     share_target: {
-      action: window.location.pathname || "./index.html",
+      action: cleanUrl,
       method: "GET",
       enctype: "application/x-www-form-urlencoded",
       params: {
@@ -76,12 +77,6 @@ function injectPWAManifestAndSW() {
   manifestLink.rel = "manifest";
   manifestLink.href = URL.createObjectURL(manifestBlob);
   document.head.appendChild(manifestLink);
-
-  if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
-    navigator.serviceWorker.register("./sw.js").catch(() => {
-      // Fallback safely if sw.js is not hosted separately in 3-file IDE preview
-    });
-  }
 }
 injectPWAManifestAndSW();
 
@@ -233,69 +228,173 @@ function initLuxuryParticles() {
     h = canvas.height = window.innerHeight;
   });
 
-  const mouse = { x: w / 2, y: h / 2 };
+  const mouse = { x: w / 2, y: h / 2, active: false };
+  const sparks = [];
+  const meteors = [];
+
+  // تفاعل الماوس: شرارات ذهبية + إمالة 3D لكارت الدخول
+  const authCard = document.querySelector(".luxury-glass-card");
   window.addEventListener("mousemove", (e) => {
     mouse.x = e.clientX;
     mouse.y = e.clientY;
+    mouse.active = true;
+
+    // إضافة شرارات مضيئة تتبع حركة الماوس
+    for (let i = 0; i < 2; i++) {
+      sparks.push({
+        x: mouse.x,
+        y: mouse.y,
+        vx: (Math.random() - 0.5) * 2.8,
+        vy: (Math.random() - 0.5) * 2.8 - 0.5,
+        r: Math.random() * 2.4 + 0.8,
+        alpha: 1,
+        gold: Math.random() > 0.3
+      });
+    }
+
+    // حركة 3D Parallax للكارت
+    if (authCard && !document.getElementById("auth-view")?.classList.contains("hidden")) {
+      const rx = ((e.clientY - h / 2) / (h / 2)) * -7;
+      const ry = ((e.clientX - w / 2) / (w / 2)) * 7;
+      authCard.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+    }
   });
 
-  const count = Math.min(55, Math.floor((w * h) / 22000));
+  // انفجار شرارات ذهبية عند الضغط بالماوس (Click Burst)
+  window.addEventListener("click", (e) => {
+    for (let i = 0; i < 22; i++) {
+      const angle = (Math.PI * 2 * i) / 22;
+      const speed = Math.random() * 4.5 + 1.5;
+      sparks.push({
+        x: e.clientX,
+        y: e.clientY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        r: Math.random() * 3 + 1.2,
+        alpha: 1,
+        gold: i % 3 !== 0
+      });
+    }
+  });
+
+  // الجزيئات الطائرة الأساسية
+  const count = Math.min(75, Math.floor((w * h) / 16000));
   const particles = Array.from({ length: count }, () => ({
     x: Math.random() * w,
     y: Math.random() * h,
-    vx: (Math.random() - 0.5) * 0.55,
-    vy: -Math.random() * 0.65 - 0.15, // تطير للأعلى بنعومة
-    r: Math.random() * 2.2 + 0.8,
-    gold: Math.random() > 0.28
+    vx: (Math.random() - 0.5) * 0.85,
+    vy: -Math.random() * 1.1 - 0.3,
+    r: Math.random() * 2.8 + 1,
+    gold: Math.random() > 0.25
   }));
+
+  function spawnMeteor() {
+    if (meteors.length < 3 && Math.random() < 0.035) {
+      meteors.push({
+        x: Math.random() * w,
+        y: -20,
+        vx: (Math.random() - 0.5) * 6 + 3,
+        vy: Math.random() * 5 + 4,
+        len: Math.random() * 90 + 50,
+        alpha: 1
+      });
+    }
+  }
 
   function animate() {
     ctx.clearRect(0, 0, w, h);
+    spawnMeteor();
+
+    // 1. رسم الشهب الطائرة (Shooting Golden Meteors)
+    for (let i = meteors.length - 1; i >= 0; i--) {
+      const m = meteors[i];
+      m.x += m.vx;
+      m.y += m.vy;
+      m.alpha -= 0.012;
+
+      const grad = ctx.createLinearGradient(m.x, m.y, m.x - m.vx * 10, m.y - m.vy * 10);
+      grad.addColorStop(0, `rgba(212, 175, 55, ${m.alpha})`);
+      grad.addColorStop(1, "rgba(212, 175, 55, 0)");
+
+      ctx.beginPath();
+      ctx.moveTo(m.x, m.y);
+      ctx.lineTo(m.x - m.vx * 10, m.y - m.vy * 10);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+
+      if (m.alpha <= 0 || m.y > h + 100) meteors.splice(i, 1);
+    }
+
+    // 2. رسم الجزيئات الطائرة والشبكة الذكية
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
       p.x += p.vx;
       p.y += p.vy;
 
-      if (p.y < -10) p.y = h + 10;
-      if (p.x < -10) p.x = w + 10;
-      if (p.x > w + 10) p.x = -10;
+      if (p.y < -15) p.y = h + 15;
+      if (p.x < -15) p.x = w + 15;
+      if (p.x > w + 15) p.x = -15;
 
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = p.gold ? "rgba(212, 175, 55, 0.65)" : "rgba(16, 185, 129, 0.55)";
-      ctx.shadowBlur = 10;
+      ctx.fillStyle = p.gold ? "rgba(212, 175, 55, 0.85)" : "rgba(16, 185, 129, 0.75)";
+      ctx.shadowBlur = 14;
       ctx.shadowColor = p.gold ? "#d4af37" : "#10b981";
       ctx.fill();
 
-      // خطوط الشبكة الذكية عند اقتراب الجزيئات أو الماوس
       for (let j = i + 1; j < particles.length; j++) {
         const p2 = particles[j];
         const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
-        if (dist < 125) {
+        if (dist < 135) {
           ctx.beginPath();
           ctx.moveTo(p.x, p.y);
           ctx.lineTo(p2.x, p2.y);
-          ctx.strokeStyle = `rgba(212, 175, 55, ${(1 - dist / 125) * 0.16})`;
-          ctx.lineWidth = 0.6;
+          ctx.strokeStyle = `rgba(212, 175, 55, ${(1 - dist / 135) * 0.25})`;
+          ctx.lineWidth = 0.8;
           ctx.stroke();
         }
       }
 
-      const mDist = Math.hypot(p.x - mouse.x, p.y - mouse.y);
-      if (mDist < 150) {
-        ctx.beginPath();
-        ctx.moveTo(p.x, p.y);
-        ctx.lineTo(mouse.x, mouse.y);
-        ctx.strokeStyle = `rgba(212, 175, 55, ${(1 - mDist / 150) * 0.3})`;
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
+      if (mouse.active) {
+        const mDist = Math.hypot(p.x - mouse.x, p.y - mouse.y);
+        if (mDist < 175) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(mouse.x, mouse.y);
+          ctx.strokeStyle = `rgba(16, 185, 129, ${(1 - mDist / 175) * 0.45})`;
+          ctx.lineWidth = 1.1;
+          ctx.stroke();
+        }
       }
     }
+
+    // 3. رسم شرارات الماوس وانفجارات الكليك
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i];
+      s.x += s.vx;
+      s.y += s.vy;
+      s.alpha -= 0.028;
+
+      if (s.alpha <= 0) {
+        sparks.splice(i, 1);
+        continue;
+      }
+
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = s.gold
+        ? `rgba(243, 229, 171, ${s.alpha})`
+        : `rgba(16, 185, 129, ${s.alpha})`;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = s.gold ? "#d4af37" : "#10b981";
+      ctx.fill();
+    }
+
     requestAnimationFrame(animate);
   }
   animate();
 }
-
 /* ============================================================================
    6. AUTHENTICATION & ROUTE PROTECTION
    ============================================================================ */
@@ -1511,9 +1610,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Network listeners
   window.addEventListener("online", () => document.getElementById("network-banner").classList.add("hidden"));
   window.addEventListener("offline", () => document.getElementById("network-banner").classList.remove("hidden"));
-
-  // Init Firebase
-  initFirebaseSystem();
 
 // تشغيل اتصال Firebase التلقائي + أنيميشن الجزيئات الطائرة
   initFirebaseSystem();

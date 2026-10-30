@@ -937,8 +937,19 @@ input:focus, select:focus, textarea:focus {
   .bottom-nav-item.active { color: var(--gold-primary); }
 }
 /* ==========================================================================
-   ULTRA LUXURY FLOATING ANIMATIONS, PARTICLES & GLASSMORPHISM
+   ULTRA LUXURY CYBER-GOLD ANIMATIONS, FLOATING ICONS & 3D PARALLAX
    ========================================================================== */
+
+/* جعل خلفية الشاشات شفافة لكشف الأنيميشن السينمائي في الخلفية */
+.auth-wrapper {
+  background: radial-gradient(circle at 50% 20%, rgba(212, 175, 55, 0.14), transparent 55%),
+              radial-gradient(circle at 15% 85%, rgba(16, 185, 129, 0.12), transparent 50%) !important;
+  perspective: 1200px;
+}
+
+.main-content {
+  background: transparent !important;
+}
 
 .luxury-bg-canvas {
   position: fixed;
@@ -959,118 +970,145 @@ input:focus, select:focus, textarea:focus {
 
 .float-icon {
   position: absolute;
-  bottom: -80px;
-  color: rgba(212, 175, 55, 0.12);
-  filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.25));
-  animation: floatUpLuxury 18s linear infinite;
+  bottom: -100px;
+  color: rgba(212, 175, 55, 0.38);
+  filter: drop-shadow(0 0 18px rgba(212, 175, 55, 0.65));
+  animation: floatUpLuxury 14s linear infinite;
 }
 
-.float-icon.f-1 { left: 8%; font-size: 2.2rem; animation-duration: 16s; animation-delay: 0s; }
-.float-icon.f-2 { left: 22%; font-size: 1.6rem; animation-duration: 21s; animation-delay: 3s; color: rgba(16, 185, 129, 0.12); }
-.float-icon.f-3 { left: 38%; font-size: 2.6rem; animation-duration: 19s; animation-delay: 1.5s; }
-.float-icon.f-4 { left: 54%; font-size: 1.9rem; animation-duration: 23s; animation-delay: 5s; }
-.float-icon.f-5 { left: 68%; font-size: 2.4rem; animation-duration: 17s; animation-delay: 2s; color: rgba(16, 185, 129, 0.14); }
-.float-icon.f-6 { left: 82%; font-size: 1.7rem; animation-duration: 20s; animation-delay: 4s; }
-.float-icon.f-7 { left: 91%; font-size: 2.1rem; animation-duration: 15s; animation-delay: 6s; }
-.float-icon.f-8 { left: 14%; font-size: 1.8rem; animation-duration: 24s; animation-delay: 7s; }
+.float-icon.f-1 { left: 7%; font-size: 2.5rem; animation-duration: 13s; animation-delay: 0s; }
+.float-icon.f-2 { left: 19%; font-size: 1.9rem; animation-duration: 17s; animation-delay: 1s; color: rgba(16, 185, 129, 0.42); filter: drop-shadow(0 0 18px rgba(16, 185, 129, 0.65)); }
+.float-icon.f-3 { left: 33%; font-size: 2.8rem; animation-duration: 15s; animation-delay: 0.5s; }
+.float-icon.f-4 { left: 52%; font-size: 2.2rem; animation-duration: 18s; animation-delay: 2s; }
+.float-icon.f-5 { left: 69%; font-size: 2.6rem; animation-duration: 14s; animation-delay: 0.8s; color: rgba(16, 185, 129, 0.42); filter: drop-shadow(0 0 18px rgba(16, 185, 129, 0.65)); }
+.float-icon.f-6 { left: 83%; font-size: 2rem; animation-duration: 16s; animation-delay: 1.5s; }
+.float-icon.f-7 { left: 92%; font-size: 2.4rem; animation-duration: 12s; animation-delay: 2.5s; }
+.float-icon.f-8 { left: 12%; font-size: 2.1rem; animation-duration: 19s; animation-delay: 3s; }
 
 @keyframes floatUpLuxury {
   0% {
-    transform: translateY(0) rotate(0deg) scale(0.8);
+    transform: translateY(10vh) rotate(0deg) scale(0.75);
     opacity: 0;
   }
-  15% {
-    opacity: 1;
+  12% {
+    opacity: 0.9;
   }
   85% {
-    opacity: 1;
+    opacity: 0.9;
   }
   100% {
-    transform: translateY(-115vh) rotate(360deg) scale(1.15);
+    transform: translateY(-120vh) rotate(360deg) scale(1.25);
     opacity: 0;
   }
 }
 
 .auth-wrapper, .app-shell {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
-.luxury-glass-card, .card, .kpi-card, .item-card {
-  background: rgba(20, 25, 38, 0.78) !important;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(212, 175, 55, 0.24) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+.luxury-glass-card {
+  position: relative;
+  background: rgba(15, 19, 29, 0.72) !important;
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid rgba(212, 175, 55, 0.42) !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8),
+              0 0 35px rgba(212, 175, 55, 0.14),
+              inset 0 1px 1px rgba(255, 255, 255, 0.15) !important;
+  transition: transform 0.15s ease-out, box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+}
+
+.card, .kpi-card, .item-card {
+  background: rgba(20, 25, 38, 0.74) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(212, 175, 55, 0.25) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
 }
 
 html[data-theme="light"] .luxury-glass-card,
 html[data-theme="light"] .card,
 html[data-theme="light"] .kpi-card,
 html[data-theme="light"] .item-card {
-  background: rgba(255, 255, 255, 0.88) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
 }
 
 .pulse-gold-ring {
   position: relative;
-  animation: levitateLogo 3.5s ease-in-out infinite;
+  animation: levitateLogo 3s ease-in-out infinite;
+  box-shadow: 0 0 35px rgba(212, 175, 55, 0.65) !important;
 }
 
+.pulse-gold-ring::before,
 .pulse-gold-ring::after {
   content: "";
   position: absolute;
-  inset: -6px;
+  inset: -8px;
   border-radius: 50%;
   border: 2px solid var(--gold-primary);
-  opacity: 0.6;
+  opacity: 0.7;
   animation: pulseRingOut 2.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
 }
 
+.pulse-gold-ring::before {
+  animation-delay: 1.1s;
+  border-color: var(--emerald-primary);
+}
+
 @keyframes levitateLogo {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8px) scale(1.06); }
 }
 
 @keyframes pulseRingOut {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  100% { transform: scale(1.45); opacity: 0; }
+  0% { transform: scale(0.9); opacity: 0.9; }
+  100% { transform: scale(1.65); opacity: 0; }
 }
 
 .shimmer-title {
-  background: linear-gradient(90deg, #ffffff 0%, #d4af37 50%, #ffffff 100%);
-  background-size: 200% auto;
+  background: linear-gradient(90deg, #ffffff 0%, #d4af37 35%, #10b981 65%, #ffffff 100%);
+  background-size: 250% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: goldShimmer 4s linear infinite;
+  animation: goldShimmer 3.5s linear infinite;
 }
 
 @keyframes goldShimmer {
-  to { background-position: 200% center; }
+  to { background-position: 250% center; }
 }
 
 .live-connected-bar {
-  border-color: rgba(16, 185, 129, 0.35) !important;
-  background: rgba(16, 185, 129, 0.06) !important;
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  background: rgba(16, 185, 129, 0.1) !important;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.12);
 }
 
 .live-dot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: #10b981;
   display: inline-block;
-  box-shadow: 0 0 10px #10b981;
-  animation: blinkDot 1.5s infinite;
+  box-shadow: 0 0 12px #10b981;
+  animation: blinkDot 1.2s infinite;
 }
 
 @keyframes blinkDot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.8); }
+  0%, 100% { opacity: 1; transform: scale(1.1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
 }
 
 .btn-luxury-shine {
   position: relative;
   overflow: hidden;
+  box-shadow: 0 8px 25px rgba(212, 175, 55, 0.35);
+}
+
+.btn-luxury-shine:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 12px 32px rgba(212, 175, 55, 0.55);
 }
 
 .btn-luxury-shine::before {
@@ -1078,14 +1116,14 @@ html[data-theme="light"] .item-card {
   position: absolute;
   top: 0;
   left: -100%;
-  width: 60%;
+  width: 65%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
   transform: skewX(-25deg);
-  animation: buttonShineSweep 3.5s infinite;
+  animation: buttonShineSweep 2.8s infinite;
 }
 
 @keyframes buttonShineSweep {
   0% { left: -100%; }
-  35%, 100% { left: 160%; }
+  40%, 100% { left: 165%; }
 }
