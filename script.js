@@ -2583,6 +2583,99 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // السبحة العائمة
   updateTasbeehUI();
+  // تحريك وتثبيت السبحة الإلكترونية في أي مكان على الشاشة (Drag & Drop بالماوس أو اللمس)
+  const tasbeehWidget = document.getElementById("floating-tasbeeh-widget");
+  if (tasbeehWidget) {
+    // استرجاع آخر مكان وضع فيه المستخدم السبحة
+    const savedPos = localStorage.getItem("MY_LIFE_OS_TASBEEH_POS");
+    if (savedPos) {
+      try {
+        const { x, y } = JSON.parse(savedPos);
+        tasbeehWidget.style.top = `${y}px`;
+        tasbeehWidget.style.left = `${x}px`;
+        tasbeehWidget.style.bottom = "auto";
+        tasbeehWidget.style.right = "auto";
+      } catch (e) {}
+    }
+
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let initialLeft = 0, initialTop = 0;
+    let hasMoved = false;
+
+    const onPointerDown = (e) => {
+      // عدم التحريك إذا كان الضغط داخل قائمة الأذكار المنسدلة
+      if (e.target.closest("#tasbeeh-popover")) return;
+
+      isDragging = true;
+      hasMoved = false;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      startX = clientX;
+      startY = clientY;
+
+      const rect = tasbeehWidget.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+
+      tasbeehWidget.classList.add("is-dragging");
+    };
+
+    const onPointerMove = (e) => {
+      if (!isDragging) return;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        hasMoved = true;
+      }
+
+      let newX = initialLeft + dx;
+      let newY = initialTop + dy;
+
+      // الحفاظ على الزر داخل حدود الشاشة
+      newX = Math.max(10, Math.min(window.innerWidth - 60, newX));
+      newY = Math.max(10, Math.min(window.innerHeight - 60, newY));
+
+      tasbeehWidget.style.top = `${newY}px`;
+      tasbeehWidget.style.left = `${newX}px`;
+      tasbeehWidget.style.bottom = "auto";
+      tasbeehWidget.style.right = "auto";
+    };
+
+    const onPointerUp = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      tasbeehWidget.classList.remove("is-dragging");
+
+      // حفظ المكان الجديد في LocalStorage
+      const rect = tasbeehWidget.getBoundingClientRect();
+      localStorage.setItem("MY_LIFE_OS_TASBEEH_POS", JSON.stringify({ x: rect.left, y: rect.top }));
+    };
+
+    // مستمعين الماوس واللمس (Desktop & Mobile Touch)
+    tasbeehWidget.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("mousemove", onPointerMove);
+    window.addEventListener("mouseup", onPointerUp);
+
+    tasbeehWidget.addEventListener("touchstart", onPointerDown, { passive: true });
+    window.addEventListener("touchmove", onPointerMove, { passive: true });
+    window.addEventListener("touchend", onPointerUp);
+
+    // منع فتح نافذة السبحة إذا كان المستخدم يقوم بسحبها
+    const tasbeehBtn = document.getElementById("btn-toggle-tasbeeh");
+    if (tasbeehBtn) {
+      const oldClick = tasbeehBtn.onclick;
+      tasbeehBtn.onclick = (e) => {
+        if (hasMoved) return; // تم السحب فقط
+        if (oldClick) oldClick(e);
+      };
+    }
+  }
   document.getElementById("btn-toggle-tasbeeh")?.addEventListener("click", () => {
     document.getElementById("tasbeeh-popover")?.classList.toggle("hidden");
   });
@@ -2926,14 +3019,39 @@ function toggleAmbientSound(type) {
   return true;
 }
 
-// 3. مؤقت بومودورو للتركيز التقني (25 دقيقة تركيز / 5 دقائق راحة)
+// 3. مؤقت بومودورو السينمائي المتطور (صوت تك تك ميكانيكي + اختيار المدة + ملء الشاشة)
 const PomodoroState = {
   duration: 25 * 60,
   timeLeft: 25 * 60,
   isRunning: false,
-  mode: "work", // "work" or "break"
-  intervalId: null
+  mode: "work",
+  intervalId: null,
+  tickSoundEnabled: true,
+  isFullscreen: false
 };
+
+// صوت "تك تك" ميكانيكي واقعي بالـ Web Audio API
+function playClockTick(isHigh = false) {
+  if (!PomodoroState.tickSoundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sine";
+    // تبادل التردد بين تكة وثانية لإعطاء إيقاع الساعة الحقيقية
+    osc.frequency.setValueAtTime(isHigh ? 1800 : 1300, ctx.currentTime);
+
+    gain.gain.setValueAtTime(0.04, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.025);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.025);
+  } catch (e) {}
+}
 
 function formatPomoTime(secs) {
   const m = String(Math.floor(secs / 60)).padStart(2, "0");
@@ -2945,6 +3063,14 @@ function updatePomodoroDisplays() {
   const timeStr = formatPomoTime(PomodoroState.timeLeft);
   const displayEl = document.getElementById("pomo-modal-display");
   if (displayEl) displayEl.textContent = timeStr;
+
+  // تحديث الحلقة الدائرية المتوهجة
+  const circleProgress = document.getElementById("pomo-circle-bar");
+  if (circleProgress) {
+    const total = PomodoroState.duration;
+    const offset = 690 - (690 * (PomodoroState.timeLeft / total));
+    circleProgress.style.strokeDashoffset = offset;
+  }
 
   const badge = document.getElementById("topbar-pomo-badge");
   if (badge) {
@@ -2959,20 +3085,23 @@ function startPomodoro() {
   PomodoroState.isRunning = true;
   updatePomodoroDisplays();
 
+  let tickToggle = false;
   PomodoroState.intervalId = setInterval(() => {
     if (PomodoroState.timeLeft > 0) {
       PomodoroState.timeLeft--;
+      playClockTick(tickToggle);
+      tickToggle = !tickToggle;
       updatePomodoroDisplays();
     } else {
       clearInterval(PomodoroState.intervalId);
       PomodoroState.isRunning = false;
       playTechBeep();
       if (PomodoroState.mode === "work") {
-        showToast("عاش يا هندسة! انتهت 25 دقيقة تركيز، وقت الراحة 5 دقائق ☕", "success");
-        setPomodoroMode("break");
+        showToast("عاش يا هندسة! انتهت جلسة التركيز بنجاح ☕", "success");
+        setCustomPomodoroTime(5, "break");
       } else {
-        showToast("انتهت استراحة الـ 5 دقائق، جاهز لجولة تركيز جديدة؟ 🚀", "info");
-        setPomodoroMode("work");
+        showToast("انتهت الاستراحة، جاهز لجولة تركيز جديدة؟ 🚀", "info");
+        setCustomPomodoroTime(25, "work");
       }
     }
   }, 1000);
@@ -2990,28 +3119,70 @@ function resetPomodoro() {
   updatePomodoroDisplays();
 }
 
-function setPomodoroMode(mode) {
+function setCustomPomodoroTime(minutes, mode = "work") {
+  const mins = Math.max(1, Math.min(180, Number(minutes) || 25));
   PomodoroState.mode = mode;
-  PomodoroState.duration = mode === "work" ? 25 * 60 : 5 * 60;
+  PomodoroState.duration = mins * 60;
   resetPomodoro();
 }
 
+function togglePomodoroFullscreen() {
+  PomodoroState.isFullscreen = !PomodoroState.isFullscreen;
+  const card = document.querySelector("#universal-modal .modal-card");
+  if (card) {
+    card.classList.toggle("pomo-fullscreen-active", PomodoroState.isFullscreen);
+  }
+}
+
 function openPomodoroModal() {
+  const total = PomodoroState.duration;
+  const offset = 690 - (690 * (PomodoroState.timeLeft / total));
+
   const modalBody = `
     <div class="pomodoro-card">
-      <div class="pomodoro-modes-bar">
-        <button type="button" id="pomo-mode-work" class="btn btn-sm ${PomodoroState.mode === "work" ? "btn-gold" : "btn-outline"}">
-          <i class="fa-solid fa-brain"></i> تركيز (25 دقيقة)
+      <!-- شريط التحكم العلوي: كتم التك تك وملء الشاشة -->
+      <div class="pomo-controls-top">
+        <button type="button" id="btn-pomo-sound-toggle" class="btn btn-xs ${PomodoroState.tickSoundEnabled ? "btn-gold" : "btn-outline"}">
+          <i class="fa-solid ${PomodoroState.tickSoundEnabled ? "fa-volume-high" : "fa-volume-xmark"}"></i>
+          <span>${PomodoroState.tickSoundEnabled ? "صوت التك تك شغال" : "صوت التك تك مكتوم"}</span>
         </button>
-        <button type="button" id="pomo-mode-break" class="btn btn-sm ${PomodoroState.mode === "break" ? "btn-gold" : "btn-outline"}">
-          <i class="fa-solid fa-mug-hot"></i> استراحة (5 دقائق)
+        <button type="button" id="btn-pomo-fullscreen-toggle" class="btn btn-xs btn-outline" title="تبديل ملء الشاشة">
+          <i class="fa-solid ${PomodoroState.isFullscreen ? "fa-compress" : "fa-expand"}"></i> ملء الشاشة
         </button>
       </div>
 
-      <div id="pomo-modal-display" class="pomodoro-timer-display">${formatPomoTime(PomodoroState.timeLeft)}</div>
+      <!-- أزرار اختيار المدة المسبقة + إدخال أي مدة مخصصة كالساعة -->
+      <div class="pomodoro-modes-bar">
+        <button type="button" class="btn btn-xs ${PomodoroState.duration === 25*60 && PomodoroState.mode === "work" ? "btn-gold" : "btn-outline"}" data-pomo-set="25">
+          25 دقيقة
+        </button>
+        <button type="button" class="btn btn-xs ${PomodoroState.duration === 45*60 ? "btn-gold" : "btn-outline"}" data-pomo-set="45">
+          45 دقيقة
+        </button>
+        <button type="button" class="btn btn-xs ${PomodoroState.duration === 60*60 ? "btn-gold" : "btn-outline"}" data-pomo-set="60">
+          <i class="fa-solid fa-hourglass-half"></i> ساعة كاملة (60 د)
+        </button>
+        <button type="button" class="btn btn-xs ${PomodoroState.mode === "break" ? "btn-gold" : "btn-outline"}" data-pomo-set="5" data-mode="break">
+          استراحة 5 د
+        </button>
+        <div class="pomo-custom-input-wrap">
+          <input type="number" id="pomo-custom-mins" min="1" max="180" placeholder="دقيقة" value="${Math.round(PomodoroState.duration/60)}" />
+          <button type="button" id="btn-apply-custom-pomo" class="btn btn-xs btn-gold">تحديد</button>
+        </div>
+      </div>
 
+      <!-- الدائرة الذهبية المتوهجة للمؤقت -->
+      <div class="pomo-ring-container">
+        <svg class="pomo-svg-ring" viewBox="0 0 240 240">
+          <circle class="pomo-circle-bg" cx="120" cy="120" r="110" />
+          <circle id="pomo-circle-bar" class="pomo-circle-progress" cx="120" cy="120" r="110" stroke-dasharray="690" stroke-dashoffset="${offset}" />
+        </svg>
+        <div id="pomo-modal-display" class="pomodoro-timer-display">${formatPomoTime(PomodoroState.timeLeft)}</div>
+      </div>
+
+      <!-- أزرار التشغيل والإعادة -->
       <div class="pomodoro-actions">
-        <button type="button" id="btn-pomo-start" class="btn btn-gold">
+        <button type="button" id="btn-pomo-start" class="btn btn-gold btn-luxury-shine" style="min-width: 130px;">
           <i class="fa-solid ${PomodoroState.isRunning ? "fa-pause" : "fa-play"}"></i>
           ${PomodoroState.isRunning ? "إيقاف مؤقت" : "بدء الجلسة"}
         </button>
@@ -3022,17 +3193,58 @@ function openPomodoroModal() {
     </div>
   `;
 
-  openFormModal("مؤقت بومودورو للتركيز التقني", modalBody, async () => {});
+  openFormModal("مؤقت التركيز السينمائي الفاخر", modalBody, async () => {});
   const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
   if (saveBtn) saveBtn.style.display = "none";
 
-  document.getElementById("pomo-mode-work").onclick = () => { setPomodoroMode("work"); openPomodoroModal(); };
-  document.getElementById("pomo-mode-break").onclick = () => { setPomodoroMode("break"); openPomodoroModal(); };
+  const card = document.querySelector("#universal-modal .modal-card");
+  if (card && PomodoroState.isFullscreen) {
+    card.classList.add("pomo-fullscreen-active");
+  }
+
+  // أحداث أزرار المدد الثابتة
+  document.querySelectorAll("[data-pomo-set]").forEach(btn => {
+    btn.onclick = () => {
+      const mins = Number(btn.dataset.pomoSet);
+      const mode = btn.dataset.mode || "work";
+      setCustomPomodoroTime(mins, mode);
+      openPomodoroModal();
+    };
+  });
+
+  // تحديد مدة مخصصة (مثلاً 60 أو 90 دقيقة)
+  document.getElementById("btn-apply-custom-pomo").onclick = () => {
+    const val = document.getElementById("pomo-custom-mins").value;
+    if (val) {
+      setCustomPomodoroTime(val, "work");
+      openPomodoroModal();
+      showToast(`تم ضبط المؤقت على ${val} دقيقة بنجاح`, "success");
+    }
+  };
+
+  // تبديل صوت التك تك
+  document.getElementById("btn-pomo-sound-toggle").onclick = () => {
+    PomodoroState.tickSoundEnabled = !PomodoroState.tickSoundEnabled;
+    openPomodoroModal();
+  };
+
+  // تبديل ملء الشاشة
+  document.getElementById("btn-pomo-fullscreen-toggle").onclick = () => {
+    togglePomodoroFullscreen();
+    openPomodoroModal();
+  };
+
+  // تشغيل / إيقاف
   document.getElementById("btn-pomo-start").onclick = () => {
     if (PomodoroState.isRunning) pausePomodoro(); else startPomodoro();
     openPomodoroModal();
   };
-  document.getElementById("btn-pomo-reset").onclick = () => { resetPomodoro(); openPomodoroModal(); };
+
+  // إعادة ضبط
+  document.getElementById("btn-pomo-reset").onclick = () => {
+    resetPomodoro();
+    openPomodoroModal();
+  };
 }
 
 // 4. نافذة أصوات التركيز والدراسة
