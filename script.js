@@ -1606,6 +1606,7 @@ async function handleAIChatSubmit(userPrompt) {
    ============================================================================ */
 function openFormModal(title, fieldsHtml, onSubmitCallback) {
   const modal = document.getElementById("universal-modal");
+  modal.querySelector(".modal-card")?.classList.remove("pomo-fullscreen-active");
   const form = document.getElementById("universal-modal-form");
   document.getElementById("modal-title").textContent = title;
   form.innerHTML = fieldsHtml + `
@@ -3019,7 +3020,7 @@ function toggleAmbientSound(type) {
   return true;
 }
 
-// 3. مؤقت بومودورو السينمائي المتطور (صوت تك تك ميكانيكي + اختيار المدة + ملء الشاشة)
+// 3. مؤقت بومودورو الملكي (ملء الشاشة تلقائياً + اللوجو + 5 ألوان منعشة + صوت تك تك)
 const PomodoroState = {
   duration: 25 * 60,
   timeLeft: 25 * 60,
@@ -3027,8 +3028,16 @@ const PomodoroState = {
   mode: "work",
   intervalId: null,
   tickSoundEnabled: true,
-  isFullscreen: false
+  colorTheme: localStorage.getItem("MY_LIFE_OS_POMO_COLOR") || "gold"
 };
+
+const POMO_THEMES = [
+  { id: "gold", name: "الذهب الملكي", hex: "#d4af37" },
+  { id: "emerald", name: "الزمرد المنعش", hex: "#10b981" },
+  { id: "cyan", name: "السماوي النيون", hex: "#06b6d4" },
+  { id: "purple", name: "البنفسجي الملكي", hex: "#a855f7" },
+  { id: "rose", name: "الياقوت الوردي", hex: "#f43f5e" }
+];
 
 // صوت "تك تك" ميكانيكي واقعي بالـ Web Audio API
 function playClockTick(isHigh = false) {
@@ -3039,10 +3048,9 @@ function playClockTick(isHigh = false) {
     const gain = ctx.createGain();
 
     osc.type = "sine";
-    // تبادل التردد بين تكة وثانية لإعطاء إيقاع الساعة الحقيقية
-    osc.frequency.setValueAtTime(isHigh ? 1800 : 1300, ctx.currentTime);
+    osc.frequency.setValueAtTime(isHigh ? 1750 : 1280, ctx.currentTime);
 
-    gain.gain.setValueAtTime(0.04, ctx.currentTime);
+    gain.gain.setValueAtTime(0.045, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.025);
 
     osc.connect(gain);
@@ -3064,11 +3072,11 @@ function updatePomodoroDisplays() {
   const displayEl = document.getElementById("pomo-modal-display");
   if (displayEl) displayEl.textContent = timeStr;
 
-  // تحديث الحلقة الدائرية المتوهجة
+  // محيط الدائرة (2 * PI * 136 ≈ 854)
   const circleProgress = document.getElementById("pomo-circle-bar");
   if (circleProgress) {
     const total = PomodoroState.duration;
-    const offset = 690 - (690 * (PomodoroState.timeLeft / total));
+    const offset = 854 - (854 * (PomodoroState.timeLeft / total));
     circleProgress.style.strokeDashoffset = offset;
   }
 
@@ -3120,89 +3128,121 @@ function resetPomodoro() {
 }
 
 function setCustomPomodoroTime(minutes, mode = "work") {
-  const mins = Math.max(1, Math.min(180, Number(minutes) || 25));
+  const mins = Math.max(1, Math.min(240, Number(minutes) || 25));
   PomodoroState.mode = mode;
   PomodoroState.duration = mins * 60;
   resetPomodoro();
 }
 
-function togglePomodoroFullscreen() {
-  PomodoroState.isFullscreen = !PomodoroState.isFullscreen;
-  const card = document.querySelector("#universal-modal .modal-card");
-  if (card) {
-    card.classList.toggle("pomo-fullscreen-active", PomodoroState.isFullscreen);
-  }
-}
-
 function openPomodoroModal() {
   const total = PomodoroState.duration;
-  const offset = 690 - (690 * (PomodoroState.timeLeft / total));
+  const offset = 854 - (854 * (PomodoroState.timeLeft / total));
+  const totalMins = Math.round(PomodoroState.duration / 60);
+
+  const swatchesHtml = POMO_THEMES.map(t => `
+    <button
+      type="button"
+      class="pomo-color-dot ${PomodoroState.colorTheme === t.id ? "active" : ""}"
+      style="background:${t.hex}; color:${t.hex}"
+      data-pomo-color="${t.id}"
+      title="${t.name}"
+    ></button>
+  `).join("");
 
   const modalBody = `
     <div class="pomodoro-card">
-      <!-- شريط التحكم العلوي: كتم التك تك وملء الشاشة -->
-      <div class="pomo-controls-top">
-        <button type="button" id="btn-pomo-sound-toggle" class="btn btn-xs ${PomodoroState.tickSoundEnabled ? "btn-gold" : "btn-outline"}">
+      <!-- اللوجو الفخم والعنوان العلوي -->
+      <div class="pomo-brand-header">
+        <div class="pomo-logo-orb">
+          <img src="logo.png" alt="MY LIFE OS" onerror="this.style.display='none'" />
+        </div>
+        <div class="pomo-brand-title">MY LIFE <span>FOCUS</span></div>
+      </div>
+
+      <!-- شريط الألوان الـ 5 الفخمة + زر صوت التك تك -->
+      <div class="pomo-top-bar">
+        <div class="pomo-color-swatches">
+          <small class="small-muted">لون الإضاءة:</small>
+          ${swatchesHtml}
+        </div>
+        <button type="button" id="btn-pomo-sound-toggle" class="pomo-preset-btn ${PomodoroState.tickSoundEnabled ? "active" : ""}">
           <i class="fa-solid ${PomodoroState.tickSoundEnabled ? "fa-volume-high" : "fa-volume-xmark"}"></i>
-          <span>${PomodoroState.tickSoundEnabled ? "صوت التك تك شغال" : "صوت التك تك مكتوم"}</span>
-        </button>
-        <button type="button" id="btn-pomo-fullscreen-toggle" class="btn btn-xs btn-outline" title="تبديل ملء الشاشة">
-          <i class="fa-solid ${PomodoroState.isFullscreen ? "fa-compress" : "fa-expand"}"></i> ملء الشاشة
+          <span>${PomodoroState.tickSoundEnabled ? "صوت الساعة شغال" : "صامت"}</span>
         </button>
       </div>
 
-      <!-- أزرار اختيار المدة المسبقة + إدخال أي مدة مخصصة كالساعة -->
+      <!-- أزرار اختيار الوقت السريعة + إدخال أي وقت مخصص -->
       <div class="pomodoro-modes-bar">
-        <button type="button" class="btn btn-xs ${PomodoroState.duration === 25*60 && PomodoroState.mode === "work" ? "btn-gold" : "btn-outline"}" data-pomo-set="25">
+        <button type="button" class="pomo-preset-btn ${totalMins === 25 && PomodoroState.mode === "work" ? "active" : ""}" data-pomo-set="25">
           25 دقيقة
         </button>
-        <button type="button" class="btn btn-xs ${PomodoroState.duration === 45*60 ? "btn-gold" : "btn-outline"}" data-pomo-set="45">
+        <button type="button" class="pomo-preset-btn ${totalMins === 45 ? "active" : ""}" data-pomo-set="45">
           45 دقيقة
         </button>
-        <button type="button" class="btn btn-xs ${PomodoroState.duration === 60*60 ? "btn-gold" : "btn-outline"}" data-pomo-set="60">
-          <i class="fa-solid fa-hourglass-half"></i> ساعة كاملة (60 د)
+        <button type="button" class="pomo-preset-btn ${totalMins === 60 ? "active" : ""}" data-pomo-set="60">
+          <i class="fa-solid fa-crown"></i> ساعة كاملة (60 د)
         </button>
-        <button type="button" class="btn btn-xs ${PomodoroState.mode === "break" ? "btn-gold" : "btn-outline"}" data-pomo-set="5" data-mode="break">
-          استراحة 5 د
+        <button type="button" class="pomo-preset-btn ${PomodoroState.mode === "break" ? "active" : ""}" data-pomo-set="5" data-mode="break">
+          <i class="fa-solid fa-mug-hot"></i> استراحة 5 د
         </button>
         <div class="pomo-custom-input-wrap">
-          <input type="number" id="pomo-custom-mins" min="1" max="180" placeholder="دقيقة" value="${Math.round(PomodoroState.duration/60)}" />
-          <button type="button" id="btn-apply-custom-pomo" class="btn btn-xs btn-gold">تحديد</button>
+          <input type="number" id="pomo-custom-mins" min="1" max="240" value="${totalMins}" title="عدد الدقائق" />
+          <button type="button" id="btn-apply-custom-pomo" class="pomo-preset-btn active" style="padding:4px 12px;">تحديد</button>
         </div>
       </div>
 
-      <!-- الدائرة الذهبية المتوهجة للمؤقت -->
+      <!-- الساعة السويسرية المضيئة في المنتصف -->
       <div class="pomo-ring-container">
-        <svg class="pomo-svg-ring" viewBox="0 0 240 240">
-          <circle class="pomo-circle-bg" cx="120" cy="120" r="110" />
-          <circle id="pomo-circle-bar" class="pomo-circle-progress" cx="120" cy="120" r="110" stroke-dasharray="690" stroke-dashoffset="${offset}" />
+        <svg class="pomo-svg-ring" viewBox="0 0 320 320">
+          <circle class="pomo-circle-tracks" cx="160" cy="160" r="150" />
+          <circle class="pomo-circle-bg" cx="160" cy="160" r="136" />
+          <circle id="pomo-circle-bar" class="pomo-circle-progress" cx="160" cy="160" r="136" stroke-dasharray="854" stroke-dashoffset="${offset}" />
         </svg>
-        <div id="pomo-modal-display" class="pomodoro-timer-display">${formatPomoTime(PomodoroState.timeLeft)}</div>
+        <div class="pomo-dial-center">
+          <span class="pomo-status-pill">
+            ${PomodoroState.mode === "break" ? "استراحة واسترخاء ☕" : PomodoroState.isRunning ? "تركيز عميق جارٍ الآن ⚡" : "جاهز للانطلاق 🚀"}
+          </span>
+          <div id="pomo-modal-display" class="pomodoro-timer-display">${formatPomoTime(PomodoroState.timeLeft)}</div>
+          <span class="pomo-sub-caption">إجمالي الجلسة: ${totalMins} دقيقة</span>
+        </div>
       </div>
 
-      <!-- أزرار التشغيل والإعادة -->
+      <!-- أزرار البدء والإعادة -->
       <div class="pomodoro-actions">
-        <button type="button" id="btn-pomo-start" class="btn btn-gold btn-luxury-shine" style="min-width: 130px;">
+        <button type="button" id="btn-pomo-start" class="btn-pomo-main">
           <i class="fa-solid ${PomodoroState.isRunning ? "fa-pause" : "fa-play"}"></i>
-          ${PomodoroState.isRunning ? "إيقاف مؤقت" : "بدء الجلسة"}
+          ${PomodoroState.isRunning ? "إيقاف مؤقت" : "بدء التركيز"}
         </button>
-        <button type="button" id="btn-pomo-reset" class="btn btn-outline">
+        <button type="button" id="btn-pomo-reset" class="btn-pomo-secondary">
           <i class="fa-solid fa-rotate-right"></i> إعادة ضبط
         </button>
       </div>
     </div>
   `;
 
-  openFormModal("مؤقت التركيز السينمائي الفاخر", modalBody, async () => {});
+  openFormModal("مؤقت التركيز الملكي", modalBody, async () => {});
   const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
   if (saveBtn) saveBtn.style.display = "none";
 
+  // تفعيل ملء الشاشة واللون المختار تلقائياً
   const card = document.querySelector("#universal-modal .modal-card");
-  if (card && PomodoroState.isFullscreen) {
+  if (card) {
     card.classList.add("pomo-fullscreen-active");
+    card.setAttribute("data-pomo-theme", PomodoroState.colorTheme);
   }
 
-  // أحداث أزرار المدد الثابتة
+  // التبديل الفوري بين الـ 5 ألوان الفخمة
+  document.querySelectorAll("[data-pomo-color]").forEach(dot => {
+    dot.onclick = () => {
+      const selectedColor = dot.dataset.pomoColor;
+      PomodoroState.colorTheme = selectedColor;
+      localStorage.setItem("MY_LIFE_OS_POMO_COLOR", selectedColor);
+      if (card) card.setAttribute("data-pomo-theme", selectedColor);
+      document.querySelectorAll("[data-pomo-color]").forEach(d => d.classList.toggle("active", d === dot));
+    };
+  });
+
+  // أزرار المدد السريعة
   document.querySelectorAll("[data-pomo-set]").forEach(btn => {
     btn.onclick = () => {
       const mins = Number(btn.dataset.pomoSet);
@@ -3212,25 +3252,19 @@ function openPomodoroModal() {
     };
   });
 
-  // تحديد مدة مخصصة (مثلاً 60 أو 90 دقيقة)
+  // تحديد مدة مخصصة
   document.getElementById("btn-apply-custom-pomo").onclick = () => {
     const val = document.getElementById("pomo-custom-mins").value;
     if (val) {
       setCustomPomodoroTime(val, "work");
       openPomodoroModal();
-      showToast(`تم ضبط المؤقت على ${val} دقيقة بنجاح`, "success");
+      showToast(`تم ضبط المؤقت على ${val} دقيقة`, "success");
     }
   };
 
   // تبديل صوت التك تك
   document.getElementById("btn-pomo-sound-toggle").onclick = () => {
     PomodoroState.tickSoundEnabled = !PomodoroState.tickSoundEnabled;
-    openPomodoroModal();
-  };
-
-  // تبديل ملء الشاشة
-  document.getElementById("btn-pomo-fullscreen-toggle").onclick = () => {
-    togglePomodoroFullscreen();
     openPomodoroModal();
   };
 
