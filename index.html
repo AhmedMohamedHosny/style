@@ -7,7 +7,8 @@
   <meta name="description" content="MY LIFE OS — Complete Personal Life Operating System powered by Firebase & AI" />
   <title>MY LIFE OS | نظام تشغيل الحياة الشخصي</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2307090e'/><circle cx='50' cy='50' r='32' fill='%23d4af37'/></svg>" />
-  <!-- Google Fonts: Cairo & Inter -->
+  <link rel="manifest" href="manifest.json" />
+<!-- Google Fonts: Cairo & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -201,6 +202,24 @@
           <button id="btn-quick-ai" class="btn-icon gold-glow" title="المساعد الذكي">
             <i class="fa-solid fa-wand-magic-sparkles"></i>
           </button>
+          <!-- زر البومودورو وأصوات التركيز الذهني -->
+          <button id="btn-topbar-pomo" class="btn-icon" title="مؤقت بومودورو للتركيز">
+            <i class="fa-solid fa-stopwatch"></i>
+            <span id="topbar-pomo-badge" class="pomo-mini-badge hidden">25:00</span>
+          </button>
+          <button id="btn-topbar-ambient" class="btn-icon" title="أصوات التركيز والمطر">
+            <i class="fa-solid fa-headphones"></i>
+          </button>
+          <!-- أزرار درع الخصوصية، وضع التركيز، ولوحة الأوامر -->
+          <button id="btn-privacy-shield" class="btn-icon" title="درع الخصوصية (إخفاء الأرقام)">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+          <button id="btn-zen-mode" class="btn-icon" title="وضع التركيز المطلق (Zen Mode)">
+            <i class="fa-solid fa-compress"></i>
+          </button>
+          <button id="btn-open-cmd" class="btn btn-outline btn-sm" title="لوحة الأوامر السريعة">
+            <i class="fa-solid fa-terminal"></i> <span class="cmd-shortcut">Ctrl+K</span>
+          </button>
           <button id="btn-theme-toggle" class="btn-icon" title="تبديل المظهر">
             <i class="fa-solid fa-moon"></i>
           </button>
@@ -219,6 +238,14 @@
            VIEW 1: DASHBOARD
       ====================================================== -->
       <section id="view-dashboard" class="view-section active">
+        <!-- كارت الموجز الصباحي الذكي -->
+        <div id="morning-briefing-card" class="morning-briefing-banner">
+          <div class="flex-between">
+            <h4><i class="fa-solid fa-sun gold-text"></i> الموجز الصباحي الذكي | Morning Briefing</h4>
+            <span class="small-muted" id="briefing-time-label">اليوم</span>
+          </div>
+          <p id="morning-briefing-text" class="briefing-content">جاري تجهيز تقريرك الصباحي الذكي من واقع بياناتك...</p>
+        </div>
         <div class="welcome-banner">
           <div>
             <h2><span data-i18n="welcome_back">مرحباً بعودتك،</span> <span id="dash-user-name" class="gold-text">...</span></h2>
@@ -416,6 +443,14 @@
       ====================================================== -->
       <section id="view-islamic" class="view-section">
         <div class="dashboard-grid">
+          <!-- كارت مواقيت الصلاة الدقيقة لمصر والعداد التنازلي -->
+          <div class="card prayer-times-card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-kaaba gold-text"></i> مواقيت الصلاة اليوم (توقيت القاهرة)</h3>
+              <span id="next-prayer-countdown" class="badge badge-gold">جاري الحساب...</span>
+            </div>
+            <div id="egypt-prayer-times-grid" class="prayer-times-grid"></div>
+          </div>
           <!-- Daily Prayers Card -->
           <div class="card">
             <div class="card-header">
@@ -674,9 +709,20 @@
               <h3><i class="fa-solid fa-list-music gold-text"></i> مدير قوائم التشغيل والمشغل</h3>
               <button id="btn-add-playlist-item" class="btn btn-outline btn-sm"><i class="fa-solid fa-plus"></i> إضافة لقائمة التشغيل</button>
             </div>
-            <div class="player-box">
+<div class="player-box">
               <video id="main-media-player" controls class="media-player-element"></video>
+              <div class="player-extra-controls">
+                <button type="button" id="btn-video-pip" class="btn btn-xs btn-outline" title="تشغيل في نافذة عائمة PiP">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i> نافذة عائمة (PiP)
+                </button>
+                <button type="button" id="btn-add-timestamp" class="btn btn-xs btn-gold" title="حفظ علامة زمنية عند اللحظة الحالية">
+                  <i class="fa-solid fa-bookmark"></i> حفظ علامة زمنية (Bookmark)
+                </button>
+              </div>
+              <!-- قائمة العلامات الزمنية المحفوظة للمقطع -->
+              <div id="video-timestamps-list" class="timestamps-container"></div>
             </div>
+            
             <div id="playlist-container" class="widget-body mt-2"></div>
           </div>
         </div>
@@ -901,7 +947,48 @@
       <form id="universal-modal-form" class="modal-body"></form>
     </div>
   </div>
+<!-- السبحة الإلكترونية العائمة الذكية -->
+  <div id="floating-tasbeeh-widget" class="floating-tasbeeh">
+    <button type="button" id="btn-toggle-tasbeeh" class="tasbeeh-circle-btn" title="السبحة الإلكترونية">
+      <i class="fa-solid fa-ring"></i>
+      <span id="tasbeeh-mini-count">0</span>
+    </button>
+    <div id="tasbeeh-popover" class="tasbeeh-popover hidden">
+      <div class="flex-between">
+        <strong id="tasbeeh-dhikr-name">سبحان الله</strong>
+        <button id="btn-reset-tasbeeh" class="btn-link text-danger" title="إعادة الضبط"><i class="fa-solid fa-rotate-right"></i></button>
+      </div>
+      <div class="tasbeeh-large-count" id="tasbeeh-main-count">0</div>
+      <button type="button" id="btn-tasbeeh-click" class="btn btn-gold btn-block">تسبيح (أو اضغط Space)</button>
+      <div class="tasbeeh-phrase-select mt-2">
+        <select id="select-tasbeeh-phrase" class="select-sm">
+          <option value="سبحان الله">سبحان الله</option>
+          <option value="الحمد لله">الحمد لله</option>
+          <option value="لا إله إلا الله">لا إله إلا الله</option>
+          <option value="الله أكبر">الله أكبر</option>
+          <option value="أستغفر الله">أستغفر الله</option>
+          <option value="اللهم صلِّ على محمد">اللهم صلِّ على محمد</option>
+        </select>
+      </div>
+    </div>
+  </div>
 
+  <!-- لوحة الأوامر السريعة (Command Palette - Ctrl + K) -->
+  <div id="command-palette-modal" class="cmd-overlay hidden">
+    <div class="cmd-card">
+      <div class="cmd-search-input-wrap">
+        <i class="fa-solid fa-terminal gold-text"></i>
+        <input type="text" id="cmd-input" placeholder="اكتب أمراً أو اسم قسم (مهام، جامعة، بومودورو، قرآن، مصروفات)..." autofocus />
+        <span class="cmd-esc-badge">ESC للخروج</span>
+      </div>
+      <div id="cmd-results-list" class="cmd-results-box"></div>
+    </div>
+  </div>
+
+  <!-- زر الخروج من وضع التركيز المطلق (يظهر فقط في الـ Zen Mode) -->
+  <button id="btn-exit-zen" class="exit-zen-floating-btn hidden">
+    <i class="fa-solid fa-expand"></i> الخروج من وضع التركيز (ESC)
+  </button>
   <!-- Main Application Script (ES Module) -->
   <script type="module" src="script.js"></script>
 </body>
