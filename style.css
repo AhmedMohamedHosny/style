@@ -1222,3 +1222,760 @@ html[data-theme="light"] .item-card {
   transform: translateY(-2px);
   box-shadow: 0 10px 25px rgba(16, 185, 129, 0.45);
 }
+/* ==========================================================================
+   TASK 3: COMMAND PALETTE (CTRL+K), PRIVACY SHIELD, ZEN MODE, TASBEEH & PRAYERS
+   ========================================================================== */
+
+/* 1. درع الخصوصية (Privacy Shield) */
+body.privacy-shield-active .kpi-info h3,
+body.privacy-shield-active .dev-tracker-time,
+body.privacy-shield-active #fin-total-income,
+body.privacy-shield-active #fin-total-expense,
+body.privacy-shield-active #fin-monthly-budget,
+body.privacy-shield-active .badge-emerald,
+body.privacy-shield-active .badge-danger {
+  filter: blur(8px) !important;
+  user-select: none !important;
+  transition: filter 0.25s ease;
+}
+
+/* 2. وضع التركيز المطلق (Zen Focus Mode) */
+body.zen-focus-active .sidebar,
+body.zen-focus-active .topbar,
+body.zen-focus-active .app-footer,
+body.zen-focus-active .bottom-nav,
+body.zen-focus-active .floating-tasbeeh {
+  display: none !important;
+}
+
+body.zen-focus-active .app-shell {
+  grid-template-columns: 1fr !important;
+}
+
+body.zen-focus-active .main-content {
+  padding-bottom: 20px !important;
+}
+
+.exit-zen-floating-btn {
+  position: fixed;
+  top: 18px;
+  inset-inline-end: 18px;
+  z-index: 9999;
+  background: var(--bg-card);
+  border: 1px solid var(--gold-primary);
+  color: var(--gold-primary);
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
+}
+
+/* 3. كارت الموجز الصباحي الذكي */
+.morning-briefing-banner {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(16, 185, 129, 0.08));
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-luxury);
+}
+
+.briefing-content {
+  font-size: 0.94rem;
+  color: var(--text-primary);
+  margin-top: 6px;
+  line-height: 1.6;
+}
+
+/* 4. كارت مواقيت الصلاة بتوقيت مصر */
+.prayer-times-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.prayer-time-col {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.prayer-time-col.active-next {
+  border-color: var(--gold-primary);
+  background: rgba(212, 175, 55, 0.12);
+}
+
+.prayer-time-col strong {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.prayer-time-col span {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  color: var(--gold-primary);
+  font-size: 0.95rem;
+  margin-top: 4px;
+  display: block;
+}
+
+/* 5. السبحة الإلكترونية العائمة */
+.floating-tasbeeh {
+  position: fixed;
+  bottom: 25px;
+  inset-inline-start: 25px;
+  z-index: 1000;
+}
+
+.tasbeeh-circle-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-primary), #8c6d1f);
+  color: #07090e;
+  border: 2px solid var(--gold-light);
+  box-shadow: 0 0 25px var(--gold-glow);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: var(--transition);
+}
+
+.tasbeeh-circle-btn:hover {
+  transform: scale(1.1);
+}
+
+.tasbeeh-circle-btn span {
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.tasbeeh-popover {
+  position: absolute;
+  bottom: 65px;
+  inset-inline-start: 0;
+  width: 240px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-luxury);
+  animation: fadeIn 0.2s ease;
+}
+
+.tasbeeh-large-count {
+  font-size: 2.8rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  text-align: center;
+  color: var(--gold-primary);
+  margin: 8px 0;
+}
+
+/* 6. نافذة لوحة الأوامر السريعة (Ctrl + K) */
+.cmd-shortcut {
+  font-size: 0.75rem;
+  font-family: 'Inter', sans-serif;
+  opacity: 0.85;
+}
+
+.cmd-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  z-index: 99999;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+}
+
+.cmd-card {
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg-card);
+  border: 1px solid var(--gold-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 30px var(--gold-glow);
+  overflow: hidden;
+}
+
+.cmd-search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.cmd-search-input-wrap input {
+  background: transparent;
+  border: none;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  width: 100%;
+  padding: 0;
+  box-shadow: none !important;
+}
+
+.cmd-esc-badge {
+  font-size: 0.72rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  padding: 3px 8px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.cmd-results-box {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.cmd-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.cmd-item:hover, .cmd-item.selected {
+  background: var(--gold-glow);
+  color: var(--gold-primary);
+}
+
+.cmd-item-start {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+/* ==========================================================================
+   TASK 1: UNIVERSITY CHECKLIST (29 ITEMS), VOICE RECORDER & COLLISION DETECTOR
+   ========================================================================== */
+
+/* كارت المادة والنسبة المئوية المحسوبة */
+.subject-progress-box {
+  background: rgba(15, 20, 32, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin: 10px 0;
+}
+
+.checklist-quick-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+/* نافذة خريطة المنهج (29 بند) */
+.curriculum-grid-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+
+.curriculum-category {
+  margin-bottom: 18px;
+}
+
+.curriculum-category h4 {
+  font-size: 0.95rem;
+  color: var(--gold-primary);
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 5px;
+}
+
+.curriculum-items-wrap {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.check-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  transition: var(--transition);
+  user-select: none;
+}
+
+.check-pill input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--gold-primary);
+}
+
+.check-pill.completed {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: var(--emerald-primary);
+  color: var(--emerald-primary);
+}
+
+/* مسجل الصوت السريع */
+.voice-recorder-bar {
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px dashed var(--gold-primary);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.rec-pulse-dot {
+  width: 10px;
+  height: 10px;
+  background: var(--danger-primary);
+  border-radius: 50%;
+  animation: blinkDot 1s infinite;
+  display: inline-block;
+  margin-inline-end: 6px;
+}
+
+.voice-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.voice-note-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.voice-note-item audio {
+  height: 32px;
+  max-width: 220px;
+}
+
+/* تنبيه كاشف التضارب */
+.collision-warning-box {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--danger-primary);
+  color: #fca5a5;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.86rem;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+/* ==========================================================================
+   TASK 2: POMODORO, DEV TIME TRACKER, AMBIENT STUDY SOUNDS & PIP
+   ========================================================================== */
+
+/* بادج البومودورو في التوب بار */
+.pomo-mini-badge {
+  position: absolute;
+  top: -6px;
+  inset-inline-end: -6px;
+  background: var(--gold-primary);
+  color: #07090e;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 99px;
+  animation: pulseRingOut 2s infinite;
+}
+
+/* بطاقة البومودورو داخل المودال */
+.pomodoro-card {
+  text-align: center;
+  padding: 10px 0;
+}
+
+.pomodoro-timer-display {
+  font-size: 3.6rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  color: var(--gold-primary);
+  text-shadow: 0 0 25px rgba(212, 175, 55, 0.45);
+  margin: 12px 0;
+  letter-spacing: 2px;
+}
+
+.pomodoro-modes-bar {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.pomodoro-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* مشغل أصوات التركيز المحيطية (Ambient Sounds) */
+.ambient-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.ambient-sound-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 14px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.ambient-sound-card.active {
+  border-color: var(--emerald-primary);
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--emerald-primary);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+}
+
+.ambient-sound-card i {
+  font-size: 1.6rem;
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* متتبع وقت المشاريع (Dev Time Tracker) */
+.dev-tracker-bar {
+  background: rgba(15, 20, 32, 0.9);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dev-tracker-time {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--emerald-primary);
+}
+
+.btn-track-pulse {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border-color: var(--danger-primary) !important;
+  color: var(--danger-primary) !important;
+  animation: blinkDot 1.4s infinite;
+}
+
+/* أزرار وعلامات الفيديو في مركز الوسائط */
+.player-extra-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  gap: 8px;
+}
+
+.timestamps-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.timestamp-chip {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--gold-primary);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition);
+}
+
+.timestamp-chip:hover {
+  background: var(--gold-glow);
+  transform: translateY(-1px);
+}
+/* ==========================================================================
+   MOBILE & TOUCH-OPTIMIZED RESPONSIVE ENGINE (ZERO HORIZONTAL SCROLL)
+   ========================================================================== */
+
+/* منع السكرول العرضي تماماً وضبط استجابة اللمس */
+html, body {
+  overflow-x: hidden !important;
+  width: 100%;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 768px) {
+  /* 1. منع زووم المتصفح التلقائي على الموبايل في الحقول */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* 2. ضبط هوامش الصفحات الرئيسية والمحتوى */
+  .main-content {
+    padding-bottom: 95px !important; /* مسافة أمان فوق الشريط السفلي */
+  }
+
+  .view-section {
+    padding: 14px 12px !important;
+  }
+
+  .welcome-banner {
+    padding: 16px !important;
+    gap: 12px !important;
+  }
+
+  .quick-actions-row {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .quick-actions-row .btn {
+    width: 100% !important;
+    padding: 9px 8px !important;
+    font-size: 0.82rem !important;
+  }
+
+  /* 3. معالجة أزرار الشريط العلوي (Topbar) لمنع خروجها بالعرض */
+  .topbar {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+  }
+
+  .topbar-start h1 {
+    font-size: 1.05rem !important;
+  }
+
+  .datetime-text {
+    font-size: 0.72rem !important;
+    display: none; /* إخفاء الساعة الطويلة على الموبايل لتوفير مساحة */
+  }
+
+  .topbar-end {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    overflow-x: auto !important;
+    max-width: 65% !important;
+    padding-bottom: 2px !important;
+    scrollbar-width: none; /* إخفاء شريط السكرول في الفايرفوكس */
+  }
+
+  .topbar-end::-webkit-scrollbar {
+    display: none; /* إخفاء شريط السكرول في كروم وسفاري */
+  }
+
+  .btn-icon {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    font-size: 0.88rem !important;
+  }
+
+  #btn-open-cmd {
+    display: none !important; /* إخفاء اختصار Ctrl+K على الموبايل لعدم وجود كيبورد */
+  }
+
+  /* 4. كروت لوحة التحكم والشبكات المرنة */
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .kpi-card {
+    padding: 12px 10px !important;
+    gap: 10px !important;
+  }
+
+  .kpi-icon {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    font-size: 1.1rem !important;
+  }
+
+  .kpi-info h3 {
+    font-size: 1.15rem !important;
+  }
+
+  .kpi-info small {
+    font-size: 0.7rem !important;
+  }
+
+  .dashboard-grid, .items-grid {
+    grid-template-columns: 1fr !important; /* عمود واحد كامل على الموبايل */
+    gap: 14px !important;
+  }
+
+  .card {
+    padding: 14px !important;
+  }
+
+  .section-toolbar {
+    padding: 12px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .filters-row {
+    width: 100% !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .input-sm, .select-sm, .input-lg {
+    width: 100% !important;
+    min-width: unset !important;
+  }
+
+  .section-toolbar > .btn {
+    width: 100% !important;
+  }
+
+  /* 5. رفع السبحة الإلكترونية العائمة فوق الشريط السفلي */
+  .floating-tasbeeh {
+    bottom: 82px !important; /* فوق الـ Bottom Nav مباشرة */
+    inset-inline-start: 14px !important;
+  }
+
+  .tasbeeh-circle-btn {
+    width: 46px !important;
+    height: 46px !important;
+  }
+
+  .tasbeeh-popover {
+    bottom: 58px !important;
+    inset-inline-start: 0 !important;
+    width: 220px !important;
+  }
+
+  /* 6. النوافذ المنبثقة (Modals) وخريطة المنهج */
+  .modal-overlay {
+    padding: 10px !important;
+    align-items: flex-end !important; /* Bottom-Sheet ستايل مريح لليد على الموبايل */
+  }
+
+  .modal-card {
+    width: 100% !important;
+    max-height: 88vh !important;
+    padding: 18px 14px !important;
+    border-radius: 20px 20px 0 0 !important; /* شكل منحني فخم زي تطبيقات الموبايل */
+  }
+
+  .curriculum-items-wrap {
+    grid-template-columns: repeat(2, 1fr) !important; /* بندين في كل صف */
+    gap: 6px !important;
+  }
+
+  .check-pill {
+    padding: 8px 6px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .prayer-times-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  /* 7. شاشة الدخول الفاخرة على الموبايل */
+  .auth-wrapper {
+    padding: 16px !important;
+    align-items: center !important;
+  }
+
+  .auth-card {
+    padding: 24px 18px !important;
+    border-radius: 18px !important;
+  }
+
+  .brand-logo-circle {
+    width: 52px !important;
+    height: 52px !important;
+  }
+
+  .auth-brand h1 {
+    font-size: 1.45rem !important;
+  }
+
+  /* 8. شريط التنقل السفلي (Bottom Nav) ودعم الـ Safe Area للآيفون */
+  .bottom-nav {
+    padding: 8px 6px !important;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    background: rgba(15, 19, 29, 0.94) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-top: 1px solid rgba(212, 175, 55, 0.25) !important;
+  }
+
+  .bottom-nav-item {
+    font-size: 0.68rem !important;
+  }
+
+  .bottom-nav-item i {
+    font-size: 1.1rem !important;
+  }
+}
+
+/* شاشات الموبايل شديدة الصغر (أقل من 375px) */
+@media (max-width: 375px) {
+  .kpi-grid {
+    grid-template-columns: 1fr !important; /* كارت واحد لكل صف لتجنب الضيق */
+  }
+
+  .curriculum-items-wrap {
+    grid-template-columns: 1fr !important;
+  }
+
+  .prayer-times-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
