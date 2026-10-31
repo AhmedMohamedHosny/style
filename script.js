@@ -788,23 +788,47 @@ function renderUniversity() {
   const subjects = AppState.collections.subjects;
   const lectures = AppState.collections.lectures;
 
-  if (!subjects.length) {
+if (!subjects.length) {
     subjBox.innerHTML = renderEmptyState("لم تقم بإضافة موادك الدراسية بعد. أضف اسم المادة بضغطة واحدة!");
   } else {
     subjBox.innerHTML = subjects.map(s => {
-      const relatedCount = lectures.filter(l => (l.subjectName || "").trim() === (s.name || "").trim()).length;
+      // إجمالي البنود: 11 محاضرة + 11 شيت + 1 ميدتيرم + 2 كويز + 4 تكليفات = 29 بنداً
+      const checklist = s.checklist || {};
+      const completedCount = Object.values(checklist).filter(Boolean).length;
+      const progressPct = Math.round((completedCount / 29) * 100);
+      const voiceNotesCount = (s.voiceNotes || []).length;
+
       return `
         <div class="item-card">
-          <div class="flex-between">
-            <span class="badge badge-gold"><i class="fa-solid fa-book-open"></i> مادة دراسية</span>
-            <button class="btn btn-xs btn-danger" data-action="delete-item" data-col="subjects" data-id="${s.id}">
-              <i class="fa-solid fa-trash"></i>
-            </button>
+          <div>
+            <div class="flex-between">
+              <span class="badge badge-gold"><i class="fa-solid fa-graduation-cap"></i> مادة دراسية</span>
+              <button class="btn btn-xs btn-danger" data-action="delete-item" data-col="subjects" data-id="${s.id}">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+            <h3 class="mt-2 gold-text">${escapeHTML(s.name)}</h3>
+            ${s.notes ? `<p class="small-muted">${escapeHTML(s.notes)}</p>` : ""}
+
+            <!-- خريطة المنهج والنسبة المئوية التلقائية -->
+            <div class="subject-progress-box">
+              <div class="checklist-quick-stats">
+                <span>إنجاز المنهج: <strong>${completedCount} / 29</strong> بند</span>
+                <span class="gold-text"><strong>${progressPct}%</strong></span>
+              </div>
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill" style="width: ${progressPct}%"></div>
+              </div>
+            </div>
           </div>
-          <h3 class="mt-2 gold-text">${escapeHTML(s.name)}</h3>
-          ${s.notes ? `<p class="small-muted">${escapeHTML(s.notes)}</p>` : ""}
+
           <div class="flex-between mt-2">
-            <small class="small-muted"><i class="fa-solid fa-layer-group"></i> المحاضرات والتكليفات المرتبطة: <strong>${relatedCount}</strong></small>
+            <button class="btn btn-xs btn-outline" data-action="open-curriculum" data-id="${s.id}">
+              <i class="fa-solid fa-list-check"></i> خريطة المنهج (29 بند)
+            </button>
+            <button class="btn btn-xs btn-gold" data-action="open-subject-voice" data-id="${s.id}">
+              <i class="fa-solid fa-microphone"></i> صوتيات (${voiceNotesCount})
+            </button>
           </div>
         </div>
       `;
@@ -939,7 +963,7 @@ function renderIslamic() {
   }
 }
 
-/* --- 9.6 PROJECTS & CODING --- */
+/* --- 9.6 PROJECTS & CODING (WITH DEV TIME TRACKER) --- */
 function renderProjects() {
   const container = document.getElementById("projects-container");
   const q = (document.getElementById("project-search")?.value || "").toLowerCase();
@@ -952,36 +976,57 @@ function renderProjects() {
     return;
   }
 
-  container.innerHTML = list.map(p => `
-    <div class="item-card">
-      <div>
-        <div class="flex-between">
-          <span class="badge badge-gold">${escapeHTML(p.techStack || "Full-Stack")}</span>
-          <span class="badge badge-emerald">${escapeHTML(p.status || "Active")}</span>
-        </div>
-        <h4 class="mt-2">${escapeHTML(p.title)}</h4>
-        <p class="small-muted">${escapeHTML(p.description || "")}</p>
-        <div class="mt-2">
-          <div class="flex-between">
-            <small>نسبة الإنجاز</small>
-            <strong>${Number(p.progress) || 0}%</strong>
-          </div>
-          <div class="progress-bar-track">
-            <div class="progress-bar-fill" style="width:${Number(p.progress) || 0}%"></div>
-          </div>
-        </div>
-      </div>
-      <div class="flex-between mt-2">
+  container.innerHTML = list.map(p => {
+    const isTracking = AppState.activeProjectTrackingId === p.id;
+    const trackedSec = Number(p.trackedSeconds || 0);
+    const hrs = Math.floor(trackedSec / 3600);
+    const mins = Math.floor((trackedSec % 3600) / 60);
+    const displayTime = hrs > 0 ? `${hrs} ساعة و ${mins} دقيقة` : `${mins} دقيقة`;
+
+    return `
+      <div class="item-card">
         <div>
-          ${p.githubUrl ? `<a href="${escapeHTML(p.githubUrl)}" target="_blank" class="btn-link"><i class="fa-brands fa-github"></i> GitHub</a>` : ""}
-          ${p.liveUrl ? `<a href="${escapeHTML(p.liveUrl)}" target="_blank" class="btn-link"><i class="fa-solid fa-globe"></i> Live</a>` : ""}
+          <div class="flex-between">
+            <span class="badge badge-gold">${escapeHTML(p.techStack || "Full-Stack")}</span>
+            <span class="badge badge-emerald">${escapeHTML(p.status || "Active")}</span>
+          </div>
+          <h4 class="mt-2">${escapeHTML(p.title)}</h4>
+          <p class="small-muted">${escapeHTML(p.description || "")}</p>
+          <div class="mt-2">
+            <div class="flex-between">
+              <small>نسبة الإنجاز</small>
+              <strong>${Number(p.progress) || 0}%</strong>
+            </div>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" style="width:${Number(p.progress) || 0}%"></div>
+            </div>
+          </div>
+
+          <!-- متتبع ساعات البرمجة الفعلي (Dev Time Tracker) -->
+          <div class="dev-tracker-bar">
+            <div>
+              <small class="small-muted d-block">إجمالي ساعات العمل المسجلة:</small>
+              <span class="dev-tracker-time"><i class="fa-solid fa-clock"></i> ${displayTime}</span>
+            </div>
+            <button class="btn btn-xs ${isTracking ? "btn-track-pulse" : "btn-outline"}" data-action="toggle-project-timer" data-id="${p.id}">
+              <i class="fa-solid ${isTracking ? "fa-stop" : "fa-play"}"></i>
+              ${isTracking ? "إيقاف وحفظ" : "بدء العمل ⏱️"}
+            </button>
+          </div>
         </div>
-        <button class="btn btn-xs btn-danger" data-action="delete-item" data-col="projects" data-id="${p.id}">
-          <i class="fa-solid fa-trash"></i>
-        </button>
+
+        <div class="flex-between mt-2">
+          <div>
+            ${p.githubUrl ? `<a href="${escapeHTML(p.githubUrl)}" target="_blank" class="btn-link"><i class="fa-brands fa-github"></i> GitHub</a>` : ""}
+            ${p.liveUrl ? `<a href="${escapeHTML(p.liveUrl)}" target="_blank" class="btn-link"><i class="fa-solid fa-globe"></i> Live</a>` : ""}
+          </div>
+          <button class="btn btn-xs btn-danger" data-action="delete-item" data-col="projects" data-id="${p.id}">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
       </div>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 }
 
 /* --- 9.7 LANGUAGES & SELF-DEVELOPMENT --- */
@@ -1759,16 +1804,50 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   document.getElementById("btn-open-task-modal").onclick = openTaskModal;
-
-  const openEventModal = () => {
+const openEventModal = () => {
     openFormModal("إضافة موعد أو حدث في التقويم", `
-      <div class="form-group"><label>عنوان الحدث</label><input name="title" required /></div>
-      <div class="form-group"><label>التاريخ</label><input type="date" name="date" value="${todayISO()}" required /></div>
-      <div class="form-group"><label>الوقت</label><input type="time" name="time" /></div>
-      <div class="form-group"><label>النوع</label>
-        <select name="type"><option value="University">محاضرة / جامعة</option><option value="Exam">امتحان</option><option value="Project">مشروع</option><option value="Reminder">تذكير</option></select>
+      <div id="collision-alert" class="collision-warning-box hidden">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span id="collision-alert-text"></span>
       </div>
-    `, (data) => createRecord("events", data));
+      <div class="form-group"><label>عنوان الحدث</label><input name="title" required placeholder="امتحان، تسليم شيت، محاضرة..." /></div>
+      <div class="form-group"><label>التاريخ</label><input type="date" id="event-input-date" name="date" value="${todayISO()}" required /></div>
+      <div class="form-group"><label>الوقت</label><input type="time" id="event-input-time" name="time" /></div>
+      <div class="form-group"><label>النوع</label>
+        <select name="type">
+          <option value="University">محاضرة / جامعة</option>
+          <option value="Exam">امتحان</option>
+          <option value="Project">مشروع</option>
+          <option value="Reminder">تذكير</option>
+        </select>
+      </div>
+    `, async (data) => {
+      const conflict = checkEventCollision(data.date, data.time);
+      if (conflict) {
+        const proceed = confirm(`⚠️ كاشف التضارب الذكي: لديك بالفعل حدث بعنوان "${conflict.title}" في نفس التوقيت تقريباً!\n\nهل ترغب في حفظ الحدث رغم وجود هذا التعارض؟`);
+        if (!proceed) return;
+      }
+      await createRecord("events", data);
+    });
+
+    // كشف فوري أثناء كتابة التاريخ والوقت في النموذج
+    const dateInp = document.getElementById("event-input-date");
+    const timeInp = document.getElementById("event-input-time");
+    const alertBox = document.getElementById("collision-alert");
+    const alertText = document.getElementById("collision-alert-text");
+
+    const runCollisionCheck = () => {
+      const conflict = checkEventCollision(dateInp.value, timeInp.value);
+      if (conflict) {
+        alertBox.classList.remove("hidden");
+        alertText.textContent = `تنبيه: يوجد تعارض مع "${conflict.title}" المسجل في نفس اليوم الساعة ${conflict.time || "غير محدد"}.`;
+      } else {
+        alertBox.classList.add("hidden");
+      }
+    };
+
+    dateInp.onchange = runCollisionCheck;
+    timeInp.onchange = runCollisionCheck;
   };
   document.getElementById("btn-open-event-modal").onclick = openEventModal;
 
@@ -1938,7 +2017,23 @@ document.getElementById("btn-add-subject").onclick = () => {
     const actionBtn = e.target.closest("[data-action]");
     if (!actionBtn) return;
     const action = actionBtn.dataset.action;
+// فتح خريطة المنهج الـ 29 بنداً للمادة
+ // تشغيل / إيقاف مؤقت العمل على المشروع البرمجي
+    if (action === "toggle-project-timer") {
+      toggleProjectDevTimer(actionBtn.dataset.id);
+    }
+if (action === "open-curriculum") {
+      const subject = AppState.collections.subjects.find(s => s.id === actionBtn.dataset.id);
+      if (!subject) return;
+      openSubjectCurriculumModal(subject);
+    }
 
+    // فتح مسجل الصوت واستعراض تسجيلات المحاضرات للمادة
+    if (action === "open-subject-voice") {
+      const subject = AppState.collections.subjects.find(s => s.id === actionBtn.dataset.id);
+      if (!subject) return;
+      openSubjectVoiceModal(subject);
+    }
     if (action === "delete-item") {
       await deleteRecord(actionBtn.dataset.col, actionBtn.dataset.id);
     }
@@ -2277,4 +2372,779 @@ document.getElementById("btn-ai-settings").onclick = () => {
       showToast("يتطلب حذف الحساب إعادة تسجيل الدخول حديثاً لدواعي الأمان: " + err.message, "error");
     }
   };
+});
+/* ==========================================================================
+   TASK 3 HELPERS: CTRL+K COMMAND PALETTE, PRIVACY, ZEN, PRAYERS & BRIEFING
+   ========================================================================== */
+
+// 1. مؤثرات صوتية تكنولوجية لمسية ناعمة (Tactile Audio Clicks)
+function playTactileClick() {
+  try {
+    const ctx = getAudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1200, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.04);
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.04);
+  } catch (e) {}
+}
+
+document.addEventListener("click", (e) => {
+  if (e.target.closest("button, .nav-item, .check-pill, .chip")) {
+    playTactileClick();
+  }
+});
+
+// 2. درع الخصوصية (Privacy Shield)
+let isPrivacyActive = false;
+function togglePrivacyShield() {
+  isPrivacyActive = !isPrivacyActive;
+  document.body.classList.toggle("privacy-shield-active", isPrivacyActive);
+  const icon = document.querySelector("#btn-privacy-shield i");
+  if (icon) {
+    icon.className = isPrivacyActive ? "fa-solid fa-eye-slash" : "fa-solid fa-eye";
+  }
+  showToast(isPrivacyActive ? "تم تفعيل درع الخصوصية (إخفاء الأرقام)" : "تم تعطيل درع الخصوصية", "info");
+}
+
+// 3. وضع التركيز المطلق (Zen Focus Mode)
+let isZenActive = false;
+function toggleZenMode() {
+  isZenActive = !isZenActive;
+  document.body.classList.toggle("zen-focus-active", isZenActive);
+  const exitBtn = document.getElementById("btn-exit-zen");
+  if (exitBtn) exitBtn.classList.toggle("hidden", !isZenActive);
+  showToast(isZenActive ? "تم تفعيل وضع التركيز المطلق (اضغط ESC للخروج)" : "تم الخروج من وضع التركيز", "info");
+}
+
+// 4. السبحة الإلكترونية العائمة الذكية
+let tasbeehCount = Number(localStorage.getItem("MY_LIFE_OS_TASBEEH") || 0);
+
+function updateTasbeehUI() {
+  document.getElementById("tasbeeh-mini-count").textContent = tasbeehCount;
+  document.getElementById("tasbeeh-main-count").textContent = tasbeehCount;
+  localStorage.setItem("MY_LIFE_OS_TASBEEH", tasbeehCount);
+}
+
+function clickTasbeeh() {
+  tasbeehCount++;
+  updateTasbeehUI();
+  if ("vibrate" in navigator) {
+    try { navigator.vibrate(35); } catch (e) {}
+  }
+}
+
+// 5. حساب مواقيت الصلاة الدقيقة لمصر (وفق الهيئة المصرية العامة للمساحة)
+function calculateEgyptPrayerTimes() {
+  // إحداثيات القاهرة والمعدلات القياسية لمصر (الفجر 19.5°، العشاء 17.5°)
+  const now = new Date();
+  const baseTimes = [
+    { key: "fajr", name: "الفجر", h: 4, m: 43 },
+    { key: "sunrise", name: "الشروق", h: 6, m: 9 },
+    { key: "dhuhr", name: "الظهر", h: 11, m: 39 },
+    { key: "asr", name: "العصر", h: 14, m: 44 },
+    { key: "maghrib", name: "المغرب", h: 17, m: 9 },
+    { key: "isha", name: "العشاء", h: 18, m: 28 }
+  ];
+
+  const grid = document.getElementById("egypt-prayer-times-grid");
+  const countdownEl = document.getElementById("next-prayer-countdown");
+  if (!grid) return;
+
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  let nextPrayer = null;
+
+  grid.innerHTML = baseTimes.map(p => {
+    const prayerMinutes = p.h * 60 + p.m;
+    const isNext = !nextPrayer && prayerMinutes > currentMinutes;
+    if (isNext) nextPrayer = { ...p, minutes: prayerMinutes };
+
+    const formattedTime = `${String(p.h > 12 ? p.h - 12 : p.h).padStart(2, "0")}:${String(p.m).padStart(2, "0")} ${p.h >= 12 ? "م" : "ص"}`;
+    return `
+      <div class="prayer-time-col ${isNext ? "active-next" : ""}">
+        <strong>${p.name}</strong>
+        <span>${formattedTime}</span>
+      </div>
+    `;
+  }).join("");
+
+  if (!nextPrayer) nextPrayer = { ...baseTimes[0], minutes: (baseTimes[0].h + 24) * 60 + baseTimes[0].m };
+  const diffMin = nextPrayer.minutes - currentMinutes;
+  const remH = Math.floor(diffMin / 60);
+  const remM = diffMin % 60;
+  if (countdownEl) {
+    countdownEl.textContent = `متبقي على صلاة ${nextPrayer.name}: ${remH > 0 ? remH + " س و " : ""}${remM} دقيقة`;
+  }
+}
+
+// 6. الموجز الصباحي الذكي (AI Morning Briefing)
+function renderMorningBriefing() {
+  const el = document.getElementById("morning-briefing-text");
+  if (!el) return;
+
+  const today = todayISO();
+  const userName = AppState.user?.displayName || "يا هندسة";
+  const tasksToday = AppState.collections.tasks.filter(t => t.dueDate === today && t.status !== "Completed");
+  const overdueTasks = AppState.collections.tasks.filter(t => t.dueDate && t.dueDate < today && t.status !== "Completed");
+  const subjectsCount = AppState.collections.subjects.length;
+
+  let briefing = `صباح الخير والبركة يا ${userName}! ☀️\n`;
+  if (tasksToday.length > 0) {
+    briefing += `• لديك اليوم ${tasksToday.length} مهام مجدولة، أولها: "${tasksToday[0].title}".\n`;
+  } else {
+    briefing += `• جدولك لمهام اليوم هادئ حتى الآن! فرصة ممتازة للمذاكرة أو تطوير مشاريعك.\n`;
+  }
+
+  if (overdueTasks.length > 0) {
+    briefing += `• تنبيه أولوية: هناك ${overdueTasks.length} مهام متأخرة نوصي بإنهاء واحدة منها اليوم.\n`;
+  }
+
+  briefing += `• لديك ${subjectsCount} مواد مسجلة. حافظ على أداء الصلوات في وقتها واستعن بالله! 🚀`;
+
+  el.textContent = briefing;
+}
+
+// 7. لوحة الأوامر السريعة (Command Palette - Ctrl + K)
+const COMMAND_ACTIONS = [
+  { label: "الانتقال إلى: لوحة التحكم (الرئيسية)", icon: "fa-gauge-high", action: () => switchView("dashboard") },
+  { label: "الانتقال إلى: إدارة المهام", icon: "fa-list-check", action: () => switchView("tasks") },
+  { label: "الانتقال إلى: الجامعة والدراسة", icon: "fa-graduation-cap", action: () => switchView("university") },
+  { label: "الانتقال إلى: القرآن والعبادة", icon: "fa-mosque", action: () => switchView("islamic") },
+  { label: "الانتقال إلى: المشاريع والبرمجة", icon: "fa-code-branch", action: () => switchView("projects") },
+  { label: "الانتقال إلى: الإدارة المالية", icon: "fa-wallet", action: () => switchView("finance") },
+  { label: "الانتقال إلى: المساعد الذكي AI", icon: "fa-wand-magic-sparkles", action: () => switchView("ai") },
+  { label: "إجراء سريع: إضافة مهمة جديدة", icon: "fa-plus", action: () => document.getElementById("btn-open-task-modal")?.click() },
+  { label: "إجراء سريع: إضافة مادة دراسية", icon: "fa-book-medical", action: () => document.getElementById("btn-add-subject")?.click() },
+  { label: "إجراء سريع: تشغيل مؤقت بومودورو", icon: "fa-stopwatch", action: () => openPomodoroModal() },
+  { label: "إجراء سريع: تشغيل صوت المطر الهادئ", icon: "fa-cloud-showers-heavy", action: () => toggleAmbientSound("rain") },
+  { label: "تبديل: تفعيل / إلغاء درع الخصوصية", icon: "fa-eye-slash", action: () => togglePrivacyShield() },
+  { label: "تبديل: تفعيل وضع التركيز (Zen Mode)", icon: "fa-compress", action: () => toggleZenMode() }
+];
+
+function openCommandPalette() {
+  const modal = document.getElementById("command-palette-modal");
+  const input = document.getElementById("cmd-input");
+  if (!modal || !input) return;
+
+  modal.classList.remove("hidden");
+  input.value = "";
+  renderCmdResults("");
+  input.focus();
+}
+
+function closeCommandPalette() {
+  const modal = document.getElementById("command-palette-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function renderCmdResults(queryStr) {
+  const list = document.getElementById("cmd-results-list");
+  if (!list) return;
+
+  const q = queryStr.toLowerCase().trim();
+  const filtered = COMMAND_ACTIONS.filter(c => c.label.toLowerCase().includes(q));
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="p-3 text-center small-muted">لم يتم العثور على أوامر مطابقة</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map((c, idx) => `
+    <div class="cmd-item" data-cmd-index="${idx}">
+      <div class="cmd-item-start">
+        <i class="fa-solid ${c.icon} gold-text"></i>
+        <span>${escapeHTML(c.label)}</span>
+      </div>
+      <i class="fa-solid fa-arrow-turn-down fa-rotate-90 small-muted"></i>
+    </div>
+  `).join("");
+
+  list.querySelectorAll(".cmd-item").forEach((el, idx) => {
+    el.onclick = () => {
+      closeCommandPalette();
+      filtered[idx].action();
+    };
+  });
+}
+
+// 8. ربط المستمعين للأحداث ومفاتيح الكيبورد
+document.addEventListener("DOMContentLoaded", () => {
+  // درع الخصوصية ووضع التركيز
+  document.getElementById("btn-privacy-shield")?.addEventListener("click", togglePrivacyShield);
+  document.getElementById("btn-zen-mode")?.addEventListener("click", toggleZenMode);
+  document.getElementById("btn-exit-zen")?.addEventListener("click", toggleZenMode);
+  document.getElementById("btn-open-cmd")?.addEventListener("click", openCommandPalette);
+
+  // السبحة العائمة
+  updateTasbeehUI();
+  document.getElementById("btn-toggle-tasbeeh")?.addEventListener("click", () => {
+    document.getElementById("tasbeeh-popover")?.classList.toggle("hidden");
+  });
+  document.getElementById("btn-tasbeeh-click")?.addEventListener("click", clickTasbeeh);
+  document.getElementById("btn-reset-tasbeeh")?.addEventListener("click", () => {
+    tasbeehCount = 0;
+    updateTasbeehUI();
+    showToast("تم إعادة ضبط عداد السبحة", "info");
+  });
+  document.getElementById("select-tasbeeh-phrase")?.addEventListener("change", (e) => {
+    document.getElementById("tasbeeh-dhikr-name").textContent = e.target.value;
+  });
+
+  // مواقيت الصلاة والموجز الصباحي
+  calculateEgyptPrayerTimes();
+  setInterval(calculateEgyptPrayerTimes, 60000);
+  renderMorningBriefing();
+
+  // اختصارات لوحة المفاتيح: Ctrl + K (أو Cmd + K)، Space للسبحة، و ESC للخروج
+  window.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      const modal = document.getElementById("command-palette-modal");
+      if (modal && !modal.classList.contains("hidden")) {
+        closeCommandPalette();
+      } else {
+        openCommandPalette();
+      }
+    }
+
+    if (e.key === "Escape") {
+      closeCommandPalette();
+      if (isZenActive) toggleZenMode();
+    }
+
+    // Spacebar للسبحة إذا كان البوب أوفر مفتوحاً ولم تكن داخل حقل كتابة
+    if (e.code === "Space" && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
+      const popover = document.getElementById("tasbeeh-popover");
+      if (popover && !popover.classList.contains("hidden")) {
+        e.preventDefault();
+        clickTasbeeh();
+      }
+    }
+  });
+
+  document.getElementById("cmd-input")?.addEventListener("input", (e) => {
+    renderCmdResults(e.target.value);
+  });
+
+  document.getElementById("command-palette-modal")?.addEventListener("click", (e) => {
+    if (e.target.id === "command-palette-modal") closeCommandPalette();
+  });
+});
+
+/* ==========================================================================
+   TASK 1 HELPERS: 29-ITEMS CURRICULUM, LIVE RECORDER & COLLISION DETECTOR
+   ========================================================================== */
+
+// 1. خريطة المنهج التفاعلية (11 محاضرة + 11 شيت + ميدتيرم + كويزين + 4 تكليفات)
+function openSubjectCurriculumModal(subject) {
+  const checklist = subject.checklist || {};
+
+  const generatePills = (prefix, count, label) => {
+    let html = "";
+    for (let i = 1; i <= count; i++) {
+      const key = `${prefix}_${i}`;
+      const checked = checklist[key] ? "checked" : "";
+      const completedClass = checked ? "completed" : "";
+      html += `
+        <label class="check-pill ${completedClass}">
+          <input type="checkbox" data-check-key="${key}" ${checked} />
+          <span>${label} ${i}</span>
+        </label>
+      `;
+    }
+    return html;
+  };
+
+  const midChecked = checklist["midterm"] ? "checked" : "";
+
+  const modalBody = `
+    <p class="small-muted mb-2">اضغط على أي بند تم إنجازه، وستُحسب نسبة تقدم المادة تلقائياً في حسابك.</p>
+    
+    <div class="curriculum-category">
+      <h4><i class="fa-solid fa-person-chalkboard"></i> المحاضرات (11 محاضرة)</h4>
+      <div class="curriculum-items-wrap">${generatePills("lec", 11, "محاضرة")}</div>
+    </div>
+
+    <div class="curriculum-category">
+      <h4><i class="fa-solid fa-file-lines"></i> الشيتات والتمارين (11 شيت)</h4>
+      <div class="curriculum-items-wrap">${generatePills("sheet", 11, "شيت")}</div>
+    </div>
+
+    <div class="curriculum-category">
+      <h4><i class="fa-solid fa-pen-ruler"></i> التكليفات والواجبات (4 تكليفات)</h4>
+      <div class="curriculum-items-wrap">${generatePills("assign", 4, "تكليف")}</div>
+    </div>
+
+    <div class="curriculum-category">
+      <h4><i class="fa-solid fa-award"></i> الاختبارات والتقييمات</h4>
+      <div class="curriculum-items-wrap">
+        <label class="check-pill ${midChecked ? "completed" : ""}">
+          <input type="checkbox" data-check-key="midterm" ${midChecked} />
+          <span>الميدتيرم</span>
+        </label>
+        <label class="check-pill ${checklist["quiz_1"] ? "completed" : ""}">
+          <input type="checkbox" data-check-key="quiz_1" ${checklist["quiz_1"] ? "checked" : ""} />
+          <span>كويز 1</span>
+        </label>
+        <label class="check-pill ${checklist["quiz_2"] ? "completed" : ""}">
+          <input type="checkbox" data-check-key="quiz_2" ${checklist["quiz_2"] ? "checked" : ""} />
+          <span>كويز 2</span>
+        </label>
+      </div>
+    </div>
+  `;
+
+  openFormModal(`خريطة منهج: ${escapeHTML(subject.name)}`, modalBody, async () => {});
+
+  // حفظ التغييرات فوراً في Firebase عند الضغط على أي Checkbox
+  const modalForm = document.getElementById("universal-modal-form");
+  const saveBtn = modalForm.querySelector('button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none"; // الحفظ فوري بدون الحاجة للضغط على زر
+
+  modalForm.querySelectorAll('input[type="checkbox"]').forEach(box => {
+    box.onchange = async () => {
+      const key = box.dataset.checkKey;
+      checklist[key] = box.checked;
+      box.closest(".check-pill").classList.toggle("completed", box.checked);
+      await updateRecord("subjects", subject.id, { checklist });
+    };
+  });
+}
+
+// 2. مسجل صوت المحاضرات المباشر
+let activeMediaRecorder = null;
+let recordedAudioChunks = [];
+
+function openSubjectVoiceModal(subject) {
+  const voiceNotes = subject.voiceNotes || [];
+
+  const notesListHtml = voiceNotes.length
+    ? voiceNotes.map((vn, idx) => `
+        <div class="voice-note-item">
+          <div>
+            <strong>${escapeHTML(vn.title || `تسجيل ${idx + 1}`)}</strong>
+            <small class="small-muted d-block">${escapeHTML(vn.date || "")}</small>
+          </div>
+          <audio controls src="${escapeHTML(vn.audioUrl)}"></audio>
+        </div>
+      `).join("")
+    : `<p class="small-muted text-center py-2">لا توجد تسجيلات صوتية مسجلة لهذه المادة بعد.</p>`;
+
+  const modalBody = `
+    <div class="voice-recorder-bar">
+      <div>
+        <span id="rec-status-indicator" class="hidden"><span class="rec-pulse-dot"></span> جاري التسجيل بالمايكروفون...</span>
+        <span id="rec-idle-indicator"><i class="fa-solid fa-microphone gold-text"></i> اضغط لبدء تسجيل ملاحظة المحاضرة:</span>
+      </div>
+      <div>
+        <button type="button" id="btn-start-recording" class="btn btn-gold btn-sm"><i class="fa-solid fa-circle-dot"></i> تسجيل</button>
+        <button type="button" id="btn-stop-recording" class="btn btn-danger btn-sm hidden"><i class="fa-solid fa-stop"></i> إيقاف وحفظ</button>
+      </div>
+    </div>
+
+    <h4 class="mt-4"><i class="fa-solid fa-file-audio gold-text"></i> تسجيلات المادة المحفوظة:</h4>
+    <div class="voice-notes-list">${notesListHtml}</div>
+  `;
+
+  openFormModal(`صوتيات مادة: ${escapeHTML(subject.name)}`, modalBody, async () => {});
+
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  const startBtn = document.getElementById("btn-start-recording");
+  const stopBtn = document.getElementById("btn-stop-recording");
+  const activeDot = document.getElementById("rec-status-indicator");
+  const idleText = document.getElementById("rec-idle-indicator");
+
+  startBtn.onclick = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      activeMediaRecorder = new MediaRecorder(stream);
+      recordedAudioChunks = [];
+
+      activeMediaRecorder.ondataavailable = e => recordedAudioChunks.push(e.data);
+      activeMediaRecorder.onstop = () => {
+        const audioBlob = new Blob(recordedAudioChunks, { type: "audio/webm" });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          const base64Audio = reader.result;
+          const newNotes = [
+            {
+              title: `تسجيل محاضرة (${new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })})`,
+              date: todayISO(),
+              audioUrl: base64Audio
+            },
+            ...voiceNotes
+          ];
+          await updateRecord("subjects", subject.id, { voiceNotes: newNotes });
+          document.getElementById("universal-modal").classList.add("hidden");
+          showToast("تم حفظ التسجيل الصوتي بنجاح", "success");
+        };
+      };
+
+      activeMediaRecorder.start();
+      startBtn.classList.add("hidden");
+      stopBtn.classList.remove("hidden");
+      activeDot.classList.remove("hidden");
+      idleText.classList.add("hidden");
+    } catch (err) {
+      showToast("يرجى إعطاء إذن استخدام المايكروفون للمتصفح", "error");
+    }
+  };
+
+  stopBtn.onclick = () => {
+    if (activeMediaRecorder && activeMediaRecorder.state !== "inactive") {
+      activeMediaRecorder.stop();
+      activeMediaRecorder.stream.getTracks().forEach(t => t.stop());
+    }
+  };
+}
+
+// 3. كاشف تضارب المواعيد الذكي (Smart Collision Detector)
+function checkEventCollision(dateStr, timeStr) {
+  if (!dateStr) return null;
+  const existingEvents = AppState.collections.events || [];
+  return existingEvents.find(e => {
+    if (e.date !== dateStr) return false;
+    if (timeStr && e.time) {
+      // فحص إذا كان الوقت بنفس الساعة أو بفارق أقل من 45 دقيقة
+      const [h1, m1] = timeStr.split(":").map(Number);
+      const [h2, m2] = e.time.split(":").map(Number);
+      const diffMinutes = Math.abs((h1 * 60 + m1) - (h2 * 60 + m2));
+      return diffMinutes < 45;
+    }
+    return true; // نفس اليوم إذا لم يتم تحديد دقيقة
+  });
+}
+/* ==========================================================================
+   TASK 2 HELPERS: POMODORO, DEV TIMER, AMBIENT STUDY AUDIO & VIDEO PIP
+   ========================================================================== */
+
+// 1. نظام الصوت التكنولوجي والتوليدي (Web Audio API - بدون ملفات خارجية)
+let sharedAudioCtx = null;
+function getAudioContext() {
+  if (!sharedAudioCtx) {
+    sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (sharedAudioCtx.state === "suspended") {
+    sharedAudioCtx.resume();
+  }
+  return sharedAudioCtx;
+}
+
+// نغمة تنبيه تكنولوجية ناعمة عند انتهاء البومودورو
+function playTechBeep() {
+  try {
+    const ctx = getAudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15); // A5
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.8);
+  } catch (e) {}
+}
+
+// 2. مولد أصوات التركيز المحيطية (صوت مطر هادئ + ضوضاء تركيز)
+let ambientSourceNode = null;
+let ambientGainNode = null;
+let currentAmbientType = null;
+
+function toggleAmbientSound(type) {
+  const ctx = getAudioContext();
+
+  if (currentAmbientType === type) {
+    // إيقاف الصوت
+    if (ambientSourceNode) {
+      ambientSourceNode.stop();
+      ambientSourceNode.disconnect();
+      ambientSourceNode = null;
+    }
+    currentAmbientType = null;
+    showToast("تم إيقاف صوت التركيز", "info");
+    return false;
+  }
+
+  // إيقاف السابق إن وُجد
+  if (ambientSourceNode) {
+    ambientSourceNode.stop();
+    ambientSourceNode.disconnect();
+  }
+
+  // توليد صوت مطر / تركيز من خلال Buffer Noise نقي
+  const bufferSize = ctx.sampleRate * 2;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  let lastOut = 0.0;
+  for (let i = 0; i < bufferSize; i++) {
+    const white = Math.random() * 2 - 1;
+    if (type === "rain") {
+      // محاكاة قطرات المطر (Pink/Brown noise خفيف)
+      data[i] = (lastOut + 0.02 * white) / 1.02;
+      lastOut = data[i];
+      data[i] *= 3.5;
+    } else {
+      // ضوضاء تركيز عميق (Brown Noise)
+      data[i] = (lastOut + 0.05 * white) / 1.05;
+      lastOut = data[i];
+      data[i] *= 2.0;
+    }
+  }
+
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+  noise.loop = true;
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = type === "rain" ? "lowpass" : "bandpass";
+  filter.frequency.value = type === "rain" ? 1000 : 450;
+
+  ambientGainNode = ctx.createGain();
+  ambientGainNode.gain.value = 0.22;
+
+  noise.connect(filter);
+  filter.connect(ambientGainNode);
+  ambientGainNode.connect(ctx.destination);
+
+  noise.start();
+  ambientSourceNode = noise;
+  currentAmbientType = type;
+  showToast(type === "rain" ? "تم تشغيل صوت المطر الهادئ 🌧️" : "تم تشغيل صوت التركيز العميق 🎧", "success");
+  return true;
+}
+
+// 3. مؤقت بومودورو للتركيز التقني (25 دقيقة تركيز / 5 دقائق راحة)
+const PomodoroState = {
+  duration: 25 * 60,
+  timeLeft: 25 * 60,
+  isRunning: false,
+  mode: "work", // "work" or "break"
+  intervalId: null
+};
+
+function formatPomoTime(secs) {
+  const m = String(Math.floor(secs / 60)).padStart(2, "0");
+  const s = String(secs % 60).padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+function updatePomodoroDisplays() {
+  const timeStr = formatPomoTime(PomodoroState.timeLeft);
+  const displayEl = document.getElementById("pomo-modal-display");
+  if (displayEl) displayEl.textContent = timeStr;
+
+  const badge = document.getElementById("topbar-pomo-badge");
+  if (badge) {
+    badge.textContent = timeStr;
+    badge.classList.toggle("hidden", !PomodoroState.isRunning);
+  }
+}
+
+function startPomodoro() {
+  if (PomodoroState.isRunning) return;
+  getAudioContext();
+  PomodoroState.isRunning = true;
+  updatePomodoroDisplays();
+
+  PomodoroState.intervalId = setInterval(() => {
+    if (PomodoroState.timeLeft > 0) {
+      PomodoroState.timeLeft--;
+      updatePomodoroDisplays();
+    } else {
+      clearInterval(PomodoroState.intervalId);
+      PomodoroState.isRunning = false;
+      playTechBeep();
+      if (PomodoroState.mode === "work") {
+        showToast("عاش يا هندسة! انتهت 25 دقيقة تركيز، وقت الراحة 5 دقائق ☕", "success");
+        setPomodoroMode("break");
+      } else {
+        showToast("انتهت استراحة الـ 5 دقائق، جاهز لجولة تركيز جديدة؟ 🚀", "info");
+        setPomodoroMode("work");
+      }
+    }
+  }, 1000);
+}
+
+function pausePomodoro() {
+  PomodoroState.isRunning = false;
+  if (PomodoroState.intervalId) clearInterval(PomodoroState.intervalId);
+  updatePomodoroDisplays();
+}
+
+function resetPomodoro() {
+  pausePomodoro();
+  PomodoroState.timeLeft = PomodoroState.duration;
+  updatePomodoroDisplays();
+}
+
+function setPomodoroMode(mode) {
+  PomodoroState.mode = mode;
+  PomodoroState.duration = mode === "work" ? 25 * 60 : 5 * 60;
+  resetPomodoro();
+}
+
+function openPomodoroModal() {
+  const modalBody = `
+    <div class="pomodoro-card">
+      <div class="pomodoro-modes-bar">
+        <button type="button" id="pomo-mode-work" class="btn btn-sm ${PomodoroState.mode === "work" ? "btn-gold" : "btn-outline"}">
+          <i class="fa-solid fa-brain"></i> تركيز (25 دقيقة)
+        </button>
+        <button type="button" id="pomo-mode-break" class="btn btn-sm ${PomodoroState.mode === "break" ? "btn-gold" : "btn-outline"}">
+          <i class="fa-solid fa-mug-hot"></i> استراحة (5 دقائق)
+        </button>
+      </div>
+
+      <div id="pomo-modal-display" class="pomodoro-timer-display">${formatPomoTime(PomodoroState.timeLeft)}</div>
+
+      <div class="pomodoro-actions">
+        <button type="button" id="btn-pomo-start" class="btn btn-gold">
+          <i class="fa-solid ${PomodoroState.isRunning ? "fa-pause" : "fa-play"}"></i>
+          ${PomodoroState.isRunning ? "إيقاف مؤقت" : "بدء الجلسة"}
+        </button>
+        <button type="button" id="btn-pomo-reset" class="btn btn-outline">
+          <i class="fa-solid fa-rotate-right"></i> إعادة ضبط
+        </button>
+      </div>
+    </div>
+  `;
+
+  openFormModal("مؤقت بومودورو للتركيز التقني", modalBody, async () => {});
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  document.getElementById("pomo-mode-work").onclick = () => { setPomodoroMode("work"); openPomodoroModal(); };
+  document.getElementById("pomo-mode-break").onclick = () => { setPomodoroMode("break"); openPomodoroModal(); };
+  document.getElementById("btn-pomo-start").onclick = () => {
+    if (PomodoroState.isRunning) pausePomodoro(); else startPomodoro();
+    openPomodoroModal();
+  };
+  document.getElementById("btn-pomo-reset").onclick = () => { resetPomodoro(); openPomodoroModal(); };
+}
+
+// 4. نافذة أصوات التركيز والدراسة
+function openAmbientModal() {
+  const modalBody = `
+    <p class="small-muted">أصوات هادئة للمساعدة على التركيز أثناء البرمجة والمذاكرة تعمل مباشرة في الخلفية:</p>
+    <div class="ambient-controls-grid">
+      <div class="ambient-sound-card ${currentAmbientType === "rain" ? "active" : ""}" id="card-amb-rain">
+        <i class="fa-solid fa-cloud-showers-heavy"></i>
+        <strong>مطر هادئ</strong>
+        <small class="small-muted d-block mt-1">${currentAmbientType === "rain" ? "شغال حالياً" : "اضغط للتشغيل"}</small>
+      </div>
+      <div class="ambient-sound-card ${currentAmbientType === "focus" ? "active" : ""}" id="card-amb-focus">
+        <i class="fa-solid fa-wave-square"></i>
+        <strong>تركيز عميق</strong>
+        <small class="small-muted d-block mt-1">${currentAmbientType === "focus" ? "شغال حالياً" : "اضغط للتشغيل"}</small>
+      </div>
+    </div>
+  `;
+
+  openFormModal("أصوات التركيز الذهني (Ambient Sounds)", modalBody, async () => {});
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  document.getElementById("card-amb-rain").onclick = () => { toggleAmbientSound("rain"); openAmbientModal(); };
+  document.getElementById("card-amb-focus").onclick = () => { toggleAmbientSound("focus"); openAmbientModal(); };
+}
+
+// 5. متتبع ساعات العمل الفعلي على المشاريع (Dev Time Tracker)
+AppState.activeProjectTrackingId = null;
+let projectTrackingTimer = null;
+let projectTrackingStartTime = 0;
+
+async function toggleProjectDevTimer(projectId) {
+  const proj = AppState.collections.projects.find(p => p.id === projectId);
+  if (!proj) return;
+
+  if (AppState.activeProjectTrackingId === projectId) {
+    // إيقاف العداد وحفظ الثواني في Firebase
+    const elapsedSec = Math.round((Date.now() - projectTrackingStartTime) / 1000);
+    clearInterval(projectTrackingTimer);
+    AppState.activeProjectTrackingId = null;
+
+    const totalSec = Number(proj.trackedSeconds || 0) + elapsedSec;
+    await updateRecord("projects", projectId, { trackedSeconds: totalSec });
+    showToast(`تم حفظ ${Math.round(elapsedSec / 60)} دقيقة عمل في مشروع "${proj.title}"`, "success");
+    renderProjects();
+  } else {
+    // بدء العداد
+    if (AppState.activeProjectTrackingId) {
+      showToast("يوجد مؤقت يعمل بالفعل على مشروع آخر، قم بإيقافه أولاً", "error");
+      return;
+    }
+    AppState.activeProjectTrackingId = projectId;
+    projectTrackingStartTime = Date.now();
+    projectTrackingTimer = setInterval(() => {
+      renderProjects();
+    }, 10000); // تحديث كل 10 ثوانٍ
+    showToast(`بدأ حساب وقت العمل على مشروع "${proj.title}" ⏱️`, "info");
+    renderProjects();
+  }
+}
+
+// 6. تشغيل الفيديو في نافذة عائمة (PiP) وحفظ العلامات الزمنية
+document.addEventListener("DOMContentLoaded", () => {
+  const topbarPomo = document.getElementById("btn-topbar-pomo");
+  if (topbarPomo) topbarPomo.onclick = openPomodoroModal;
+
+  const topbarAmbient = document.getElementById("btn-topbar-ambient");
+  if (topbarAmbient) topbarAmbient.onclick = openAmbientModal;
+
+  const pipBtn = document.getElementById("btn-video-pip");
+  const player = document.getElementById("main-media-player");
+  if (pipBtn && player) {
+    pipBtn.onclick = async () => {
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else if (document.pictureInPictureEnabled && player.src) {
+          await player.requestPictureInPicture();
+        } else {
+          showToast("شغل فيديو أولاً لتفعيله في نافذة عائمة", "info");
+        }
+      } catch (err) {
+        showToast("المتصفح لا يدعم PiP لهذا المصدر حالياً", "error");
+      }
+    };
+  }
+
+  const addTsBtn = document.getElementById("btn-add-timestamp");
+  const tsContainer = document.getElementById("video-timestamps-list");
+  if (addTsBtn && player && tsContainer) {
+    addTsBtn.onclick = () => {
+      if (!player.duration || isNaN(player.currentTime)) {
+        showToast("قم بتشغيل الفيديو أولاً لحفظ علامة زمنية", "info");
+        return;
+      }
+      const sec = Math.floor(player.currentTime);
+      const m = String(Math.floor(sec / 60)).padStart(2, "0");
+      const s = String(sec % 60).padStart(2, "0");
+      const timeLabel = `${m}:${s}`;
+
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "timestamp-chip";
+      chip.innerHTML = `<i class="fa-regular fa-clock"></i> الدقيقة ${timeLabel}`;
+      chip.onclick = () => {
+        player.currentTime = sec;
+        player.play();
+      };
+      tsContainer.appendChild(chip);
+      showToast(`تم حفظ العلامة الزمنية عند ${timeLabel}`, "success");
+    };
+  }
 });
