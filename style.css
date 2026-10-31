@@ -1619,47 +1619,236 @@ body.zen-focus-active .main-content {
   animation: pulseRingOut 2s infinite;
 }
 
-/* بطاقة البومودورو المطورة ووضع ملء الشاشة السينمائي */
-.pomodoro-card {
-  text-align: center;
-  padding: 8px 4px;
-  position: relative;
-}
+/* ==========================================================================
+   ULTRA-LUXURY FULLSCREEN POMODORO SANCTUARY & 5 REFRESHING COLOR THEMES
+   ========================================================================== */
 
-/* وضع ملء الشاشة الفخم للمودال */
 .modal-card.pomo-fullscreen-active {
+  --pomo-accent: #d4af37;
+  --pomo-accent-rgb: 212, 175, 55;
   max-width: 100vw !important;
   width: 100vw !important;
   height: 100vh !important;
   max-height: 100vh !important;
   border-radius: 0 !important;
+  padding: 28px 20px !important;
   display: flex !important;
   flex-direction: column !important;
-  justify-content: center !important;
+  justify-content: flex-start !important;
   align-items: center !important;
-  background: radial-gradient(circle at center, rgba(20, 25, 38, 0.98), #05070b 80%) !important;
+  background: radial-gradient(circle at 50% 35%, rgba(var(--pomo-accent-rgb), 0.16), rgba(10, 14, 24, 0.96) 55%, #04060a 100%) !important;
   border: none !important;
+  overflow-y: auto !important;
+  transition: background 0.5s ease !important;
 }
 
-.modal-card.pomo-fullscreen-active .pomodoro-timer-display {
-  font-size: 6.5rem !important;
-  text-shadow: 0 0 50px rgba(212, 175, 55, 0.65) !important;
+/* الألوان الـ 5 الفاخرة والمنعشة */
+.modal-card.pomo-fullscreen-active[data-pomo-theme="gold"] {
+  --pomo-accent: #d4af37;
+  --pomo-accent-rgb: 212, 175, 55;
+}
+.modal-card.pomo-fullscreen-active[data-pomo-theme="emerald"] {
+  --pomo-accent: #10b981;
+  --pomo-accent-rgb: 16, 185, 129;
+}
+.modal-card.pomo-fullscreen-active[data-pomo-theme="cyan"] {
+  --pomo-accent: #06b6d4;
+  --pomo-accent-rgb: 6, 182, 212;
+}
+.modal-card.pomo-fullscreen-active[data-pomo-theme="purple"] {
+  --pomo-accent: #a855f7;
+  --pomo-accent-rgb: 168, 85, 247;
+}
+.modal-card.pomo-fullscreen-active[data-pomo-theme="rose"] {
+  --pomo-accent: #f43f5e;
+  --pomo-accent-rgb: 244, 63, 94;
 }
 
-/* الحلقة الدائرية المتوهجة للوقت */
-.pomo-ring-container {
-  position: relative;
-  width: 240px;
-  height: 240px;
-  margin: 10px auto;
+/* إخفاء الهيدر القديم الضيق في وضع البومودورو واستبداله بهيدر اللوجو الفخم */
+.modal-card.pomo-fullscreen-active .modal-header {
+  width: 100%;
+  max-width: 900px;
+  border: none !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  justify-content: flex-end !important;
+}
+
+.modal-card.pomo-fullscreen-active #modal-title {
+  display: none !important;
+}
+
+.modal-card.pomo-fullscreen-active #btn-close-modal {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(var(--pomo-accent-rgb), 0.4) !important;
+  color: var(--pomo-accent) !important;
+  font-size: 1.2rem !important;
+  box-shadow: 0 0 20px rgba(var(--pomo-accent-rgb), 0.2);
+}
+
+.modal-card.pomo-fullscreen-active #btn-close-modal:hover {
+  transform: rotate(90deg) scale(1.1);
+  background: rgba(var(--pomo-accent-rgb), 0.2) !important;
+}
+
+.pomodoro-card {
+  width: 100%;
+  max-width: 760px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  margin: auto 0;
+}
+
+/* اللوجو العلوي المتوهج فوق المؤقت */
+.pomo-brand-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.pomo-logo-orb {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  padding: 4px;
+  background: linear-gradient(135deg, var(--pomo-accent), transparent);
+  box-shadow: 0 0 35px rgba(var(--pomo-accent-rgb), 0.55);
+  animation: levitateLogo 3.2s ease-in-out infinite;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.modal-card.pomo-fullscreen-active .pomo-ring-container {
-  width: 340px;
-  height: 340px;
+.pomo-logo-orb img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #07090e;
+}
+
+.pomo-brand-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #ffffff;
+}
+
+.pomo-brand-title span {
+  color: var(--pomo-accent);
+  text-shadow: 0 0 16px rgba(var(--pomo-accent-rgb), 0.6);
+}
+
+/* شريط الـ 5 ألوان والصوت */
+.pomo-top-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(15, 20, 32, 0.75);
+  border: 1px solid rgba(var(--pomo-accent-rgb), 0.28);
+  padding: 8px 18px;
+  border-radius: 99px;
+  backdrop-filter: blur(16px);
+}
+
+.pomo-color-swatches {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pomo-color-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.pomo-color-dot:hover {
+  transform: scale(1.2);
+}
+
+.pomo-color-dot.active {
+  transform: scale(1.25);
+  border-color: #ffffff;
+  box-shadow: 0 0 15px currentColor;
+}
+
+/* أزرار المدد الزمنية الزجاجية */
+.pomodoro-modes-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.pomo-preset-btn {
+  background: rgba(20, 26, 40, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.pomo-preset-btn:hover,
+.pomo-preset-btn.active {
+  background: rgba(var(--pomo-accent-rgb), 0.18);
+  border-color: var(--pomo-accent);
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(var(--pomo-accent-rgb), 0.3);
+  transform: translateY(-2px);
+}
+
+.pomo-custom-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 20, 32, 0.85);
+  border: 1px solid rgba(var(--pomo-accent-rgb), 0.35);
+  border-radius: 99px;
+  padding: 3px 6px 3px 12px;
+}
+
+.pomo-custom-input-wrap input {
+  width: 52px !important;
+  padding: 4px !important;
+  text-align: center;
+  border: none !important;
+  background: transparent !important;
+  font-weight: 800;
+  color: var(--pomo-accent);
+  font-size: 0.95rem !important;
+}
+
+/* الساعة الدائرية السويسرية الفاخرة */
+.pomo-ring-container {
+  position: relative;
+  width: 330px;
+  height: 330px;
+  margin: 6px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--pomo-accent-rgb), 0.08) 0%, rgba(10, 14, 24, 0.65) 70%, transparent 100%);
+  box-shadow: 0 0 60px rgba(var(--pomo-accent-rgb), 0.15), inset 0 0 40px rgba(var(--pomo-accent-rgb), 0.08);
 }
 
 .pomo-svg-ring {
@@ -1672,72 +1861,120 @@ body.zen-focus-active .main-content {
 
 .pomo-svg-ring circle {
   fill: transparent;
-  stroke-width: 8;
   stroke-linecap: round;
 }
 
+.pomo-circle-tracks {
+  stroke: rgba(var(--pomo-accent-rgb), 0.18);
+  stroke-width: 2;
+  stroke-dasharray: 4 8;
+  animation: spinSlowRing 60s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes spinSlowRing {
+  to { transform: rotate(360deg); }
+}
+
 .pomo-circle-bg {
-  stroke: rgba(255, 255, 255, 0.08);
+  stroke: rgba(255, 255, 255, 0.06);
+  stroke-width: 10;
 }
 
 .pomo-circle-progress {
-  stroke: var(--gold-primary);
-  filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.5));
-  transition: stroke-dashoffset 1s linear;
+  stroke: var(--pomo-accent);
+  stroke-width: 10;
+  filter: drop-shadow(0 0 16px rgba(var(--pomo-accent-rgb), 0.75));
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.4s ease;
+}
+
+.pomo-dial-center {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.pomo-status-pill {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--pomo-accent);
+  background: rgba(var(--pomo-accent-rgb), 0.12);
+  border: 1px solid rgba(var(--pomo-accent-rgb), 0.3);
+  padding: 3px 14px;
+  border-radius: 99px;
+  margin-bottom: 6px;
 }
 
 .pomodoro-timer-display {
-  position: relative;
-  z-index: 2;
-  font-size: 3.5rem;
+  font-size: 4.4rem !important;
   font-family: 'Inter', sans-serif;
   font-weight: 800;
-  color: var(--gold-primary);
-  text-shadow: 0 0 25px rgba(212, 175, 55, 0.45);
-  letter-spacing: 2px;
+  color: #ffffff;
+  text-shadow: 0 0 35px rgba(var(--pomo-accent-rgb), 0.65);
+  letter-spacing: 3px;
+  line-height: 1.1;
 }
 
-.pomodoro-modes-bar {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 12px;
+.pomo-sub-caption {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 6px;
 }
 
-.pomo-controls-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  padding: 0 6px;
-}
-
-.pomo-custom-input-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  padding: 3px 8px;
-}
-
-.pomo-custom-input-wrap input {
-  width: 55px !important;
-  padding: 4px 6px !important;
-  text-align: center;
-  border: none !important;
-  background: transparent !important;
-  font-weight: 700;
-  color: var(--gold-primary);
-}
-
+/* أزرار التحكم السفلية الفخمة */
 .pomodoro-actions {
   display: flex;
   justify-content: center;
-  gap: 12px;
-  margin-top: 10px;
+  align-items: center;
+  gap: 16px;
+  margin-top: 6px;
+}
+
+.btn-pomo-main {
+  background: linear-gradient(135deg, var(--pomo-accent), rgba(var(--pomo-accent-rgb), 0.75)) !important;
+  color: #05070b !important;
+  font-weight: 800 !important;
+  font-size: 1.05rem !important;
+  padding: 13px 36px !important;
+  border-radius: 99px !important;
+  border: none !important;
+  box-shadow: 0 10px 30px rgba(var(--pomo-accent-rgb), 0.45) !important;
+  cursor: pointer;
+  transition: all 0.25s ease !important;
+}
+
+.btn-pomo-main:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 15px 40px rgba(var(--pomo-accent-rgb), 0.65) !important;
+}
+
+.btn-pomo-secondary {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: var(--text-primary) !important;
+  padding: 12px 24px !important;
+  border-radius: 99px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  transition: all 0.25s ease !important;
+}
+
+.btn-pomo-secondary:hover {
+  border-color: var(--pomo-accent) !important;
+  color: var(--pomo-accent) !important;
+}
+
+@media (max-width: 500px) {
+  .pomo-ring-container {
+    width: 270px;
+    height: 270px;
+  }
+  .pomodoro-timer-display {
+    font-size: 3.4rem !important;
+  }
 }
 
 /* مشغل أصوات التركيز المحيطية (Ambient Sounds) */
