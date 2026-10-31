@@ -2318,3 +2318,23 @@ html, body {
     grid-template-columns: repeat(2, 1fr) !important;
   }
 }
+/* ==========================================================================
+   PERFORMANCE BOOST: DISABLE HEAVY ANIMATIONS ON MOBILE & TABLETS (<= 1024px)
+   ========================================================================== */
+@media (max-width: 1024px) {
+  /* إخفاء الكانفاس والأيقونات الطائرة نهائياً لمنع استهلاك كارت شاشة الفون */
+  .luxury-bg-canvas,
+  .floating-icons-layer {
+    display: none !important;
+  }
+
+  /* إيقاف حركات الـ Floating الثقيلة لتوفير البطارية وسرعة الاستجابة */
+  .float-icon {
+    animation: none !important;
+  }
+
+  /* خلفية داكنة خفيفة وسريعة جداً في التحميل للتاب والموبايل */
+  .auth-wrapper {
+    background: #07090e !important;
+  }
+}
