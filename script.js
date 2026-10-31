@@ -217,6 +217,9 @@ async function initFirebaseSystem() {
 }
 
 function initLuxuryParticles() {
+  // إيقاف تشغيل الأنيميشن والعمليات الحسابية نهائياً على الموبايل والتابلت لتسريع الأداء 100%
+  if (window.innerWidth <= 1024) return;
+
   const canvas = document.getElementById("luxury-bg-canvas");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
