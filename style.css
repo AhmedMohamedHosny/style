@@ -1619,33 +1619,125 @@ body.zen-focus-active .main-content {
   animation: pulseRingOut 2s infinite;
 }
 
-/* بطاقة البومودورو داخل المودال */
+/* بطاقة البومودورو المطورة ووضع ملء الشاشة السينمائي */
 .pomodoro-card {
   text-align: center;
-  padding: 10px 0;
+  padding: 8px 4px;
+  position: relative;
+}
+
+/* وضع ملء الشاشة الفخم للمودال */
+.modal-card.pomo-fullscreen-active {
+  max-width: 100vw !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  background: radial-gradient(circle at center, rgba(20, 25, 38, 0.98), #05070b 80%) !important;
+  border: none !important;
+}
+
+.modal-card.pomo-fullscreen-active .pomodoro-timer-display {
+  font-size: 6.5rem !important;
+  text-shadow: 0 0 50px rgba(212, 175, 55, 0.65) !important;
+}
+
+/* الحلقة الدائرية المتوهجة للوقت */
+.pomo-ring-container {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  margin: 10px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-card.pomo-fullscreen-active .pomo-ring-container {
+  width: 340px;
+  height: 340px;
+}
+
+.pomo-svg-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.pomo-svg-ring circle {
+  fill: transparent;
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+
+.pomo-circle-bg {
+  stroke: rgba(255, 255, 255, 0.08);
+}
+
+.pomo-circle-progress {
+  stroke: var(--gold-primary);
+  filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.5));
+  transition: stroke-dashoffset 1s linear;
 }
 
 .pomodoro-timer-display {
-  font-size: 3.6rem;
+  position: relative;
+  z-index: 2;
+  font-size: 3.5rem;
   font-family: 'Inter', sans-serif;
   font-weight: 800;
   color: var(--gold-primary);
   text-shadow: 0 0 25px rgba(212, 175, 55, 0.45);
-  margin: 12px 0;
   letter-spacing: 2px;
 }
 
 .pomodoro-modes-bar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.pomo-controls-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 0 6px;
+}
+
+.pomo-custom-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 3px 8px;
+}
+
+.pomo-custom-input-wrap input {
+  width: 55px !important;
+  padding: 4px 6px !important;
+  text-align: center;
+  border: none !important;
+  background: transparent !important;
+  font-weight: 700;
+  color: var(--gold-primary);
 }
 
 .pomodoro-actions {
   display: flex;
   justify-content: center;
   gap: 12px;
+  margin-top: 10px;
 }
 
 /* مشغل أصوات التركيز المحيطية (Ambient Sounds) */
@@ -1881,11 +1973,21 @@ html, body {
     width: 100% !important;
   }
 
-  /* 5. رفع السبحة الإلكترونية العائمة فوق الشريط السفلي */
-  .floating-tasbeeh {
-    bottom: 82px !important; /* فوق الـ Bottom Nav مباشرة */
-    inset-inline-start: 14px !important;
-  }
+.floating-tasbeeh {
+  position: fixed;
+  bottom: 85px;
+  inset-inline-start: 20px;
+  z-index: 99999;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  transition: transform 0.05s ease-out;
+}
+
+.floating-tasbeeh.is-dragging {
+  cursor: grabbing !important;
+  transform: scale(1.12);
+}
 
   .tasbeeh-circle-btn {
     width: 46px !important;
