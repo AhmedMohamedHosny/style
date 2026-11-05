@@ -2338,3 +2338,10 @@ html, body {
     background: #07090e !important;
   }
 }
+/* مجموعة أزرار التحكم في الصوت والملف المخصص */
+.pomo-sound-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
