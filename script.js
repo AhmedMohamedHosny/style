@@ -3023,28 +3023,25 @@ function toggleAmbientSound(type) {
   return true;
 }
 
-// 3. مؤقت بومودورو الملكي (ملء الشاشة تلقائياً + اللوجو + 5 ألوان منعشة + صوت تك تك)
+// 3. مؤقت بومودورو الملكي (دعم الملف الصوتي المخصص مع التكرار التلقائي + صوت التكتكة الافتراضي)
 const PomodoroState = {
   duration: 25 * 60,
   timeLeft: 25 * 60,
   isRunning: false,
   mode: "work",
   intervalId: null,
-  tickSoundEnabled: true,
-  colorTheme: localStorage.getItem("MY_LIFE_OS_POMO_COLOR") || "gold"
+  soundMode: "tick", // الوضع الافتراضي: "tick" (تكتكة)، أو "custom" (ملف صوتي)، أو "mute" (صامت)
+  colorTheme: localStorage.getItem("MY_LIFE_OS_POMO_COLOR") || "gold",
+  customAudio: new Audio(),
+  customAudioName: ""
 };
 
-const POMO_THEMES = [
-  { id: "gold", name: "الذهب الملكي", hex: "#d4af37" },
-  { id: "emerald", name: "الزمرد المنعش", hex: "#10b981" },
-  { id: "cyan", name: "السماوي النيون", hex: "#06b6d4" },
-  { id: "purple", name: "البنفسجي الملكي", hex: "#a855f7" },
-  { id: "rose", name: "الياقوت الوردي", hex: "#f43f5e" }
-];
+// تكرار الملف الصوتي تلقائياً إذا كان أقصر من مدة الجلسة
+PomodoroState.customAudio.loop = true;
 
 // صوت "تك تك" ميكانيكي واقعي بالـ Web Audio API
 function playClockTick(isHigh = false) {
-  if (!PomodoroState.tickSoundEnabled) return;
+  if (PomodoroState.soundMode !== "tick") return;
   try {
     const ctx = getAudioContext();
     const osc = ctx.createOscillator();
@@ -3075,7 +3072,6 @@ function updatePomodoroDisplays() {
   const displayEl = document.getElementById("pomo-modal-display");
   if (displayEl) displayEl.textContent = timeStr;
 
-  // محيط الدائرة (2 * PI * 136 ≈ 854)
   const circleProgress = document.getElementById("pomo-circle-bar");
   if (circleProgress) {
     const total = PomodoroState.duration;
@@ -3096,16 +3092,30 @@ function startPomodoro() {
   PomodoroState.isRunning = true;
   updatePomodoroDisplays();
 
+  // تشغيل الملف الصوتي المخصص إذا كان هو الوضع المختار
+  if (PomodoroState.soundMode === "custom" && PomodoroState.customAudio.src) {
+    PomodoroState.customAudio.play().catch(() => {});
+  }
+
   let tickToggle = false;
   PomodoroState.intervalId = setInterval(() => {
     if (PomodoroState.timeLeft > 0) {
       PomodoroState.timeLeft--;
-      playClockTick(tickToggle);
-      tickToggle = !tickToggle;
+      if (PomodoroState.soundMode === "tick") {
+        playClockTick(tickToggle);
+        tickToggle = !tickToggle;
+      }
       updatePomodoroDisplays();
     } else {
       clearInterval(PomodoroState.intervalId);
       PomodoroState.isRunning = false;
+
+      // إيقاف الملف الصوتي وقطعه فوراً عند انتهاء الوقت مهما كانت مدته
+      if (PomodoroState.customAudio) {
+        PomodoroState.customAudio.pause();
+        PomodoroState.customAudio.currentTime = 0;
+      }
+
       playTechBeep();
       if (PomodoroState.mode === "work") {
         showToast("عاش يا هندسة! انتهت جلسة التركيز بنجاح ☕", "success");
@@ -3121,11 +3131,18 @@ function startPomodoro() {
 function pausePomodoro() {
   PomodoroState.isRunning = false;
   if (PomodoroState.intervalId) clearInterval(PomodoroState.intervalId);
+  if (PomodoroState.customAudio) {
+    PomodoroState.customAudio.pause();
+  }
   updatePomodoroDisplays();
 }
 
 function resetPomodoro() {
   pausePomodoro();
+  if (PomodoroState.customAudio) {
+    PomodoroState.customAudio.pause();
+    PomodoroState.customAudio.currentTime = 0;
+  }
   PomodoroState.timeLeft = PomodoroState.duration;
   updatePomodoroDisplays();
 }
@@ -3141,6 +3158,14 @@ function openPomodoroModal() {
   const total = PomodoroState.duration;
   const offset = 854 - (854 * (PomodoroState.timeLeft / total));
   const totalMins = Math.round(PomodoroState.duration / 60);
+
+  const POMO_THEMES = [
+    { id: "gold", name: "الذهب الملكي", hex: "#d4af37" },
+    { id: "emerald", name: "الزمرد المنعش", hex: "#10b981" },
+    { id: "cyan", name: "السماوي النيون", hex: "#06b6d4" },
+    { id: "purple", name: "البنفسجي الملكي", hex: "#a855f7" },
+    { id: "rose", name: "الياقوت الوردي", hex: "#f43f5e" }
+  ];
 
   const swatchesHtml = POMO_THEMES.map(t => `
     <button
@@ -3162,16 +3187,39 @@ function openPomodoroModal() {
         <div class="pomo-brand-title">MY LIFE <span>FOCUS</span></div>
       </div>
 
-      <!-- شريط الألوان الـ 5 الفخمة + زر صوت التك تك -->
+      <!-- شريط الألوان الـ 5 الفخمة + خيارات الصوت (تكتكة / ملف صوتي / صامت) -->
       <div class="pomo-top-bar">
         <div class="pomo-color-swatches">
           <small class="small-muted">لون الإضاءة:</small>
           ${swatchesHtml}
         </div>
-        <button type="button" id="btn-pomo-sound-toggle" class="pomo-preset-btn ${PomodoroState.tickSoundEnabled ? "active" : ""}">
-          <i class="fa-solid ${PomodoroState.tickSoundEnabled ? "fa-volume-high" : "fa-volume-xmark"}"></i>
-          <span>${PomodoroState.tickSoundEnabled ? "صوت الساعة شغال" : "صامت"}</span>
-        </button>
+
+        <div class="pomo-sound-group">
+          <!-- زر التكتكة (الوضع الافتراضي) -->
+          <button type="button" id="btn-sound-tick" class="pomo-preset-btn ${PomodoroState.soundMode === "tick" ? "active" : ""}">
+            <i class="fa-solid fa-stopwatch"></i>
+            <span>صوت التكتكة</span>
+          </button>
+
+          <!-- زر اختيار وتشغيل الملف الصوتي المخصص -->
+          <button type="button" id="btn-sound-custom" class="pomo-preset-btn ${PomodoroState.soundMode === "custom" ? "active" : ""}">
+            <i class="fa-solid fa-music"></i>
+            <span id="pomo-file-name-label">${PomodoroState.customAudioName ? escapeHTML(PomodoroState.customAudioName) : "ملف صوتي 🎵"}</span>
+          </button>
+          <input type="file" id="pomo-audio-file-input" accept="audio/*" class="hidden" />
+
+          ${PomodoroState.customAudioName ? `
+            <button type="button" id="btn-change-audio-file" class="pomo-preset-btn" title="تغيير الملف الصوتي" style="padding: 6px 12px;">
+              <i class="fa-solid fa-folder-open"></i>
+            </button>
+          ` : ""}
+
+          <!-- زر الوضع الصامت -->
+          <button type="button" id="btn-sound-mute" class="pomo-preset-btn ${PomodoroState.soundMode === "mute" ? "active" : ""}">
+            <i class="fa-solid fa-volume-xmark"></i>
+            <span>صامت</span>
+          </button>
+        </div>
       </div>
 
       <!-- أزرار اختيار الوقت السريعة + إدخال أي وقت مخصص -->
@@ -3227,14 +3275,13 @@ function openPomodoroModal() {
   const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
   if (saveBtn) saveBtn.style.display = "none";
 
-  // تفعيل ملء الشاشة واللون المختار تلقائياً
   const card = document.querySelector("#universal-modal .modal-card");
   if (card) {
     card.classList.add("pomo-fullscreen-active");
     card.setAttribute("data-pomo-theme", PomodoroState.colorTheme);
   }
 
-  // التبديل الفوري بين الـ 5 ألوان الفخمة
+  // التبديل بين الألوان الـ 5
   document.querySelectorAll("[data-pomo-color]").forEach(dot => {
     dot.onclick = () => {
       const selectedColor = dot.dataset.pomoColor;
@@ -3244,6 +3291,70 @@ function openPomodoroModal() {
       document.querySelectorAll("[data-pomo-color]").forEach(d => d.classList.toggle("active", d === dot));
     };
   });
+
+  // التحكم في أوضاع الصوت الثلاثة
+  const fileInput = document.getElementById("pomo-audio-file-input");
+
+  // 1. اختيار وضع التكتكة
+  document.getElementById("btn-sound-tick").onclick = () => {
+    PomodoroState.soundMode = "tick";
+    if (PomodoroState.customAudio) PomodoroState.customAudio.pause();
+    openPomodoroModal();
+  };
+
+  // 2. زر الملف الصوتي المخصص
+  document.getElementById("btn-sound-custom").onclick = () => {
+    if (!PomodoroState.customAudio.src) {
+      fileInput.click();
+    } else {
+      PomodoroState.soundMode = "custom";
+      if (PomodoroState.isRunning) {
+        PomodoroState.customAudio.play().catch(() => {});
+      }
+      openPomodoroModal();
+    }
+  };
+
+  // زر تغيير الملف الصوتي إذا كان موجوداً مسبقاً
+  const changeBtn = document.getElementById("btn-change-audio-file");
+  if (changeBtn) {
+    changeBtn.onclick = () => fileInput.click();
+  }
+
+  // معالجة اختيار الملف من الجهاز
+  fileInput.onchange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (PomodoroState.customAudio) {
+      PomodoroState.customAudio.pause();
+    }
+
+    const audioUrl = URL.createObjectURL(file);
+    PomodoroState.customAudio.src = audioUrl;
+    PomodoroState.customAudio.loop = true; // تكرار تلقائي إذا كان المقطع قصيراً
+
+    let shortName = file.name;
+    if (shortName.length > 16) {
+      shortName = shortName.substring(0, 13) + "...";
+    }
+    PomodoroState.customAudioName = shortName;
+    PomodoroState.soundMode = "custom";
+
+    if (PomodoroState.isRunning) {
+      PomodoroState.customAudio.play().catch(() => {});
+    }
+
+    showToast(`تم تحميل: ${shortName}`, "success");
+    openPomodoroModal();
+  };
+
+  // 3. اختيار الوضع الصامت
+  document.getElementById("btn-sound-mute").onclick = () => {
+    PomodoroState.soundMode = "mute";
+    if (PomodoroState.customAudio) PomodoroState.customAudio.pause();
+    openPomodoroModal();
+  };
 
   // أزرار المدد السريعة
   document.querySelectorAll("[data-pomo-set]").forEach(btn => {
@@ -3263,12 +3374,6 @@ function openPomodoroModal() {
       openPomodoroModal();
       showToast(`تم ضبط المؤقت على ${val} دقيقة`, "success");
     }
-  };
-
-  // تبديل صوت التك تك
-  document.getElementById("btn-pomo-sound-toggle").onclick = () => {
-    PomodoroState.tickSoundEnabled = !PomodoroState.tickSoundEnabled;
-    openPomodoroModal();
   };
 
   // تشغيل / إيقاف
