@@ -2345,3 +2345,236 @@ html, body {
   gap: 8px;
   flex-wrap: wrap;
 }
+/* ==========================================================================
+   ALL 5 AXES UPGRADE: GOD-TIER POMODORO, HEATMAP, DEV HUB & SCRATCHPAD
+   ========================================================================== */
+
+/* 1. شريط لوحة التحكم الفائق (طاقة، رادار امتحانات، Heatmap) */
+.super-os-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.os-mini-widget {
+  background: rgba(20, 25, 38, 0.78);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-luxury);
+}
+
+.os-mini-widget.radar-danger {
+  border-color: var(--danger-primary) !important;
+  box-shadow: 0 0 25px rgba(239, 68, 68, 0.3) !important;
+}
+
+.energy-pills-row {
+  display: flex;
+  gap: 6px;
+}
+
+.energy-btn {
+  flex: 1;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.energy-btn.active, .energy-btn:hover {
+  border-color: var(--gold-primary);
+  background: var(--gold-glow);
+  color: #ffffff;
+}
+
+.habit-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  gap: 4px;
+}
+
+.heatmap-cell {
+  height: 14px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.heatmap-cell.lvl-1 { background: rgba(16, 185, 129, 0.35); }
+.heatmap-cell.lvl-2 { background: rgba(16, 185, 129, 0.65); }
+.heatmap-cell.lvl-3 { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+
+/* 2. ثورة البومودورو الخارقة (God-Tier Pomodoro) */
+.pomo-streak-pill {
+  background: rgba(var(--pomo-accent-rgb), 0.15);
+  border: 1px solid var(--pomo-accent);
+  color: #ffffff;
+  padding: 4px 14px;
+  border-radius: 99px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* حلقة التنفس الإرشادي (Box Breathing Ring) */
+.pomo-breathing-aura {
+  position: absolute;
+  inset: -18px;
+  border-radius: 50%;
+  border: 2px dashed rgba(var(--pomo-accent-rgb), 0.45);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.pomo-breathing-aura.active {
+  opacity: 1;
+  animation: boxBreathingCycle 12s ease-in-out infinite;
+}
+
+@keyframes boxBreathingCycle {
+  0%, 100% { transform: scale(0.92); border-color: rgba(var(--pomo-accent-rgb), 0.25); }
+  33% { transform: scale(1.12); border-color: var(--pomo-accent); box-shadow: 0 0 40px rgba(var(--pomo-accent-rgb), 0.35); }
+  66% { transform: scale(1.12); border-color: #10b981; }
+}
+
+/* أنماط عرض الساعة (Flip Clock & Minimalist HUD) */
+.pomo-ring-container[data-dial-skin="flip"] {
+  border-radius: 24px !important;
+  width: 360px !important;
+  height: 210px !important;
+  background: rgba(12, 16, 26, 0.95) !important;
+  border: 2px solid var(--pomo-accent) !important;
+}
+
+.pomo-ring-container[data-dial-skin="flip"] .pomo-svg-ring {
+  display: none !important;
+}
+
+.pomo-ring-container[data-dial-skin="flip"] .pomodoro-timer-display {
+  background: #070a12;
+  padding: 14px 26px;
+  border-radius: 14px;
+  border-bottom: 4px solid var(--pomo-accent);
+  box-shadow: inset 0 4px 15px rgba(0,0,0,0.8);
+}
+
+.pomo-ring-container[data-dial-skin="hud"] {
+  background: transparent !important;
+  box-shadow: none !important;
+  height: 220px !important;
+}
+
+.pomo-ring-container[data-dial-skin="hud"] .pomo-svg-ring {
+  display: none !important;
+}
+
+.pomo-ring-container[data-dial-skin="hud"] .pomodoro-timer-display {
+  font-size: 6.2rem !important;
+  letter-spacing: 6px;
+}
+
+/* موجات الصوت التفاعلية النيونية (Audio Visualizer Waves) */
+.pomo-visualizer-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  margin-top: 8px;
+}
+
+.vis-bar {
+  width: 5px;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--pomo-accent);
+  box-shadow: 0 0 10px var(--pomo-accent);
+  transition: height 0.15s ease;
+}
+
+.pomo-visualizer-bars.playing .vis-bar {
+  animation: waveBounce 0.9s ease-in-out infinite alternate;
+}
+
+.pomo-visualizer-bars.playing .vis-bar:nth-child(2n) { animation-duration: 0.65s; }
+.pomo-visualizer-bars.playing .vis-bar:nth-child(3n) { animation-duration: 1.1s; }
+.pomo-visualizer-bars.playing .vis-bar:nth-child(4n) { animation-duration: 0.8s; }
+
+@keyframes waveBounce {
+  0% { height: 5px; opacity: 0.4; }
+  100% { height: 30px; opacity: 1; }
+}
+
+/* سلة تفريغ الأفكار المشتتة داخل البومودورو */
+.pomo-braindump-bar {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+  margin-top: 6px;
+}
+
+.pomo-braindump-bar input {
+  background: rgba(15, 20, 32, 0.85) !important;
+  border: 1px solid rgba(var(--pomo-accent-rgb), 0.35) !important;
+  border-radius: 99px !important;
+  padding: 8px 16px !important;
+  font-size: 0.85rem !important;
+}
+
+/* 3. المسودة السريعة الجانبية (Quick Scratchpad Drawer) */
+.scratchpad-trigger-btn {
+  position: fixed;
+  top: 50%;
+  inset-inline-end: 0;
+  transform: translateY(-50%);
+  z-index: 1500;
+  background: linear-gradient(135deg, var(--gold-primary), #8c6d1f);
+  color: #07090e;
+  border: none;
+  padding: 12px 10px;
+  border-radius: 12px 0 0 12px;
+  cursor: pointer;
+  box-shadow: -4px 0 20px rgba(212, 175, 55, 0.35);
+}
+
+html[dir="ltr"] .scratchpad-trigger-btn {
+  border-radius: 0 12px 12px 0;
+}
+
+.scratchpad-drawer {
+  position: fixed;
+  top: 80px;
+  inset-inline-end: 16px;
+  width: 320px;
+  max-width: 92vw;
+  background: var(--bg-card);
+  border: 1px solid var(--gold-primary);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  z-index: 2500;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
+}
+
+.code-snippet-box {
+  background: #060911;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--emerald-primary);
+  overflow-x: auto;
+  margin-top: 8px;
+}

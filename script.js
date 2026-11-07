@@ -829,8 +829,16 @@ if (!subjects.length) {
             <button class="btn btn-xs btn-outline" data-action="open-curriculum" data-id="${s.id}">
               <i class="fa-solid fa-list-check"></i> خريطة المنهج (29 بند)
             </button>
-            <button class="btn btn-xs btn-gold" data-action="open-subject-voice" data-id="${s.id}">
-              <i class="fa-solid fa-microphone"></i> صوتيات (${voiceNotesCount})
+${p.liveUrl ? `
+            <a href="${escapeHTML(p.liveUrl)}" target="_blank" class="btn-link"><i class="fa-solid fa-globe"></i> Live</a>
+            <button class="btn btn-xs btn-outline" data-action="ping-project-url" data-url="${escapeHTML(p.liveUrl)}">
+              <i class="fa-solid fa-signal"></i> فحص الحالة
+            </button>
+          ` : ""}
+                        <i class="fa-solid fa-microphone"></i> صوتيات (${voiceNotesCount})
+            </button>
+            <button class="btn btn-xs btn-outline" data-action="open-subject-formulas" data-id="${s.id}">
+              <i class="fa-solid fa-square-root-variable gold-text"></i> القوانين (${(s.formulas || []).length})
             </button>
           </div>
         </div>
@@ -3154,10 +3162,53 @@ function setCustomPomodoroTime(minutes, mode = "work") {
   resetPomodoro();
 }
 
+// متغيرات البومودورو الخارقة الإضافية
+PomodoroState.dialSkin = localStorage.getItem("MY_LIFE_OS_POMO_SKIN") || "ring"; // ring | flip | hud
+PomodoroState.breathingGuide = false;
+PomodoroState.binauralMode = "off"; // off | alpha | beta
+PomodoroState.linkedTarget = "";
+let binauralOscLeft = null;
+let binauralOscRight = null;
+
+function stopBinauralBeats() {
+  try {
+    if (binauralOscLeft) { binauralOscLeft.stop(); binauralOscLeft.disconnect(); binauralOscLeft = null; }
+    if (binauralOscRight) { binauralOscRight.stop(); binauralOscRight.disconnect(); binauralOscRight = null; }
+  } catch (e) {}
+  PomodoroState.binauralMode = "off";
+}
+
+function startBinauralBeats(type) {
+  stopBinauralBeats();
+  if (type === "off") return;
+  try {
+    const ctx = getAudioContext();
+    const baseFreq = 200;
+    const beatFreq = type === "alpha" ? 10 : 20; // Alpha 10Hz للمذاكرة، Beta 20Hz للبرمجة
+
+    const gain = ctx.createGain();
+    gain.gain.value = 0.04;
+    gain.connect(ctx.destination);
+
+    binauralOscLeft = ctx.createOscillator();
+    binauralOscRight = ctx.createOscillator();
+    binauralOscLeft.frequency.value = baseFreq;
+    binauralOscRight.frequency.value = baseFreq + beatFreq;
+
+    binauralOscLeft.connect(gain);
+    binauralOscRight.connect(gain);
+    binauralOscLeft.start();
+    binauralOscRight.start();
+    PomodoroState.binauralMode = type;
+    showToast(type === "alpha" ? "تم تفعيل موجات ألفا (10Hz) لصفاء الذهن 🧠" : "تم تفعيل موجات بيتا (20Hz) للتركيز الهندسي المكثف ⚡", "success");
+  } catch (e) {}
+}
+
 function openPomodoroModal() {
   const total = PomodoroState.duration;
   const offset = 854 - (854 * (PomodoroState.timeLeft / total));
   const totalMins = Math.round(PomodoroState.duration / 60);
+  const streakCount = Number(localStorage.getItem("MY_LIFE_OS_POMO_STREAK_" + todayISO()) || 0);
 
   const POMO_THEMES = [
     { id: "gold", name: "الذهب الملكي", hex: "#d4af37" },
@@ -3168,94 +3219,110 @@ function openPomodoroModal() {
   ];
 
   const swatchesHtml = POMO_THEMES.map(t => `
-    <button
-      type="button"
-      class="pomo-color-dot ${PomodoroState.colorTheme === t.id ? "active" : ""}"
-      style="background:${t.hex}; color:${t.hex}"
-      data-pomo-color="${t.id}"
-      title="${t.name}"
-    ></button>
+    <button type="button" class="pomo-color-dot ${PomodoroState.colorTheme === t.id ? "active" : ""}"
+      style="background:${t.hex}; color:${t.hex}" data-pomo-color="${t.id}" title="${t.name}"></button>
   `).join("");
+
+  // قائمة المواد والمشاريع لربط جلسة التركيز بها
+  const subjectsOpts = AppState.collections.subjects.map(s => `<option value="subj:${escapeHTML(s.name)}" ${PomodoroState.linkedTarget === "subj:"+s.name ? "selected" : ""}>📚 مادة: ${escapeHTML(s.name)}</option>`).join("");
+  const projectsOpts = AppState.collections.projects.map(p => `<option value="proj:${escapeHTML(p.title)}" ${PomodoroState.linkedTarget === "proj:"+p.title ? "selected" : ""}>💻 مشروع: ${escapeHTML(p.title)}</option>`).join("");
 
   const modalBody = `
     <div class="pomodoro-card">
-      <!-- اللوجو الفخم والعنوان العلوي -->
+      <!-- اللوجو الفخم + شعلة الإنجاز اليومي -->
       <div class="pomo-brand-header">
         <div class="pomo-logo-orb">
           <img src="logo.png" alt="MY LIFE OS" onerror="this.style.display='none'" />
         </div>
         <div class="pomo-brand-title">MY LIFE <span>FOCUS</span></div>
+        <div class="pomo-streak-pill">
+          🔥 جلسات اليوم المكتملة: <strong id="pomo-streak-num">${streakCount}</strong>
+        </div>
       </div>
 
-      <!-- شريط الألوان الـ 5 الفخمة + خيارات الصوت (تكتكة / ملف صوتي / صامت) -->
+      <!-- شريط الألوان الـ 5 + أنماط الساعة (Skins) + الصوت والترددات -->
       <div class="pomo-top-bar">
         <div class="pomo-color-swatches">
-          <small class="small-muted">لون الإضاءة:</small>
           ${swatchesHtml}
         </div>
 
+        <!-- تبديل شكل الساعة (Dial Skins) -->
         <div class="pomo-sound-group">
-          <!-- زر التكتكة (الوضع الافتراضي) -->
-          <button type="button" id="btn-sound-tick" class="pomo-preset-btn ${PomodoroState.soundMode === "tick" ? "active" : ""}">
-            <i class="fa-solid fa-stopwatch"></i>
-            <span>صوت التكتكة</span>
-          </button>
+          <button type="button" class="pomo-preset-btn ${PomodoroState.dialSkin === "ring" ? "active" : ""}" data-skin="ring">⭕ دائرية</button>
+          <button type="button" class="pomo-preset-btn ${PomodoroState.dialSkin === "flip" ? "active" : ""}" data-skin="flip">📟 Flip 3D</button>
+          <button type="button" class="pomo-preset-btn ${PomodoroState.dialSkin === "hud" ? "active" : ""}" data-skin="hud">🌌 HUD عملاقة</button>
+        </div>
 
-          <!-- زر اختيار وتشغيل الملف الصوتي المخصص -->
+        <div class="pomo-sound-group">
+          <button type="button" id="btn-sound-tick" class="pomo-preset-btn ${PomodoroState.soundMode === "tick" ? "active" : ""}">
+            <i class="fa-solid fa-stopwatch"></i> <span>تكتكة</span>
+          </button>
           <button type="button" id="btn-sound-custom" class="pomo-preset-btn ${PomodoroState.soundMode === "custom" ? "active" : ""}">
             <i class="fa-solid fa-music"></i>
-            <span id="pomo-file-name-label">${PomodoroState.customAudioName ? escapeHTML(PomodoroState.customAudioName) : "ملف صوتي 🎵"}</span>
+            <span>${PomodoroState.customAudioName ? escapeHTML(PomodoroState.customAudioName) : "ملف صوتي 🎵"}</span>
           </button>
           <input type="file" id="pomo-audio-file-input" accept="audio/*" class="hidden" />
-
-          ${PomodoroState.customAudioName ? `
-            <button type="button" id="btn-change-audio-file" class="pomo-preset-btn" title="تغيير الملف الصوتي" style="padding: 6px 12px;">
-              <i class="fa-solid fa-folder-open"></i>
-            </button>
-          ` : ""}
-
-          <!-- زر الوضع الصامت -->
+          ${PomodoroState.customAudioName ? `<button type="button" id="btn-change-audio-file" class="pomo-preset-btn" style="padding:6px 10px;"><i class="fa-solid fa-folder-open"></i></button>` : ""}
           <button type="button" id="btn-sound-mute" class="pomo-preset-btn ${PomodoroState.soundMode === "mute" ? "active" : ""}">
             <i class="fa-solid fa-volume-xmark"></i>
-            <span>صامت</span>
           </button>
         </div>
+      </div>
+
+      <!-- شريط الترددات العقلية (Binaural) + التنفس الرباعي + ربط المادة -->
+      <div class="pomodoro-modes-bar">
+        <button type="button" id="btn-pomo-breathe" class="pomo-preset-btn ${PomodoroState.breathingGuide ? "active" : ""}">
+          <i class="fa-solid fa-lungs"></i> تنفس رباعي (4-4-4)
+        </button>
+        <button type="button" class="pomo-preset-btn ${PomodoroState.binauralMode === "alpha" ? "active" : ""}" data-binaural="alpha">
+          🧠 موجات Alpha 10Hz
+        </button>
+        <button type="button" class="pomo-preset-btn ${PomodoroState.binauralMode === "beta" ? "active" : ""}" data-binaural="beta">
+          ⚡ موجات Beta 20Hz
+        </button>
+        <select id="pomo-link-select" class="pomo-preset-btn" style="max-width:190px;">
+          <option value="">🎯 ربط بمادة أو مشروع...</option>
+          ${subjectsOpts}
+          ${projectsOpts}
+        </select>
       </div>
 
       <!-- أزرار اختيار الوقت السريعة + إدخال أي وقت مخصص -->
       <div class="pomodoro-modes-bar">
-        <button type="button" class="pomo-preset-btn ${totalMins === 25 && PomodoroState.mode === "work" ? "active" : ""}" data-pomo-set="25">
-          25 دقيقة
-        </button>
-        <button type="button" class="pomo-preset-btn ${totalMins === 45 ? "active" : ""}" data-pomo-set="45">
-          45 دقيقة
-        </button>
-        <button type="button" class="pomo-preset-btn ${totalMins === 60 ? "active" : ""}" data-pomo-set="60">
-          <i class="fa-solid fa-crown"></i> ساعة كاملة (60 د)
-        </button>
-        <button type="button" class="pomo-preset-btn ${PomodoroState.mode === "break" ? "active" : ""}" data-pomo-set="5" data-mode="break">
-          <i class="fa-solid fa-mug-hot"></i> استراحة 5 د
-        </button>
+        <button type="button" class="pomo-preset-btn ${totalMins === 25 && PomodoroState.mode === "work" ? "active" : ""}" data-pomo-set="25">25 د</button>
+        <button type="button" class="pomo-preset-btn ${totalMins === 45 ? "active" : ""}" data-pomo-set="45">45 د</button>
+        <button type="button" class="pomo-preset-btn ${totalMins === 60 ? "active" : ""}" data-pomo-set="60"><i class="fa-solid fa-crown"></i> ساعة (60 د)</button>
+        <button type="button" class="pomo-preset-btn ${PomodoroState.mode === "break" ? "active" : ""}" data-pomo-set="5" data-mode="break">☕ راحة 5 د</button>
         <div class="pomo-custom-input-wrap">
-          <input type="number" id="pomo-custom-mins" min="1" max="240" value="${totalMins}" title="عدد الدقائق" />
+          <input type="number" id="pomo-custom-mins" min="1" max="240" value="${totalMins}" />
           <button type="button" id="btn-apply-custom-pomo" class="pomo-preset-btn active" style="padding:4px 12px;">تحديد</button>
         </div>
       </div>
 
-      <!-- الساعة السويسرية المضيئة في المنتصف -->
-      <div class="pomo-ring-container">
+      <!-- الساعة الفاخرة + هالة التنفس + الموجات الصوتية التفاعلية -->
+      <div class="pomo-ring-container" data-dial-skin="${PomodoroState.dialSkin}">
+        <div id="pomo-breath-ring" class="pomo-breathing-aura ${PomodoroState.breathingGuide ? "active" : ""}"></div>
         <svg class="pomo-svg-ring" viewBox="0 0 320 320">
           <circle class="pomo-circle-tracks" cx="160" cy="160" r="150" />
           <circle class="pomo-circle-bg" cx="160" cy="160" r="136" />
           <circle id="pomo-circle-bar" class="pomo-circle-progress" cx="160" cy="160" r="136" stroke-dasharray="854" stroke-dashoffset="${offset}" />
         </svg>
         <div class="pomo-dial-center">
-          <span class="pomo-status-pill">
-            ${PomodoroState.mode === "break" ? "استراحة واسترخاء ☕" : PomodoroState.isRunning ? "تركيز عميق جارٍ الآن ⚡" : "جاهز للانطلاق 🚀"}
+          <span class="pomo-status-pill" id="pomo-status-text">
+            ${PomodoroState.breathingGuide ? "شهيق 4ث.. حبس 4ث.. زفير 4ث 🌬️" : PomodoroState.isRunning ? "تركيز عميق جارٍ الآن ⚡" : "جاهز للانطلاق 🚀"}
           </span>
           <div id="pomo-modal-display" class="pomodoro-timer-display">${formatPomoTime(PomodoroState.timeLeft)}</div>
-          <span class="pomo-sub-caption">إجمالي الجلسة: ${totalMins} دقيقة</span>
+          <!-- موجات التفاعل الصوتي النيونية -->
+          <div class="pomo-visualizer-bars ${PomodoroState.isRunning ? "playing" : ""}">
+            ${Array.from({length: 16}, () => `<span class="vis-bar"></span>`).join("")}
+          </div>
         </div>
+      </div>
+
+      <!-- سلة تفريغ الأفكار المشتتة الفورية (Brain-Dump Pad) -->
+      <div class="pomo-braindump-bar">
+        <input type="text" id="pomo-braindump-input" placeholder="💡 خطرت ببالك فكرة مشتتة؟ اكتبها هنا واحفظها في الملاحظات بدون خروج..." />
+        <button type="button" id="btn-save-braindump" class="pomo-preset-btn active">حفظ فوري</button>
       </div>
 
       <!-- أزرار البدء والإعادة -->
@@ -3281,108 +3348,111 @@ function openPomodoroModal() {
     card.setAttribute("data-pomo-theme", PomodoroState.colorTheme);
   }
 
-  // التبديل بين الألوان الـ 5
+  // الألوان الـ 5
   document.querySelectorAll("[data-pomo-color]").forEach(dot => {
     dot.onclick = () => {
-      const selectedColor = dot.dataset.pomoColor;
-      PomodoroState.colorTheme = selectedColor;
-      localStorage.setItem("MY_LIFE_OS_POMO_COLOR", selectedColor);
-      if (card) card.setAttribute("data-pomo-theme", selectedColor);
+      PomodoroState.colorTheme = dot.dataset.pomoColor;
+      localStorage.setItem("MY_LIFE_OS_POMO_COLOR", PomodoroState.colorTheme);
+      if (card) card.setAttribute("data-pomo-theme", PomodoroState.colorTheme);
       document.querySelectorAll("[data-pomo-color]").forEach(d => d.classList.toggle("active", d === dot));
     };
   });
 
-  // التحكم في أوضاع الصوت الثلاثة
-  const fileInput = document.getElementById("pomo-audio-file-input");
+  // تبديل نمط الساعة (Dial Skins)
+  document.querySelectorAll("[data-skin]").forEach(btn => {
+    btn.onclick = () => {
+      PomodoroState.dialSkin = btn.dataset.skin;
+      localStorage.setItem("MY_LIFE_OS_POMO_SKIN", PomodoroState.dialSkin);
+      openPomodoroModal();
+    };
+  });
 
-  // 1. اختيار وضع التكتكة
+  // حلقة التنفس الإرشادي
+  document.getElementById("btn-pomo-breathe").onclick = () => {
+    PomodoroState.breathingGuide = !PomodoroState.breathingGuide;
+    openPomodoroModal();
+  };
+
+  // موجات الدماغ Binaural Beats
+  document.querySelectorAll("[data-binaural]").forEach(btn => {
+    btn.onclick = () => {
+      const targetMode = btn.dataset.binaural;
+      if (PomodoroState.binauralMode === targetMode) {
+        stopBinauralBeats();
+      } else {
+        startBinauralBeats(targetMode);
+      }
+      openPomodoroModal();
+    };
+  });
+
+  // ربط الجلسة بمادة أو مشروع
+  document.getElementById("pomo-link-select").onchange = (e) => {
+    PomodoroState.linkedTarget = e.target.value;
+  };
+
+  // حفظ الفكرة المشتتة فوراً في الملاحظات بدون الخروج من المؤقت
+  document.getElementById("btn-save-braindump").onclick = async () => {
+    const inp = document.getElementById("pomo-braindump-input");
+    const val = inp.value.trim();
+    if (!val) return;
+    inp.value = "";
+    await createRecord("notes", {
+      title: "💡 فكرة سريعة أثناء جلسة التركيز",
+      content: val,
+      category: "Brain-Dump",
+      linkedTo: PomodoroState.linkedTarget || "Pomodoro"
+    });
+  };
+
+  // أوضاع الصوت (تكتكة / ملف مخصص / صامت)
+  const fileInput = document.getElementById("pomo-audio-file-input");
   document.getElementById("btn-sound-tick").onclick = () => {
     PomodoroState.soundMode = "tick";
     if (PomodoroState.customAudio) PomodoroState.customAudio.pause();
     openPomodoroModal();
   };
-
-  // 2. زر الملف الصوتي المخصص
   document.getElementById("btn-sound-custom").onclick = () => {
-    if (!PomodoroState.customAudio.src) {
-      fileInput.click();
-    } else {
+    if (!PomodoroState.customAudio.src) fileInput.click();
+    else {
       PomodoroState.soundMode = "custom";
-      if (PomodoroState.isRunning) {
-        PomodoroState.customAudio.play().catch(() => {});
-      }
+      if (PomodoroState.isRunning) PomodoroState.customAudio.play().catch(() => {});
       openPomodoroModal();
     }
   };
-
-  // زر تغيير الملف الصوتي إذا كان موجوداً مسبقاً
-  const changeBtn = document.getElementById("btn-change-audio-file");
-  if (changeBtn) {
-    changeBtn.onclick = () => fileInput.click();
-  }
-
-  // معالجة اختيار الملف من الجهاز
+  document.getElementById("btn-change-audio-file")?.addEventListener("click", () => fileInput.click());
   fileInput.onchange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (PomodoroState.customAudio) {
-      PomodoroState.customAudio.pause();
-    }
-
-    const audioUrl = URL.createObjectURL(file);
-    PomodoroState.customAudio.src = audioUrl;
-    PomodoroState.customAudio.loop = true; // تكرار تلقائي إذا كان المقطع قصيراً
-
-    let shortName = file.name;
-    if (shortName.length > 16) {
-      shortName = shortName.substring(0, 13) + "...";
-    }
-    PomodoroState.customAudioName = shortName;
+    if (PomodoroState.customAudio) PomodoroState.customAudio.pause();
+    PomodoroState.customAudio.src = URL.createObjectURL(file);
+    PomodoroState.customAudio.loop = true;
+    PomodoroState.customAudioName = file.name.length > 14 ? file.name.substring(0, 12) + "..." : file.name;
     PomodoroState.soundMode = "custom";
-
-    if (PomodoroState.isRunning) {
-      PomodoroState.customAudio.play().catch(() => {});
-    }
-
-    showToast(`تم تحميل: ${shortName}`, "success");
+    if (PomodoroState.isRunning) PomodoroState.customAudio.play().catch(() => {});
     openPomodoroModal();
   };
-
-  // 3. اختيار الوضع الصامت
   document.getElementById("btn-sound-mute").onclick = () => {
     PomodoroState.soundMode = "mute";
     if (PomodoroState.customAudio) PomodoroState.customAudio.pause();
     openPomodoroModal();
   };
 
-  // أزرار المدد السريعة
+  // أزرار الوقت
   document.querySelectorAll("[data-pomo-set]").forEach(btn => {
     btn.onclick = () => {
-      const mins = Number(btn.dataset.pomoSet);
-      const mode = btn.dataset.mode || "work";
-      setCustomPomodoroTime(mins, mode);
+      setCustomPomodoroTime(Number(btn.dataset.pomoSet), btn.dataset.mode || "work");
       openPomodoroModal();
     };
   });
-
-  // تحديد مدة مخصصة
   document.getElementById("btn-apply-custom-pomo").onclick = () => {
     const val = document.getElementById("pomo-custom-mins").value;
-    if (val) {
-      setCustomPomodoroTime(val, "work");
-      openPomodoroModal();
-      showToast(`تم ضبط المؤقت على ${val} دقيقة`, "success");
-    }
+    if (val) { setCustomPomodoroTime(val, "work"); openPomodoroModal(); }
   };
-
-  // تشغيل / إيقاف
   document.getElementById("btn-pomo-start").onclick = () => {
     if (PomodoroState.isRunning) pausePomodoro(); else startPomodoro();
     openPomodoroModal();
   };
-
-  // إعادة ضبط
   document.getElementById("btn-pomo-reset").onclick = () => {
     resetPomodoro();
     openPomodoroModal();
@@ -3501,4 +3571,337 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast(`تم حفظ العلامة الزمنية عند ${timeLabel}`, "success");
     };
   }
+});
+/* ==========================================================================
+   MASTER 5-AXES ENGINE: UNIVERSITY, DEV HUB, SPIRITUAL & UI POLISH
+   ========================================================================== */
+
+// 1. باقات الأصوات التفاعلية (Apple Touch vs Thocky Mechanical Keyboard)
+let currentUISoundPack = localStorage.getItem("MY_LIFE_OS_SOUND_PACK") || "apple";
+
+function playCustomUISound() {
+  if (currentUISoundPack === "mute") return;
+  try {
+    const ctx = getAudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    if (currentUISoundPack === "mech") {
+      // صوت سويتش كيبورد ميكانيكي فخم (Thocky Switch)
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(320, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(95, ctx.currentTime + 0.045);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.045);
+    } else {
+      // نغمة Apple Touch الناعمة
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(1100, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(420, ctx.currentTime + 0.035);
+      gain.gain.setValueAtTime(0.07, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.035);
+    }
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.05);
+  } catch (e) {}
+}
+
+// 2. تحديث رادار الامتحانات، شبكة العادات (Heatmap)، ومنبه صيام النوافل
+function refreshSuperOSWidgets() {
+  // أ) رادار الامتحانات (Exam Radar)
+  const radarWidget = document.getElementById("exam-radar-widget");
+  const radarBadge = document.getElementById("exam-radar-badge");
+  const radarText = document.getElementById("exam-radar-text");
+  if (radarWidget && radarText) {
+    const today = todayISO();
+    const upcomingExams = AppState.collections.events
+      .filter(e => e.date >= today && (e.type === "Exam" || e.type === "University"))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    if (upcomingExams.length > 0) {
+      const nextEv = upcomingExams[0];
+      const diffDays = Math.ceil((new Date(nextEv.date) - new Date(today)) / (1000 * 60 * 60 * 24));
+      radarText.textContent = `الحدث القادم: "${nextEv.title}" (${diffDays === 0 ? "اليوم!" : "بعد " + diffDays + " يوم"})`;
+      if (diffDays <= 2) {
+        radarWidget.classList.add("radar-danger");
+        radarBadge.className = "badge badge-danger";
+        radarBadge.textContent = "طوارئ < 48 ساعة";
+      } else {
+        radarWidget.classList.remove("radar-danger");
+        radarBadge.className = "badge badge-gold";
+        radarBadge.textContent = `متبقي ${diffDays} يوم`;
+      }
+    } else {
+      radarWidget.classList.remove("radar-danger");
+      radarBadge.className = "badge badge-emerald";
+      radarBadge.textContent = "آمن";
+      radarText.textContent = "لا توجد اختبارات مسجلة قريبة.";
+    }
+  }
+
+  // ب) شبكة الالتزام الخضراء (GitHub-Style Habit Heatmap - آخر 28 يوماً)
+  const heatmapGrid = document.getElementById("habit-heatmap-grid");
+  if (heatmapGrid) {
+    let cellsHtml = "";
+    for (let i = 27; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const iso = d.toISOString().split("T")[0];
+      const pDoc = AppState.collections.prayers.find(p => p.date === iso);
+      const pCount = pDoc ? ["fajr","dhuhr","asr","maghrib","isha"].filter(k => pDoc[k]).length : 0;
+      const tDone = AppState.collections.tasks.filter(t => t.dueDate === iso && t.status === "Completed").length;
+      const score = pCount + tDone;
+      const lvl = score >= 5 ? "lvl-3" : score >= 3 ? "lvl-2" : score >= 1 ? "lvl-1" : "";
+      cellsHtml += `<div class="heatmap-cell ${lvl}" title="${iso}: نشاط (${score})"></div>`;
+    }
+    heatmapGrid.innerHTML = cellsHtml;
+  }
+
+  // ج) منبه صيام النوافل (الاثنين والخميس والأيام البيض)
+  const fastBadge = document.getElementById("fasting-reminder-badge");
+  if (fastBadge) {
+    const dayOfWeek = new Date().getDay(); // 0=الأحد، 1=الاثنين، 3=الأربعاء، 4=الخميس
+    if (dayOfWeek === 0 || dayOfWeek === 3) {
+      fastBadge.innerHTML = `<i class="fa-solid fa-bell gold-text"></i> تذكير: غداً يوم ${dayOfWeek === 0 ? "الاثنين" : "الخميس"} (سُنّة صيام النوافل)`;
+    } else if (dayOfWeek === 1 || dayOfWeek === 4) {
+      fastBadge.innerHTML = `<i class="fa-solid fa-star gold-text"></i> اليوم ${dayOfWeek === 1 ? "الاثنين" : "الخميس"} — تقبل الله طاعاتكم`;
+    } else {
+      fastBadge.innerHTML = `<i class="fa-solid fa-moon"></i> صيام الاثنين والخميس والأيام البيض (13، 14، 15 هجرياً)`;
+    }
+  }
+
+  // د) تحديث علامة المصحف المحفوظة
+  const savedQuran = localStorage.getItem("MY_LIFE_OS_QURAN_BOOKMARK");
+  if (savedQuran) {
+    const qLabel = document.getElementById("quran-bookmark-label");
+    if (qLabel) qLabel.textContent = `آخر وقف مصحف: ${savedQuran}`;
+  }
+}
+
+// 3. خزنة قوانين ومعادلات المادة (Formulas Vault) + فحص حالة السيرفر (Ping Checker)
+document.addEventListener("click", async (e) => {
+  const actionBtn = e.target.closest("[data-action]");
+  if (!actionBtn) return;
+  const action = actionBtn.dataset.action;
+
+  // خزنة قوانين المادة الدراسية
+  if (action === "open-subject-formulas") {
+    const subj = AppState.collections.subjects.find(s => s.id === actionBtn.dataset.id);
+    if (!subj) return;
+    const formulas = subj.formulas || [];
+    const listHtml = formulas.length
+      ? formulas.map(f => `<div class="code-snippet-box"><strong>${escapeHTML(f.title)}</strong><div dir="ltr" class="mt-2">${escapeHTML(f.eq)}</div></div>`).join("")
+      : `<p class="small-muted">لا توجد قوانين محفوظة لهذه المادة بعد.</p>`;
+
+    openFormModal(`خزنة قوانين ومعادلات: ${escapeHTML(subj.name)}`, `
+      <div class="form-group"><label>اسم القانون / المفهوم</label><input name="title" required placeholder="قانون أوم / معادلة كيرشوف..." /></div>
+      <div class="form-group"><label>المعادلة أو القانون</label><input name="eq" dir="ltr" required placeholder="V = I * R  |  P = V * I" /></div>
+      <h4 class="mt-4 gold-text">القوانين المحفوظة:</h4>
+      <div style="max-height:200px; overflow-y:auto;">${listHtml}</div>
+    `, async (data) => {
+      const updated = [{ title: data.title, eq: data.eq }, ...formulas];
+      await updateRecord("subjects", subj.id, { formulas: updated });
+    });
+  }
+
+  // فحص حالة موقع المشروع المنشور (Live Server Ping Checker)
+  if (action === "ping-project-url") {
+    const url = actionBtn.dataset.url;
+    actionBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> جاري الفحص...`;
+    try {
+      await fetch(url, { mode: "no-cors", cache: "no-store" });
+      actionBtn.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#10b981"></i> Online (شغال)`;
+      showToast("الموقع المنشور يستجيب ويعمل بنجاح (Online) 🟢", "success");
+    } catch (err) {
+      actionBtn.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444"></i> Offline`;
+      showToast("تعذر الوصول للموقع حالياً (Offline) 🔴", "error");
+    }
+  }
+});
+
+// 4. ربط جميع أزرار المحاور الخمسة الجديدة
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(refreshSuperOSWidgets, 1200);
+  setInterval(refreshSuperOSWidgets, 15000);
+
+  // أ) متتبع الطاقة اليومية (Energy Score)
+  document.querySelectorAll(".energy-btn").forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll(".energy-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const lvl = btn.dataset.energy;
+      const badge = document.getElementById("energy-advice-badge");
+      if (lvl === "high") {
+        badge.textContent = "ابدأ بأصعب مادة أو مشروع الآن 🔥";
+        showToast("طاقة عالية! وقت مثالي للمسائل الهندسية والبرمجة العميقة", "success");
+      } else if (lvl === "medium") {
+        badge.textContent = "مناسب لحل الشيتات والمراجعة ⚡";
+      } else {
+        badge.textContent = "ركز على المهام الخفيفة والقراءة ☕";
+      }
+    };
+  });
+
+  // ب) حاسبة الـ GPA وسيناريوهات التقدير
+  document.getElementById("btn-gpa-simulator")?.addEventListener("click", () => {
+    openFormModal("حاسبة الـ GPA وسيناريو درجة الامتياز", `
+      <div class="form-group"><label>معدلك التراكمي الحالي (GPA من 4.0)</label><input type="number" step="0.01" id="gpa-cur" value="3.2" /></div>
+      <div class="form-group"><label>الساعات المنجزة سابقاً</label><input type="number" id="gpa-hours-done" value="60" /></div>
+      <div class="form-group"><label>ساعات الترم الحالي</label><input type="number" id="gpa-hours-sem" value="18" /></div>
+      <div class="form-group"><label>التقدير المتوقع هذا الترم (من 4.0)</label><input type="number" step="0.1" id="gpa-sem-target" value="3.8" /></div>
+      <div class="subject-progress-box">
+        <strong id="gpa-calc-result" class="gold-text">اضغط "حفظ البيانات" لحساب المعدل الجديد</strong>
+      </div>
+    `, async () => {
+      const cur = Number(document.getElementById("gpa-cur").value) || 0;
+      const hDone = Number(document.getElementById("gpa-hours-done").value) || 0;
+      const hSem = Number(document.getElementById("gpa-hours-sem").value) || 0;
+      const semGpa = Number(document.getElementById("gpa-sem-target").value) || 0;
+      const totalPts = (cur * hDone) + (semGpa * hSem);
+      const newGpa = ((totalPts) / (hDone + hSem || 1)).toFixed(2);
+      showToast(`معدلك التراكمي المتوقع سيصبح: ${newGpa} من 4.0 🎓`, "success");
+    });
+  });
+
+  // ج) محاكي فاينمان للمذاكرة بالذكاء الاصطناعي (AI Feynman Mode)
+  document.getElementById("btn-feynman-ai")?.addEventListener("click", () => {
+    openFormModal("محاكي فاينمان الذكي (اشرح الدرس وسيقيمك الـ AI)", `
+      <div class="form-group"><label>اسم المادة أو المفهوم الهندسي</label><input name="topic" required placeholder="مثال: البوابات المنطقية Logic Gates / قوانين كيرشوف" /></div>
+      <div class="form-group"><label>اشرح المفهوم بأسلوبك وكأنك تشرحه لطالب زميلك:</label><textarea name="explanation" rows="4" required placeholder="اكتب شرحك المختصر هنا ليقوم المساعد الذكي بتقييم فهمك..."></textarea></div>
+    `, async (data) => {
+      switchView("ai");
+      handleAIChatSubmit(`أريد تطبيق تقنية فاينمان في مادة (${data.topic}). هذا هو شرحي للمفهوم: "${data.explanation}". قيّم مدى صحة شرحي، وصحح أي نقص، واطرح عليّ سؤالاً لاختبار فهمي العميق.`);
+    });
+  });
+
+  // د) مصحف القراءة وحفظ الوقف التلقائي
+  document.getElementById("btn-open-quran-reader")?.addEventListener("click", () => {
+    const saved = localStorage.getItem("MY_LIFE_OS_QURAN_BOOKMARK") || "صفحة 1 - سورة الفاتحة";
+    openFormModal("مصحف القراءة وحفظ الوقف التلقائي", `
+      <div class="form-group"><label>السورة الحالية ورموز الآيات / الصفحة</label><input name="bookmark" value="${escapeHTML(saved)}" required placeholder="مثال: سورة الكهف - آية 45 (صفحة 299)" /></div>
+      <div class="form-group"><label>تدبر أو فائدة قرآنية استوقفتك اليوم (اختياري)</label><textarea name="reflection" rows="3" placeholder="اكتب تدبرك ليُحفظ في سجل القرآن..."></textarea></div>
+    `, async (data) => {
+      localStorage.setItem("MY_LIFE_OS_QURAN_BOOKMARK", data.bookmark);
+      refreshSuperOSWidgets();
+      if (data.reflection) {
+        await createRecord("study_records", { title: `تدبر قرآني (${data.bookmark})`, benefit: data.reflection });
+      }
+      showToast("تم حفظ موضع وقفك في المصحف تلقائياً", "success");
+    });
+  });
+
+  // هـ) خزنة الأكواد السريعة (Code Snippets Vault)
+  document.getElementById("btn-open-snippets")?.addEventListener("click", () => {
+    const snippets = JSON.parse(localStorage.getItem("MY_LIFE_OS_SNIPPETS") || "[]");
+    const listHtml = snippets.length
+      ? snippets.map((s, i) => `
+          <div class="code-snippet-box">
+            <div class="flex-between">
+              <strong>${escapeHTML(s.title)}</strong>
+              <button type="button" class="btn btn-xs btn-gold" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(s.code)}'))">نسخ الكود</button>
+            </div>
+            <pre dir="ltr" class="mt-2">${escapeHTML(s.code)}</pre>
+          </div>
+        `).join("")
+      : `<p class="small-muted">لا توجد أكواد محفوظة بعد.</p>`;
+
+    openFormModal("خزنة الأكواد البرمجية السريعة (Code Snippets)", `
+      <div class="form-group"><label>عنوان الكود / الدالة</label><input name="title" required placeholder="اتصال Firebase / حل مسألة C++..." /></div>
+      <div class="form-group"><label>الكود البرمجي</label><textarea name="code" rows="4" dir="ltr" required placeholder="const app = initializeApp(config);"></textarea></div>
+      <h4 class="mt-4 gold-text">مكتبة أكوادك المحفوظة:</h4>
+      <div style="max-height:220px; overflow-y:auto;">${listHtml}</div>
+    `, async (data) => {
+      snippets.unshift({ title: data.title, code: data.code });
+      localStorage.setItem("MY_LIFE_OS_SNIPPETS", JSON.stringify(snippets));
+      showToast("تم حفظ الكود في خزنتك البرمجية", "success");
+    });
+  });
+
+  // و) سجل الأخطاء البرمجية وحلولها (Dev Bug & Fix Log)
+  document.getElementById("btn-open-buglog")?.addEventListener("click", () => {
+    const bugs = JSON.parse(localStorage.getItem("MY_LIFE_OS_BUGS") || "[]");
+    const listHtml = bugs.length
+      ? bugs.map(b => `<div class="prayer-row"><div><strong>🐞 ${escapeHTML(b.bug)}</strong><p class="small-note">✅ الحل: ${escapeHTML(b.fix)}</p></div></div>`).join("")
+      : `<p class="small-muted">سجل الأخطاء المحلولة فارغ.</p>`;
+
+    openFormModal("سجل التحديات والأخطاء المحلولة (Bug & Fix Log)", `
+      <div class="form-group"><label>المشكلة أو الـ Error الذي واجهك</label><input name="bug" required placeholder="CORS Error / Null Reference..." /></div>
+      <div class="form-group"><label>كيف قمت بحله؟</label><textarea name="fix" rows="2" required placeholder="إضافة Header / التأكد من تحميل DOM..."></textarea></div>
+      <div style="max-height:200px; overflow-y:auto;" class="mt-2">${listHtml}</div>
+    `, async (data) => {
+      bugs.unshift({ bug: data.bug, fix: data.fix });
+      localStorage.setItem("MY_LIFE_OS_BUGS", JSON.stringify(bugs));
+      showToast("تم توثيق الحل الهندسي بنجاح", "success");
+    });
+  });
+
+  // ز) خريطة مسارات التعلم التقنية (Tech Roadmap Tracker)
+  document.getElementById("btn-open-roadmap")?.addEventListener("click", () => {
+    const roadmap = JSON.parse(localStorage.getItem("MY_LIFE_OS_ROADMAP") || '{"html":true,"css":true,"js":true,"firebase":true}');
+    const skills = [
+      { key: "html", label: "HTML5 & Semantic Architecture" },
+      { key: "css", label: "CSS3, Grid & Luxury Animations" },
+      { key: "js", label: "Modern ES6+ JavaScript & Async" },
+      { key: "firebase", label: "Firebase Auth, Firestore & Security" },
+      { key: "pwa", label: "PWA, Service Workers & Offline Sync" },
+      { key: "cpp", label: "C++ & Data Structures / Algorithms" },
+      { key: "logic", label: "Digital Logic & Circuit Design" },
+      { key: "ai", label: "AI APIs & Prompt Engineering" }
+    ];
+
+    const pillsHtml = skills.map(s => `
+      <label class="check-pill ${roadmap[s.key] ? "completed" : ""}">
+        <input type="checkbox" name="${s.key}" ${roadmap[s.key] ? "checked" : ""} />
+        <span>${s.label}</span>
+      </label>
+    `).join("");
+
+    openFormModal("خريطة إتقان المهارات الهندسية والبرمجية", `
+      <p class="small-muted mb-2">علّم على المهارات التي أتقنتها لمتابعة تطورك التقني:</p>
+      <div class="curriculum-items-wrap" style="grid-template-columns:1fr;">${pillsHtml}</div>
+    `, async (data) => {
+      const newMap = {};
+      skills.forEach(s => { newMap[s.key] = Boolean(data[s.key]); });
+      localStorage.setItem("MY_LIFE_OS_ROADMAP", JSON.stringify(newMap));
+      showToast("تم تحديث خريطة مهاراتك التقنية", "success");
+    });
+  });
+
+  // ح) المسودة السريعة الجانبية (Quick Scratchpad) + باقات الأصوات
+  const scratchDrawer = document.getElementById("scratchpad-drawer");
+  const scratchArea = document.getElementById("quick-scratchpad-area");
+  const soundSelect = document.getElementById("select-ui-sound-pack");
+
+  if (scratchArea) {
+    scratchArea.value = localStorage.getItem("MY_LIFE_OS_SCRATCHPAD") || "";
+    scratchArea.oninput = () => localStorage.setItem("MY_LIFE_OS_SCRATCHPAD", scratchArea.value);
+  }
+
+  if (soundSelect) {
+    soundSelect.value = currentUISoundPack;
+    soundSelect.onchange = () => {
+      currentUISoundPack = soundSelect.value;
+      localStorage.setItem("MY_LIFE_OS_SOUND_PACK", currentUISoundPack);
+      playCustomUISound();
+      showToast("تم تغيير باقة الأصوات التفاعلية", "success");
+    };
+  }
+
+  document.getElementById("btn-toggle-scratchpad")?.addEventListener("click", () => {
+    scratchDrawer?.classList.toggle("hidden");
+  });
+  document.getElementById("btn-close-scratchpad")?.addEventListener("click", () => {
+    scratchDrawer?.classList.add("hidden");
+  });
+
+  // ط) تخصيص وإخفاء/إظهار كروت لوحة التحكم
+  document.getElementById("btn-customize-dash")?.addEventListener("click", () => {
+    const kpiGrid = document.querySelector("#view-dashboard .kpi-grid");
+    if (kpiGrid) {
+      kpiGrid.classList.toggle("hidden");
+      showToast("تم تبديل وضع عرض الكروت الإحصائية في الرئيسية", "info");
+    }
+  });
 });

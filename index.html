@@ -244,7 +244,43 @@
             <h4><i class="fa-solid fa-sun gold-text"></i> الموجز الصباحي الذكي | Morning Briefing</h4>
             <span class="small-muted" id="briefing-time-label">اليوم</span>
           </div>
+
           <p id="morning-briefing-text" class="briefing-content">جاري تجهيز تقريرك الصباحي الذكي من واقع بياناتك...</p>
+        </div>
+        <!-- المحور 2 و 4 و 5: شريط الطاقة اليومية + رادار الامتحانات + شبكة العادات + تخصيص لوحة التحكم -->
+        <div class="super-os-bar">
+          <!-- متتبع الطاقة والمزاج اليومي -->
+          <div class="os-mini-widget">
+            <div class="flex-between">
+              <strong><i class="fa-solid fa-battery-full gold-text"></i> طاقتك اليومية</strong>
+              <span id="energy-advice-badge" class="badge badge-gold">اختر حالتك</span>
+            </div>
+            <div class="energy-pills-row mt-2">
+              <button type="button" class="energy-btn" data-energy="high">🔥 عالية جداً</button>
+              <button type="button" class="energy-btn" data-energy="medium">⚡ متوسطة</button>
+              <button type="button" class="energy-btn" data-energy="low">☕ هادئة</button>
+            </div>
+          </div>
+
+          <!-- رادار العد التنازلي للامتحانات والتسليمات -->
+          <div class="os-mini-widget" id="exam-radar-widget">
+            <div class="flex-between">
+              <strong><i class="fa-solid fa-satellite-dish gold-text"></i> رادار الاختبارات والتسليمات</strong>
+              <span id="exam-radar-badge" class="badge badge-emerald">آمن</span>
+            </div>
+            <p id="exam-radar-text" class="small-muted mt-2">لا توجد اختبارات عاجلة خلال 48 ساعة.</p>
+          </div>
+
+          <!-- شبكة تتبع العادات السنوية (GitHub Heatmap) -->
+          <div class="os-mini-widget">
+            <div class="flex-between">
+              <strong><i class="fa-solid fa-fire-flame-curved gold-text"></i> سلسلة الالتزام (Heatmap)</strong>
+              <button type="button" id="btn-customize-dash" class="btn btn-xs btn-outline">
+                <i class="fa-solid fa-table-columns"></i> تخصيص الكروت
+              </button>
+            </div>
+            <div id="habit-heatmap-grid" class="habit-heatmap-grid mt-2"></div>
+          </div>
         </div>
         <div class="welcome-banner">
           <div>
@@ -413,9 +449,11 @@
             <button class="btn btn-outline" data-uni-tab="lectures">المحاضرات والتكليفات</button>
             <button class="btn btn-outline" data-uni-tab="grades">الامتحانات والدرجات</button>
           </div>
-          <div class="filters-row">
+<div class="filters-row">
             <button id="btn-add-subject" class="btn btn-gold btn-sm"><i class="fa-solid fa-book-medical"></i> مادة جديدة</button>
             <button id="btn-add-lecture" class="btn btn-outline btn-sm"><i class="fa-solid fa-file-circle-plus"></i> محاضرة / واجب</button>
+            <button id="btn-gpa-simulator" class="btn btn-outline btn-sm"><i class="fa-solid fa-calculator gold-text"></i> حاسبة GPA والامتياز</button>
+            <button id="btn-feynman-ai" class="btn btn-outline btn-sm"><i class="fa-solid fa-brain gold-text"></i> محاكي فاينمان AI</button>
           </div>
         </div>
 
@@ -442,6 +480,18 @@
            VIEW 5: ISLAMIC LIFE (QURAN & WORSHIP)
       ====================================================== -->
       <section id="view-islamic" class="view-section">
+        <!-- شريط منبه صيام النوافل ومصحف الحفظ التلقائي -->
+        <div class="section-toolbar">
+          <div class="flex-between" style="gap:12px; flex-wrap:wrap;">
+            <span id="fasting-reminder-badge" class="badge badge-gold">
+              <i class="fa-solid fa-moon"></i> جاري فحص أيام الصيام المستحبة...
+            </span>
+            <span id="quran-bookmark-label" class="small-muted">آخر وقف مصحف: صفحة 1 - سورة الفاتحة</span>
+          </div>
+          <button type="button" id="btn-open-quran-reader" class="btn btn-gold btn-sm">
+            <i class="fa-solid fa-book-open-reader"></i> فتح المصحف وحفظ الوقف التلقائي
+          </button>
+        </div>
         <div class="dashboard-grid">
           <!-- كارت مواقيت الصلاة الدقيقة لمصر والعداد التنازلي -->
           <div class="card prayer-times-card">
@@ -495,13 +545,24 @@
         </div>
       </section>
 
-      <!-- =====================================================
-           VIEW 6: PROJECTS & CODING
+<!-- =====================================================
+           VIEW 6: PROJECTS & CODING (DEV ENGINEERING HUB)
       ====================================================== -->
       <section id="view-projects" class="view-section">
         <div class="section-toolbar">
-          <input type="search" id="project-search" class="input-sm" placeholder="ابحث في المشاريع والتقنيات..." />
-          <button id="btn-open-project-modal" class="btn btn-gold">
+          <div class="filters-row">
+            <input type="search" id="project-search" class="input-sm" placeholder="ابحث في المشاريع والتقنيات..." />
+            <button type="button" id="btn-open-snippets" class="btn btn-outline btn-sm">
+              <i class="fa-solid fa-code gold-text"></i> خزنة الأكواد (Snippets)
+            </button>
+            <button type="button" id="btn-open-buglog" class="btn btn-outline btn-sm">
+              <i class="fa-solid fa-bug gold-text"></i> سجل الأخطاء (Bug Log)
+            </button>
+            <button type="button" id="btn-open-roadmap" class="btn btn-outline btn-sm">
+              <i class="fa-solid fa-route gold-text"></i> خريطة المهارات (Roadmap)
+            </button>
+          </div>
+          <button id="btn-open-project-modal" class="btn btn-gold btn-sm">
             <i class="fa-solid fa-plus"></i> مشروع برمجي جديد
           </button>
         </div>
@@ -989,6 +1050,28 @@
   <button id="btn-exit-zen" class="exit-zen-floating-btn hidden">
     <i class="fa-solid fa-expand"></i> الخروج من وضع التركيز (ESC)
   </button>
+  <!-- المسودة السريعة الجانبية (Quick Scratchpad Drawer) + باقات الأصوات -->
+  <button type="button" id="btn-toggle-scratchpad" class="scratchpad-trigger-btn" title="المسودة السريعة وأصوات النظام">
+    <i class="fa-solid fa-pen-nib"></i>
+  </button>
+
+  <aside id="scratchpad-drawer" class="scratchpad-drawer hidden">
+    <div class="flex-between">
+      <h4><i class="fa-solid fa-bolt gold-text"></i> المسودة الفورية وأصوات النظام</h4>
+      <button type="button" id="btn-close-scratchpad" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <p class="small-muted mt-2">اكتب أي فكرة أو رقم سريع هنا (يُحفظ تلقائياً أثناء الكتابة):</p>
+    <textarea id="quick-scratchpad-area" rows="7" placeholder="اكتب مسودتك السريعة أو أرقامك العابرة هنا..."></textarea>
+
+    <div class="form-group mt-4">
+      <label><i class="fa-solid fa-volume-high gold-text"></i> باقة الأصوات التفاعلية (UI Sound Pack):</label>
+      <select id="select-ui-sound-pack" class="select-sm" style="width:100%">
+        <option value="apple">نغمة تكنولوجية ناعمة (Apple Touch)</option>
+        <option value="mech">كيبورد ميكانيكي فاخر (Thocky Mechanical)</option>
+        <option value="mute">صامت تماماً (Silent Mode)</option>
+      </select>
+    </div>
+  </aside>
   <!-- Main Application Script (ES Module) -->
   <script type="module" src="script.js"></script>
 </body>
