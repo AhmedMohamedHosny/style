@@ -1072,6 +1072,94 @@
       </select>
     </div>
   </aside>
+  <!-- =========================================================
+       ALEX — ANIMATED CARTOON AI ASSISTANT WIDGET
+  ========================================================== -->
+  <div id="alex-mascot-Root" class="alex-mascot-wrapper">
+    <!-- Speech Bubble -->
+    <div id="alex-speech-bubble" class="alex-speech-bubble">
+      <span id="alex-bubble-text">Hey! I'm Alex 🤖 Need any help?</span>
+      <button type="button" id="btn-hide-alex-bubble" class="alex-bubble-close" title="Dismiss">&times;</button>
+    </div>
+
+    <!-- Bouncing Cartoon Character SVG -->
+    <button type="button" id="btn-alex-avatar" class="alex-avatar-btn" title="Ask Alex AI">
+      <div class="alex-glow-aura"></div>
+      <svg class="alex-cartoon-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <!-- Antenna -->
+        <line x1="60" y1="10" x2="60" y2="26" stroke="#d4af37" stroke-width="4" stroke-linecap="round" />
+        <circle class="alex-antenna-bulb" cx="60" cy="10" r="6" fill="#10b981" />
+        <!-- Ears -->
+        <rect x="14" y="48" width="10" height="22" rx="5" fill="#d4af37" />
+        <rect x="96" y="48" width="10" height="22" rx="5" fill="#d4af37" />
+        <!-- Head / Body -->
+        <rect x="22" y="26" width="76" height="66" rx="26" fill="#141926" stroke="#d4af37" stroke-width="4" />
+        <!-- Inner Screen Face -->
+        <rect x="30" y="36" width="60" height="44" rx="16" fill="#07090e" stroke="rgba(16,185,129,0.4)" stroke-width="2" />
+        <!-- Animated Glowing Eyes -->
+        <g class="alex-eyes">
+          <ellipse cx="46" cy="54" rx="6" ry="8" fill="#06b6d4" />
+          <ellipse cx="74" cy="54" rx="6" ry="8" fill="#06b6d4" />
+          <circle cx="48" cy="51" r="2.2" fill="#ffffff" />
+          <circle cx="76" cy="51" r="2.2" fill="#ffffff" />
+        </g>
+        <!-- Happy Smile -->
+        <path class="alex-mouth" d="M 48 67 Q 60 76 72 67" fill="none" stroke="#10b981" stroke-width="3.5" stroke-linecap="round" />
+        <!-- Floating Hands -->
+        <circle class="alex-hand-left" cx="14" cy="84" r="7" fill="#141926" stroke="#d4af37" stroke-width="3" />
+        <circle class="alex-hand-right" cx="106" cy="84" r="7" fill="#141926" stroke="#d4af37" stroke-width="3" />
+      </svg>
+      <span class="alex-name-tag">ALEX AI</span>
+    </button>
+
+    <!-- Alex Interactive Chat & Quick Actions Popup -->
+    <div id="alex-chat-popup" class="alex-chat-popup hidden">
+      <div class="alex-popup-header">
+        <div class="alex-header-info">
+          <span class="alex-online-dot"></span>
+          <strong>Alex — AI Copilot</strong>
+          <small id="alex-model-badge" class="badge badge-gold">Gemini Flash</small>
+        </div>
+        <div class="alex-header-actions">
+          <button type="button" id="btn-alex-api-key" class="btn-icon" title="Configure Gemini API Key & Model">
+            <i class="fa-solid fa-key"></i>
+          </button>
+          <button type="button" id="btn-alex-close" class="btn-icon" title="Close">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Ready-made Quick Actions (Lots of Cool Presets) -->
+      <div class="alex-quick-chips" id="alex-quick-chips">
+        <button type="button" class="alex-chip" data-alex-prompt="Give me a smart daily plan based on my current tasks and subjects.">📅 Plan My Day</button>
+        <button type="button" class="alex-chip" data-alex-prompt="Quiz me with 3 short multiple-choice questions on Logic Design & Engineering.">🧠 Quick Quiz</button>
+        <button type="button" class="alex-chip" data-alex-prompt="Summarize my progress, active projects, and pending tasks in English.">📊 Status Report</button>
+        <button type="button" class="alex-chip" data-alex-prompt="Give me a high-energy motivational boost for studying and coding right now!">🔥 Motivate Me</button>
+        <button type="button" class="alex-chip" data-alex-prompt="Explain a clean JavaScript / Firebase best practice tip in 3 lines.">💻 Code Tip</button>
+        <button type="button" class="alex-chip" data-alex-prompt="Suggest a 2-hour deep study strategy using Pomodoro and Feynman technique.">⏱️ Study Strategy</button>
+        <button type="button" class="alex-chip" data-alex-prompt="Help me debug a code error or explain a difficult engineering concept.">🛠️ Debug / Explain</button>
+        <button type="button" class="alex-chip" data-alex-prompt="Give me 3 creative full-stack project ideas I can build next.">💡 Project Ideas</button>
+        <button type="button" class="alex-chip" data-alex-cmd="open-pomo">🚀 Start 60m Focus</button>
+        <button type="button" class="alex-chip" data-alex-cmd="rain-sound">🌧️ Toggle Rain Sound</button>
+      </div>
+
+      <!-- Alex Messages Stream -->
+      <div id="alex-messages-stream" class="alex-messages-stream">
+        <div class="alex-bubble-msg bot">
+          Hi! I'm <strong>Alex</strong>, your personal AI assistant. Tap any quick action above or ask me anything in English or Arabic!
+        </div>
+      </div>
+
+      <!-- Alex Direct Input -->
+      <form id="alex-popup-form" class="alex-popup-input-row">
+        <input type="text" id="alex-popup-input" placeholder="Ask Alex anything or type a command..." required />
+        <button type="submit" class="btn btn-gold btn-sm">
+          <i class="fa-solid fa-paper-plane"></i>
+        </button>
+      </form>
+    </div>
+  </div>
   <!-- Main Application Script (ES Module) -->
   <script type="module" src="script.js"></script>
 </body>

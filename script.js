@@ -825,17 +825,12 @@ if (!subjects.length) {
             </div>
           </div>
 
-          <div class="flex-between mt-2">
+<div class="flex-between mt-2">
             <button class="btn btn-xs btn-outline" data-action="open-curriculum" data-id="${s.id}">
               <i class="fa-solid fa-list-check"></i> خريطة المنهج (29 بند)
             </button>
-${p.liveUrl ? `
-            <a href="${escapeHTML(p.liveUrl)}" target="_blank" class="btn-link"><i class="fa-solid fa-globe"></i> Live</a>
-            <button class="btn btn-xs btn-outline" data-action="ping-project-url" data-url="${escapeHTML(p.liveUrl)}">
-              <i class="fa-solid fa-signal"></i> فحص الحالة
-            </button>
-          ` : ""}
-                        <i class="fa-solid fa-microphone"></i> صوتيات (${voiceNotesCount})
+            <button class="btn btn-xs btn-gold" data-action="open-subject-voice" data-id="${s.id}">
+              <i class="fa-solid fa-microphone"></i> صوتيات (${voiceNotesCount})
             </button>
             <button class="btn btn-xs btn-outline" data-action="open-subject-formulas" data-id="${s.id}">
               <i class="fa-solid fa-square-root-variable gold-text"></i> القوانين (${(s.formulas || []).length})
@@ -1542,74 +1537,79 @@ function parseNaturalLanguageAIAction(input) {
   return null;
 }
 
+async function askGeminiOrFallbackAI(userPrompt) {
+  const userName = AppState.user?.displayName || "Engineer";
+  const pendingTasks = AppState.collections.tasks.filter(t => t.status !== "Completed").map(t => t.title);
+  const subjectsList = AppState.collections.subjects.map(s => s.name);
+  const projectsList = AppState.collections.projects.map(p => `${p.title} (${p.progress || 0}%)`);
+
+  const systemContext = `You are "Alex", an advanced, smart, and friendly AI Personal Copilot inside the MY LIFE OS platform for "${userName}".
+Keep your tone professional, motivating, concise, and helpful. Do NOT use slang phrases like "يا قدوة".
+Respond in the same language the user writes in (English or Arabic), keeping key technical terms in English.
+User's live context:
+- Enrolled Subjects (${subjectsList.length}): ${subjectsList.join(", ") || "None yet"}
+- Pending Tasks (${pendingTasks.length}): ${pendingTasks.join(", ") || "No pending tasks"}
+- Active Projects (${projectsList.length}): ${projectsList.join(", ") || "No active projects"}`;
+
+  const geminiKey = localStorage.getItem("MY_LIFE_OS_GEMINI_KEY");
+  const selectedModel = localStorage.getItem("MY_LIFE_OS_GEMINI_MODEL") || "gemini-2.0-flash";
+
+  // 1. إذا أدخل المستخدم مفتاح Gemini API الخاص به
+  if (geminiKey) {
+    const modelsToTry = [selectedModel, "gemini-2.0-flash", "gemini-1.5-flash"];
+    for (const modelName of modelsToTry) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(geminiKey)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${systemContext}\n\nUser Request: ${userPrompt}` }] }]
+          })
+        });
+        const data = await res.json();
+        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (reply) return reply;
+      } catch (e) {}
+    }
+  }
+
+  // 2. المحرك التلقائي الاحتياطي في حال عدم إدخال مفتاح
+  try {
+    const res = await fetch("https://text.pollinations.ai/openai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "openai",
+        messages: [
+          { role: "system", content: systemContext },
+          { role: "user", content: userPrompt }
+        ]
+      })
+    });
+    const data = await res.json();
+    const reply = data?.choices?.[0]?.message?.content;
+    if (reply) return reply;
+  } catch (e) {}
+
+  return `Hello ${userName}! I'm Alex AI. You currently have ${pendingTasks.length} active tasks and ${subjectsList.length} enrolled subjects. How can I help you organize your schedule today?`;
+}
+
 async function handleAIChatSubmit(userPrompt) {
   appendAIMessage(userPrompt, "user");
 
-  // أولاً: فحص ما إذا كان الطلب أمر تنفيذ مباشر (مهمة / مادة / مصروف)
   const detectedAction = parseNaturalLanguageAIAction(userPrompt);
   if (detectedAction) {
     AppState.pendingAIAction = detectedAction;
     document.getElementById("ai-confirm-summary").textContent = detectedAction.summary;
     document.getElementById("ai-confirm-payload").textContent = JSON.stringify(detectedAction.payload, null, 2);
     document.getElementById("ai-confirmation-card").classList.remove("hidden");
-    appendAIMessage("جهزت لك الإجراء المطلوب! اضغط على زر التأكيد بالأسفل لحفظه فوراً في حسابك.", "assistant");
+    appendAIMessage("Action extracted! Please confirm below to save it directly to your account.", "assistant");
     return;
   }
 
-  // ثانياً: محادثة ذكاء اصطناعي حقيقية مع سياق بيانات المستخدم الفعلية
-  const loadingMsg = appendAIMessage("جاري التفكير...", "assistant");
-
-  const userName = AppState.user?.displayName || "يا هندسة";
-  const pendingTasks = AppState.collections.tasks.filter(t => t.status !== "Completed").map(t => t.title);
-  const subjectsList = AppState.collections.subjects.map(s => s.name);
-  const projectsList = AppState.collections.projects.map(p => `${p.title} (${p.progress || 0}%)`);
-
-  const systemContext = `أنت المساعد الشخصي الذكي داخل نظام MY LIFE OS الخاص بالمستخدم "${userName}".
-تحدث باللغة العربية بأسلوب راقٍ، ودود، وذكي جداً (وبروح مصرية هندسية مشجعة عند الترحيب).
-بيانات المستخدم الحالية في النظام:
-- المواد الدراسية المسجلة (${subjectsList.length}): ${subjectsList.join("، ") || "لا توجد مواد بعد"}
-- المهام غير المكتملة (${pendingTasks.length}): ${pendingTasks.join("، ") || "لا توجد مهام معلقة"}
-- المشاريع النشطة (${projectsList.length}): ${projectsList.join("، ") || "لا توجد مشاريع بعد"}
-أجب على سؤال المستخدم أو طلب التنظيم بشكل مباشر وعملي دون ذكر أي تفاصيل تقنية عن قواعد البيانات.`;
-
-  try {
-    const geminiKey = localStorage.getItem("MY_LIFE_OS_GEMINI_KEY");
-    let aiReply = "";
-
-    if (geminiKey) {
-      // الاتصال المباشر بـ Google Gemini API في حال إدخال المفتاح
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `${systemContext}\n\nرسالة المستخدم: ${userPrompt}` }] }]
-        })
-      });
-      const data = await res.json();
-      aiReply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    }
-
-    if (!aiReply) {
-      // محرك الذكاء الاصطناعي التوليدي المجاني المدمج (يعمل فوراً بدون مفتاح)
-      const res = await fetch("https://text.pollinations.ai/openai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "openai",
-          messages: [
-            { role: "system", content: systemContext },
-            { role: "user", content: userPrompt }
-          ]
-        })
-      });
-      const data = await res.json();
-      aiReply = data?.choices?.[0]?.message?.content || "";
-    }
-
-    loadingMsg.textContent = aiReply || `يا هلا بيك يا ${userName}! أنا معاك وجاهز لتنظيم يومك، موادك الدراسية، أو مشاريعك. تحب نبدأ بإيه النهاردة؟`;
-  } catch (err) {
-    loadingMsg.textContent = `يا هلا بيك يا ${userName}! أنا مساعدك الذكي في MY LIFE OS. حالياً لديك ${pendingTasks.length} مهام نشطة و ${subjectsList.length} مواد دراسية. قولي تحب نرتب جدول مذاكرتك إزاي أو أضيف لك مهمة جديدة؟`;
-  }
+  const loadingMsg = appendAIMessage("Alex is thinking...", "assistant");
+  const aiReply = await askGeminiOrFallbackAI(userPrompt);
+  loadingMsg.textContent = aiReply;
 }
 
 /* ============================================================================
@@ -3903,5 +3903,146 @@ document.addEventListener("DOMContentLoaded", () => {
       kpiGrid.classList.toggle("hidden");
       showToast("تم تبديل وضع عرض الكروت الإحصائية في الرئيسية", "info");
     }
+  });
+});
+/* ==========================================================================
+   ALEX CARTOON AI MASCOT ENGINE & GEMINI FLASH CONFIGURATOR
+   ========================================================================== */
+
+const ALEX_BUBBLE_QUOTES = [
+  "Hey! I'm Alex 🤖 Need any help?",
+  "Ready to crush your goals today? 🚀",
+  "Click me for quick AI study tools! 🧠",
+  "Want a quick quiz on your subjects? 📚",
+  "Remember to stay hydrated & focused! ⚡",
+  "I can plan your schedule in seconds! 📅"
+];
+
+function openGeminiConfigModal() {
+  const currentKey = localStorage.getItem("MY_LIFE_OS_GEMINI_KEY") || "";
+  const currentModel = localStorage.getItem("MY_LIFE_OS_GEMINI_MODEL") || "gemini-2.0-flash";
+
+  openFormModal("Configure Gemini Flash AI & API Key", `
+    <div class="form-group">
+      <label>Select Gemini Flash Model</label>
+      <select name="model" dir="ltr">
+        <option value="gemini-2.0-flash" ${currentModel === "gemini-2.0-flash" ? "selected" : ""}>Gemini Flash (Latest Fast Model)</option>
+        <option value="gemini-1.5-flash" ${currentModel === "gemini-1.5-flash" ? "selected" : ""}>Gemini 1.5 Flash (Stable)</option>
+        <option value="gemini-1.5-pro" ${currentModel === "gemini-1.5-pro" ? "selected" : ""}>Gemini Pro (Deep Reasoning)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Your Google Gemini API Key (Optional — Auto-Fallback Enabled)</label>
+      <input type="password" name="apiKey" dir="ltr" value="${escapeHTML(currentKey)}" placeholder="AIzaSy..." />
+      <small class="small-muted d-block mt-2">Enter your key from Google AI Studio to use your personal Gemini quota directly.</small>
+    </div>
+  `, async (data) => {
+    if (data.model) {
+      localStorage.setItem("MY_LIFE_OS_GEMINI_MODEL", data.model);
+    }
+    if (data.apiKey && data.apiKey.trim()) {
+      localStorage.setItem("MY_LIFE_OS_GEMINI_KEY", data.apiKey.trim());
+      showToast("Gemini API Key & Model saved successfully!", "success");
+    } else {
+      localStorage.removeItem("MY_LIFE_OS_GEMINI_KEY");
+      showToast("Switched to built-in Free AI Engine", "info");
+    }
+  });
+}
+
+function appendAlexPopupMessage(text, sender = "bot") {
+  const stream = document.getElementById("alex-messages-stream");
+  if (!stream) return null;
+  const msg = document.createElement("div");
+  msg.className = `alex-bubble-msg ${sender}`;
+  msg.textContent = text;
+  stream.appendChild(msg);
+  stream.scrollTop = stream.scrollHeight;
+  return msg;
+}
+
+async function sendToAlexPopup(promptText) {
+  const popup = document.getElementById("alex-chat-popup");
+  if (popup) popup.classList.remove("hidden");
+
+  appendAlexPopupMessage(promptText, "user");
+
+  // فحص إذا كان الأمر إضافة مهمة أو مادة أو مصروف
+  const detectedAction = parseNaturalLanguageAIAction(promptText);
+  if (detectedAction) {
+    const id = await createRecord(detectedAction.collection, detectedAction.payload);
+    if (id) {
+      appendAlexPopupMessage(`Done! ✅ ${detectedAction.summary}`, "bot");
+      return;
+    }
+  }
+
+  const thinkingEl = appendAlexPopupMessage("Alex is thinking... 🤖", "bot");
+  const reply = await askGeminiOrFallbackAI(promptText);
+  if (thinkingEl) thinkingEl.textContent = reply;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // ربط زر إعدادات الـ AI في صفحة المساعد ونافذة Alex
+  const aiSetBtn = document.getElementById("btn-ai-settings");
+  if (aiSetBtn) aiSetBtn.onclick = openGeminiConfigModal;
+  document.getElementById("btn-alex-api-key")?.addEventListener("click", openGeminiConfigModal);
+
+  const alexAvatarBtn = document.getElementById("btn-alex-avatar");
+  const alexPopup = document.getElementById("alex-chat-popup");
+  const alexBubble = document.getElementById("alex-speech-bubble");
+  const alexBubbleText = document.getElementById("alex-bubble-text");
+
+  // تبديل عبارات Alex التشجيعية باللغة الإنجليزية تلقائياً كل 12 ثانية
+  let quoteIdx = 0;
+  setInterval(() => {
+    if (!alexBubble || alexBubble.classList.contains("hidden")) return;
+    quoteIdx = (quoteIdx + 1) % ALEX_BUBBLE_QUOTES.length;
+    if (alexBubbleText) alexBubbleText.textContent = ALEX_BUBBLE_QUOTES[quoteIdx];
+  }, 12000);
+
+  // إغلاق فقاعة الكلام الصغيرة
+  document.getElementById("btn-hide-alex-bubble")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    alexBubble?.classList.add("hidden");
+  });
+
+  // فتح/إغلاق نافذة Alex الذكية عند الضغط على الشخصية الكرتونية
+  alexAvatarBtn?.addEventListener("click", () => {
+    alexPopup?.classList.toggle("hidden");
+    if (!alexPopup?.classList.contains("hidden")) {
+      document.getElementById("alex-popup-input")?.focus();
+    }
+  });
+
+  document.getElementById("btn-alex-close")?.addEventListener("click", () => {
+    alexPopup?.classList.add("hidden");
+  });
+
+  // إرسال رسالة مباشرة إلى Alex
+  document.getElementById("alex-popup-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const inp = document.getElementById("alex-popup-input");
+    const text = inp.value.trim();
+    if (!text) return;
+    inp.value = "";
+    await sendToAlexPopup(text);
+  });
+
+  // تشغيل الاختصارات الجاهزة الكثيرة (Quick Chips) داخل Alex
+  document.querySelectorAll("#alex-quick-chips .alex-chip").forEach(chip => {
+    chip.onclick = async () => {
+      const cmd = chip.dataset.alexCmd;
+      const prompt = chip.dataset.alexPrompt;
+      if (cmd === "open-pomo") {
+        alexPopup?.classList.add("hidden");
+        setCustomPomodoroTime(60, "work");
+        openPomodoroModal();
+      } else if (cmd === "rain-sound") {
+        toggleAmbientSound("rain");
+      } else if (prompt) {
+        await sendToAlexPopup(prompt);
+      }
+    };
   });
 });
