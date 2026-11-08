@@ -222,16 +222,27 @@ function initLuxuryParticles() {
 }
 
 const DEFAULT_WALLPAPERS = {
+  // خلفيات شباب وفخامة وغموض
   shadowWarrior: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1920&q=85",
-  animeCyber: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1920&q=85",
   darkRonin: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1920&q=85",
+  cyberCoder: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1920&q=85",
   nightHood: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1920&q=85",
-  royalGalaxy: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1920&q=85"
+  // خلفيات بنات وأنيميشن وألوان لطيفة وهادئة
+  animeGirlStudy: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1920&q=85",
+  sakuraPink: "https://images.unsplash.com/photo-1522383225653-ed111181a951?auto=format&fit=crop&w=1920&q=85",
+  cozyAesthetic: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=1920&q=85",
+  pastelClouds: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=85",
+  // خلفيات طبيعة ساحرة وهدوء نفسي
+  swissAlps: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=85",
+  rainyForest: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1920&q=85",
+  royalGalaxy: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1920&q=85",
+  nightOcean: "https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&w=1920&q=85"
 };
 
 function applySavedWallpapers() {
-  const appBg = localStorage.getItem("MY_LIFE_OS_APP_BG") || DEFAULT_WALLPAPERS.shadowWarrior;
-  const pomoBg = localStorage.getItem("MY_LIFE_OS_POMO_BG") || DEFAULT_WALLPAPERS.animeCyber;
+  const cloudPref = AppState.collections?.user_settings?.[0] || {};
+  const appBg = cloudPref.appWallpaper || localStorage.getItem("MY_LIFE_OS_APP_BG") || DEFAULT_WALLPAPERS.shadowWarrior;
+  const pomoBg = cloudPref.pomoWallpaper || localStorage.getItem("MY_LIFE_OS_POMO_BG") || DEFAULT_WALLPAPERS.animeGirlStudy;
   document.documentElement.style.setProperty("--app-wallpaper", `url('${appBg}')`);
   document.documentElement.style.setProperty("--pomo-wallpaper", `url('${pomoBg}')`);
 }
@@ -472,19 +483,34 @@ function renderDashboard() {
     `).join("");
   }
 
-  // Active Projects Widget
+// تحديث أشرطة التقدم المضيئة في الكروت الـ 4 (SHADOW CORE Bars)
+  const taskBarPct = todayTasks.length ? Math.round((completedToday / todayTasks.length) * 100) : 0;
+  document.getElementById("kpi-bar-tasks")?.style.setProperty("width", `${taskBarPct}%`);
+  document.getElementById("kpi-bar-prayers")?.style.setProperty("width", `${Math.round((prayerCount / 5) * 100)}%`);
+  document.getElementById("kpi-bar-projects")?.style.setProperty("width", `${avgProgress}%`);
+
+  // عرض تقدم المشاريع + المواد الدراسية معاً بدون قص الأسماء
   const projBox = document.getElementById("dash-active-projects");
-  if (!projects.length) {
-    projBox.innerHTML = renderEmptyState("لم تقم بإنشاء أي مشاريع بعد.");
+  const subjects = AppState.collections.subjects || [];
+  const combinedProgress = [
+    ...projects.map(p => ({ name: `💻 ${p.title}`, pct: Number(p.progress) || 0 })),
+    ...subjects.map(s => {
+      const done = Object.values(s.checklist || {}).filter(Boolean).length;
+      return { name: `📚 ${s.name}`, pct: Math.round((done / 29) * 100) };
+    })
+  ];
+
+  if (!combinedProgress.length) {
+    projBox.innerHTML = renderEmptyState("لم تقم بإضافة مشاريع أو مواد دراسية بعد.");
   } else {
-    projBox.innerHTML = projects.slice(0, 4).map(p => `
-      <div class="mb-2">
+    projBox.innerHTML = combinedProgress.slice(0, 5).map(item => `
+      <div class="prayer-row" style="flex-direction:column; align-items:stretch; gap:6px;">
         <div class="flex-between">
-          <strong>${escapeHTML(p.title)}</strong>
-          <span class="gold-text">${Number(p.progress) || 0}%</span>
+          <strong style="word-break:break-word;">${escapeHTML(item.name)}</strong>
+          <span class="badge badge-gold">${item.pct}%</span>
         </div>
         <div class="progress-bar-track">
-          <div class="progress-bar-fill" style="width:${Number(p.progress) || 0}%"></div>
+          <div class="progress-bar-fill" style="width:${item.pct}%"></div>
         </div>
       </div>
     `).join("");
@@ -2384,30 +2410,33 @@ function calculateEgyptPrayerTimes() {
   }
 }
 
-// 6. الموجز الصباحي الذكي (AI Morning Briefing)
 function renderMorningBriefing() {
   const el = document.getElementById("morning-briefing-text");
+  const prefixEl = document.getElementById("time-greeting-prefix");
   if (!el) return;
 
+  const hour = new Date().getHours();
+  const isMorning = hour >= 4 && hour < 12;
+  const isAfternoon = hour >= 12 && hour < 17;
+  const greeting = isMorning ? "صباح الخير والبركة" : isAfternoon ? "مساء الخير والهمة" : "مساء النور والهدوء";
+  const emoji = isMorning ? "☀️" : isAfternoon ? "⚡" : "🌙";
+
+  if (prefixEl) prefixEl.textContent = `${greeting}،`;
+
   const today = todayISO();
-  const userName = AppState.user?.displayName || "يا هندسة";
   const tasksToday = AppState.collections.tasks.filter(t => t.dueDate === today && t.status !== "Completed");
   const overdueTasks = AppState.collections.tasks.filter(t => t.dueDate && t.dueDate < today && t.status !== "Completed");
   const subjectsCount = AppState.collections.subjects.length;
 
-  let briefing = `صباح الخير والبركة يا ${userName}! ☀️\n`;
+  let briefing = `${emoji} لديك ${subjectsCount} مواد دراسية مسجلة. `;
   if (tasksToday.length > 0) {
-    briefing += `• لديك اليوم ${tasksToday.length} مهام مجدولة، أولها: "${tasksToday[0].title}".\n`;
+    briefing += `مهامك المتبقية لليوم (${tasksToday.length})، أهمها: "${tasksToday[0].title}". `;
   } else {
-    briefing += `• جدولك لمهام اليوم هادئ حتى الآن! فرصة ممتازة للمذاكرة أو تطوير مشاريعك.\n`;
+    briefing += `أنهيت مهام اليوم المجدولة! وقت مثالي للتركيز العميق أو الراحة. `;
   }
-
   if (overdueTasks.length > 0) {
-    briefing += `• تنبيه أولوية: هناك ${overdueTasks.length} مهام متأخرة نوصي بإنهاء واحدة منها اليوم.\n`;
+    briefing += `(تنبيه: لديك ${overdueTasks.length} مهام متأخرة).`;
   }
-
-  briefing += `• لديك ${subjectsCount} مواد مسجلة. حافظ على أداء الصلوات في وقتها واستعن بالله! 🚀`;
-
   el.textContent = briefing;
 }
 
@@ -3275,12 +3304,20 @@ function openPomodoroModal() {
         <button type="button" id="btn-pomo-settings-toggle" class="btn-pomo-secondary">
           <i class="fa-solid fa-sliders"></i> المظهر والصوت
         </button>
-        <button type="button" id="btn-pomo-bg-studio" class="btn-pomo-secondary">
+<button type="button" id="btn-pomo-bg-studio" class="btn-pomo-secondary">
           <i class="fa-solid fa-image"></i> صورة الخلفية
+        </button>
+        <button type="button" id="btn-pomo-pure-fullscreen" class="btn-pomo-secondary" title="إخفاء كل الأزرار وشريط ويندوز">
+          <i class="fa-solid fa-expand"></i> شاشة نقية كاملة
         </button>
         <button type="button" id="btn-pomo-reset" class="btn-pomo-secondary" title="إعادة ضبط">
           <i class="fa-solid fa-rotate-right"></i>
         </button>
+      </div>
+      <!-- زر عائم خفيف يظهر فقط عند إخفاء كل شيء للعودة -->
+      <button type="button" id="btn-exit-pure-cinema" class="pomo-exit-cinema-btn">
+        <i class="fa-solid fa-compress"></i> إظهار الأزرار (أو اضغط ESC)
+      </button>
       </div>
 
       <!-- درج سجل الجلسات واستكمال المهام (يفتح عند الضغط على سجل الجلسات) -->
@@ -3353,11 +3390,32 @@ function openPomodoroModal() {
     PomodoroState.showSettingsDrawer = false;
     openPomodoroModal();
   };
-  document.getElementById("btn-pomo-settings-toggle").onclick = () => {
-    document.getElementById("btn-pomo-bg-studio").onclick = openWallpaperStudioModal;
+document.getElementById("btn-pomo-settings-toggle").onclick = () => {
     PomodoroState.showSettingsDrawer = !PomodoroState.showSettingsDrawer;
     PomodoroState.showHistoryDrawer = false;
     openPomodoroModal();
+  };
+
+  // إصلاح عمل زر صورة الخلفية بضغطة واحدة مباشرة
+  document.getElementById("btn-pomo-bg-studio").onclick = () => {
+    openWallpaperStudioModal();
+  };
+
+  // زر ملء الشاشة النقي (يخفي شريط ويندوز السفلي + يخفي كل الأزرار والبار داخل البومودورو)
+  document.getElementById("btn-pomo-pure-fullscreen").onclick = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch (e) {}
+    card?.classList.add("pomo-pure-cinema");
+  };
+
+  document.getElementById("btn-exit-pure-cinema").onclick = async () => {
+    card?.classList.remove("pomo-pure-cinema");
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+    } catch (e) {}
   };
   
 
@@ -3917,14 +3975,23 @@ document.addEventListener("DOMContentLoaded", () => {
    FLYING FRIENDLY ALEX BOT + XP LEVELING + KANBAN + EXAM CRUNCH + DAILY CARD
    ========================================================================== */
 
-// 1. استوديو الخلفيات الفخمة (للموقع العام ولشاشة مؤقت البومودورو - صور غامضة / أنمي / رفع من جهازك)
 function openWallpaperStudioModal() {
   const presets = [
-    { key: "shadowWarrior", name: "المحارب الغامض", url: DEFAULT_WALLPAPERS.shadowWarrior },
-    { key: "animeCyber", name: "أنمي نيون ليلي", url: DEFAULT_WALLPAPERS.animeCyber },
-    { key: "darkRonin", name: "ساموراي الظلام", url: DEFAULT_WALLPAPERS.darkRonin },
-    { key: "nightHood", name: "سيد الظلال", url: DEFAULT_WALLPAPERS.nightHood },
-    { key: "royalGalaxy", name: "المجرة الملكية", url: DEFAULT_WALLPAPERS.royalGalaxy }
+    // شباب وفخامة وغموض
+    { name: "⚔️ المحارب الغامض", url: DEFAULT_WALLPAPERS.shadowWarrior },
+    { name: "🥷 ساموراي الظلام", url: DEFAULT_WALLPAPERS.darkRonin },
+    { name: "💻 هاكر النيون", url: DEFAULT_WALLPAPERS.cyberCoder },
+    { name: "🌑 سيد الظلال", url: DEFAULT_WALLPAPERS.nightHood },
+    // بنات ورسوم لطيفة
+    { name: "🌸 فتاة الأنمي والمذاكرة", url: DEFAULT_WALLPAPERS.animeGirlStudy },
+    { name: "🌺 أزهار الساكورا الوردية", url: DEFAULT_WALLPAPERS.sakuraPink },
+    { name: "🕯️ غرفة دافئة لطيفة", url: DEFAULT_WALLPAPERS.cozyAesthetic },
+    { name: "☁️ غيوم وردية هادئة", url: DEFAULT_WALLPAPERS.pastelClouds },
+    // طبيعة ساحرة وهدوء
+    { name: "🏔️ جبال الألب السويسرية", url: DEFAULT_WALLPAPERS.swissAlps },
+    { name: "🌲 غابة المطر الضبابية", url: DEFAULT_WALLPAPERS.rainyForest },
+    { name: "🌌 المجرة الملكية", url: DEFAULT_WALLPAPERS.royalGalaxy },
+    { name: "🌊 أمواج المحيط الليلي", url: DEFAULT_WALLPAPERS.nightOcean }
   ];
 
   const presetsHtml = presets.map(p => `
@@ -3933,37 +4000,30 @@ function openWallpaperStudioModal() {
     </div>
   `).join("");
 
-  openFormModal("🖼️ استوديو الخلفيات الفخمة (الموقع والمؤقت)", `
+  openFormModal("🖼️ استوديو الخلفيات (شباب • بنات • طبيعة • صورتك الخاصة)", `
     <div class="form-group">
-      <label>تطبيق الصورة المختارة على:</label>
+      <label>تطبيق الخلفية على:</label>
       <select id="wp-target-select" class="select-sm" style="width:100%">
         <option value="both">خلفية الموقع + شاشة المؤقت معاً ✨</option>
-        <option value="app">خلفية الموقع الرئيسية فقط 🖥</option>
+        <option value="app">خلفية الموقع الرئيسية فقط 🖥️</option>
         <option value="pomo">خلفية شاشة مؤقت التركيز فقط ⏱️</option>
       </select>
     </div>
 
-    <label class="small-muted">اختر من الخلفيات الغامضة والأنمي الجاهزة:</label>
+    <label class="small-muted">اختر من المكتبة المنوعة الجاهزة (اضغط على أي صورة لتفعيلها فوراً):</label>
     <div class="wallpaper-presets-grid">${presetsHtml}</div>
 
     <div class="form-group mt-2">
-      <label>أو ارفع صورة خاصة من جهازك (أنمي / شخصية غامضة / خلفية مفضلة):</label>
-      <input type="file" id="wp-file-upload" accept="image/*" />
+      <label class="btn btn-gold btn-sm btn-block" style="cursor:pointer;">
+        <i class="fa-solid fa-upload"></i> أو اختر صورة خاصة من جهازك الكمبيوتر
+        <input type="file" id="wp-file-upload" accept="image/*" class="hidden" />
+      </label>
     </div>
+  `, async () => {});
 
-    <div class="form-group">
-      <label>أو الصق رابط صورة مباشر (Image URL):</label>
-      <input type="url" id="wp-custom-url" dir="ltr" placeholder="https://example.com/anime-wallpaper.jpg" />
-    </div>
-  `, async () => {
-    const target = document.getElementById("wp-target-select").value;
-    const customUrl = document.getElementById("wp-custom-url").value.trim();
-    if (customUrl) {
-      saveAndApplyWallpaper(customUrl, target);
-    }
-  });
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
 
-  // عند الضغط على أي خلفية جاهزة
   document.querySelectorAll("[data-wp-url]").forEach(card => {
     card.onclick = () => {
       const target = document.getElementById("wp-target-select").value;
@@ -3973,7 +4033,6 @@ function openWallpaperStudioModal() {
     };
   });
 
-  // عند رفع صورة من الجهاز
   document.getElementById("wp-file-upload").onchange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -3981,10 +4040,87 @@ function openWallpaperStudioModal() {
     reader.onload = () => {
       const target = document.getElementById("wp-target-select").value;
       saveAndApplyWallpaper(reader.result, target);
+      document.getElementById("universal-modal").classList.add("hidden");
     };
     reader.readAsDataURL(file);
   };
 }
+
+async function saveAndApplyWallpaper(imgUrl, target = "both") {
+  if (target === "both" || target === "app") {
+    localStorage.setItem("MY_LIFE_OS_APP_BG", imgUrl);
+  }
+  if (target === "both" || target === "pomo") {
+    localStorage.setItem("MY_LIFE_OS_POMO_BG", imgUrl);
+  }
+  applySavedWallpapers();
+  showToast("تم تطبيق الخلفية الجديدة بنجاح! 🎨", "success");
+
+  // مزامنة مع الحساب السحابي إذا كانت رابطاً خفيفاً
+  if (imgUrl.startsWith("http") && AppState.user) {
+    const existing = AppState.collections.user_settings[0];
+    const payload = target === "app" ? { appWallpaper: imgUrl } : target === "pomo" ? { pomoWallpaper: imgUrl } : { appWallpaper: imgUrl, pomoWallpaper: imgUrl };
+    if (existing) await updateRecord("user_settings", existing.id, payload);
+    else await createRecord("user_settings", payload);
+  }
+}
+
+// تشغيل القرآن الصوتي + رفع الصورة الشخصية من الجهاز + المؤقت المصغر + تفاعل أليكس اللحظي
+document.addEventListener("DOMContentLoaded", () => {
+  // 1. مشغل القرآن الكريم الصوتي المباشر
+  document.getElementById("btn-play-quran-stream")?.addEventListener("click", () => {
+    const server = document.getElementById("quran-reciter-select").value;
+    const surah = document.getElementById("quran-surah-select").value;
+    const player = document.getElementById("quran-audio-player");
+    if (player) {
+      player.src = `${server}/${surah}.mp3`;
+      player.play();
+      showToast("جاري تشغيل التلاوة المباركة 🌿", "success");
+    }
+  });
+
+  // 2. رفع الصورة الشخصية من الجهاز في الإعدادات
+  const photoFileInp = document.getElementById("set-photo-file");
+  const avatarPreview = document.getElementById("settings-avatar-preview");
+  const savedLocalAvatar = localStorage.getItem("MY_LIFE_OS_CUSTOM_AVATAR");
+  if (savedLocalAvatar) {
+    if (avatarPreview) avatarPreview.src = savedLocalAvatar;
+    const sideImg = document.getElementById("user-avatar-img");
+    if (sideImg) sideImg.src = savedLocalAvatar;
+  }
+
+  photoFileInp?.addEventListener("change", (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result;
+      localStorage.setItem("MY_LIFE_OS_CUSTOM_AVATAR", base64);
+      if (avatarPreview) avatarPreview.src = base64;
+      const sideImg = document.getElementById("user-avatar-img");
+      if (sideImg) sideImg.src = base64;
+      showToast("تم تحديث صورتك الشخصية من جهازك بنجاح! 📸", "success");
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // 3. تحديث المؤقت العائم المصغر عند إغلاق نافذة البومودورو
+  setInterval(() => {
+    const miniPomo = document.getElementById("mini-floating-pomo");
+    const miniTime = document.getElementById("mini-pomo-time");
+    const modalHidden = document.getElementById("universal-modal")?.classList.contains("hidden");
+    if (miniPomo && miniTime) {
+      if (PomodoroState.isRunning && modalHidden) {
+        miniPomo.classList.remove("hidden");
+        miniTime.textContent = formatPomoTime(PomodoroState.timeLeft);
+      } else {
+        miniPomo.classList.add("hidden");
+      }
+    }
+  }, 1000);
+
+  document.getElementById("btn-mini-pomo-open")?.addEventListener("click", openPomodoroModal);
+});
 
 function saveAndApplyWallpaper(imgUrl, target = "both") {
   if (target === "both" || target === "app") {

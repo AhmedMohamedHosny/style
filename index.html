@@ -25,6 +25,26 @@
 <body>
 
   <!-- Global Toast & Status Notification Bar -->
+   <!-- شاشة حجب الهواتف (PC / Laptop Only Guard - English) -->
+  <div id="desktop-only-guard" class="desktop-only-guard">
+    <div class="desktop-guard-card">
+      <div class="guard-icon-wrap">
+        <i class="fa-solid fa-desktop"></i>
+      </div>
+      <h2>Desktop Experience Required</h2>
+      <p><strong>MY LIFE OS</strong> is a high-performance personal operating system engineered exclusively for <strong>Desktop & Laptop</strong> workstations.</p>
+      <div class="guard-badge">
+        <i class="fa-solid fa-Triangle-exclamation"></i> Mobile & Phone browsers are not supported. Please open this platform on your PC or Laptop.
+      </div>
+    </div>
+  </div>
+
+  <!-- المؤقت العائم المصغر (يظهر تلقائياً عند إغلاق شاشة البومودورو والعداد شغال) -->
+  <div id="mini-floating-pomo" class="mini-floating-pomo hidden">
+    <span class="live-dot"></span>
+    <strong id="mini-pomo-time">25:00</strong>
+    <button type="button" id="btn-mini-pomo-open" class="btn btn-xs btn-gold">فتح المؤقت</button>
+  </div>
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- Network Offline Banner -->
@@ -242,21 +262,30 @@
            VIEW 1: DASHBOARD
       ====================================================== -->
       <section id="view-dashboard" class="view-section active">
-        <!-- كارت الموجز الصباحي الذكي -->
-        <div id="morning-briefing-card" class="morning-briefing-banner">
-          <div class="flex-between">
-            <h4><i class="fa-solid fa-sun gold-text"></i> الموجز الصباحي الذكي | Morning Briefing</h4>
-            <span class="small-muted" id="briefing-time-label">اليوم</span>
+<!-- البانر الرئيسي المدمج مع الموجز الذكي المتفاعل مع الوقت (صباحاً / مساءً) -->
+        <div class="welcome-banner">
+          <div style="max-width: 680px;">
+            <div class="flex-between" style="justify-content:flex-start; gap:10px; margin-bottom:6px;">
+              <span id="briefing-time-badge" class="badge badge-gold"><i class="fa-solid fa-sparkles"></i> موجز القيادة الذكي</span>
+              <span class="small-muted" id="briefing-time-label">تحديث لحظي</span>
+            </div>
+            <h2><span id="time-greeting-prefix">مرحباً بعودتك،</span> <span id="dash-user-name" class="gold-text">...</span></h2>
+            <p id="morning-briefing-text" class="briefing-content">جاري تحليل يومك ومهامك الحالية...</p>
           </div>
-
-          <p id="morning-briefing-text" class="briefing-content">جاري تجهيز تقريرك الصباحي الذكي من واقع بياناتك...</p>
+          <div class="quick-actions-row">
+            <button class="btn btn-gold btn-sm" data-quick-add="task"><i class="fa-solid fa-plus"></i> مهمة</button>
+            <button class="btn btn-outline btn-sm" data-quick-add="expense"><i class="fa-solid fa-coins"></i> معاملة</button>
+            <button class="btn btn-outline btn-sm" data-quick-add="note"><i class="fa-solid fa-pen"></i> ملاحظة</button>
+            <button class="btn btn-outline btn-sm" data-quick-add="event"><i class="fa-regular fa-calendar-plus"></i> موعد</button>
+            <button id="btn-generate-daily-card" class="btn btn-gold btn-sm"><i class="fa-solid fa-trophy"></i> بطاقة إنجازي</button>
+          </div>
         </div>
-        <!-- المحور 2 و 4 و 5: شريط الطاقة اليومية + رادار الامتحانات + شبكة العادات + تخصيص لوحة التحكم -->
+
+        <!-- شريط الطاقة + رادار الاختبارات + شبكة الالتزام -->
         <div class="super-os-bar">
-          <!-- متتبع الطاقة والمزاج اليومي -->
           <div class="os-mini-widget">
             <div class="flex-between">
-              <strong><i class="fa-solid fa-battery-full gold-text"></i> طاقتك اليومية</strong>
+              <strong><i class="fa-solid fa-battery-full gold-text"></i> طاقتك الحالية</strong>
               <span id="energy-advice-badge" class="badge badge-gold">اختر حالتك</span>
             </div>
             <div class="energy-pills-row mt-2">
@@ -266,73 +295,73 @@
             </div>
           </div>
 
-          <!-- رادار العد التنازلي للامتحانات والتسليمات -->
           <div class="os-mini-widget" id="exam-radar-widget">
             <div class="flex-between">
-              <strong><i class="fa-solid fa-satellite-dish gold-text"></i> رادار الاختبارات والتسليمات</strong>
+              <strong><i class="fa-solid fa-satellite-dish gold-text"></i> رادار الاختبارات والمراجعة المتباعدة</strong>
               <span id="exam-radar-badge" class="badge badge-emerald">آمن</span>
             </div>
             <p id="exam-radar-text" class="small-muted mt-2">لا توجد اختبارات عاجلة خلال 48 ساعة.</p>
           </div>
 
-          <!-- شبكة تتبع العادات السنوية (GitHub Heatmap) -->
           <div class="os-mini-widget">
             <div class="flex-between">
               <strong><i class="fa-solid fa-fire-flame-curved gold-text"></i> سلسلة الالتزام (Heatmap)</strong>
               <button type="button" id="btn-customize-dash" class="btn btn-xs btn-outline">
-                <i class="fa-solid fa-table-columns"></i> تخصيص الكروت
+                <i class="fa-solid fa-table-columns"></i> الكروت
               </button>
             </div>
             <div id="habit-heatmap-grid" class="habit-heatmap-grid mt-2"></div>
           </div>
         </div>
-        <div class="welcome-banner">
-          <div>
-            <h2><span data-i18n="welcome_back">مرحباً بعودتك،</span> <span id="dash-user-name" class="gold-text">...</span></h2>
-            <p data-i18n="dashboard_sub">مركز القيادة اليومي المحسوب مباشرة من بياناتك الفعلية.</p>
-          </div>
-<div class="quick-actions-row">
-            <button class="btn btn-gold btn-sm" data-quick-add="task"><i class="fa-solid fa-plus"></i> مهمة</button>
-            <button class="btn btn-outline btn-sm" data-quick-add="expense"><i class="fa-solid fa-coins"></i> معاملة</button>
-            <button class="btn btn-outline btn-sm" data-quick-add="note"><i class="fa-solid fa-pen"></i> ملاحظة</button>
-            <button class="btn btn-outline btn-sm" data-quick-add="event"><i class="fa-regular fa-calendar-plus"></i> موعد</button>
-            <button id="btn-generate-daily-card" class="btn btn-gold btn-sm"><i class="fa-solid fa-trophy"></i> بطاقة إنجازي اليوم</button>
-          </div>
-        </div>
 
-        <!-- KPI Real Metrics Grid -->
+        <!-- كروت الإحصائيات بستايل SHADOW CORE مع أشرطة التقدم المضيئة -->
         <div class="kpi-grid">
-          <div class="kpi-card">
-            <div class="kpi-icon gold"><i class="fa-solid fa-list-check"></i></div>
-            <div class="kpi-info">
-              <span class="kpi-label">مهام اليوم المتبقية</span>
-              <h3 id="kpi-tasks-today">0</h3>
-              <small id="kpi-tasks-sub">0 مكتملة من 0</small>
+          <div class="kpi-card shadow-kpi">
+            <div class="flex-between" style="width:100%">
+              <div class="kpi-info">
+                <span class="kpi-label">مهام اليوم المتبقية</span>
+                <h3 id="kpi-tasks-today">0</h3>
+                <small id="kpi-tasks-sub">0 مكتملة من 0</small>
+              </div>
+              <div class="kpi-icon gold"><i class="fa-solid fa-list-check"></i></div>
             </div>
+            <div class="progress-bar-track"><div id="kpi-bar-tasks" class="progress-bar-fill" style="width:0%"></div></div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-icon emerald"><i class="fa-solid fa-mosque"></i></div>
-            <div class="kpi-info">
-              <span class="kpi-label">الصلوات المسجلة اليوم</span>
-              <h3 id="kpi-prayers-today">0 / 5</h3>
-              <small id="kpi-quran-sub">الورد اليومي: 0 آية</small>
+
+          <div class="kpi-card shadow-kpi">
+            <div class="flex-between" style="width:100%">
+              <div class="kpi-info">
+                <span class="kpi-label">الصلوات المسجلة اليوم</span>
+                <h3 id="kpi-prayers-today">0 / 5</h3>
+                <small id="kpi-quran-sub">الورد اليومي: 0 آية</small>
+              </div>
+              <div class="kpi-icon emerald"><i class="fa-solid fa-mosque"></i></div>
             </div>
+            <div class="progress-bar-track"><div id="kpi-bar-prayers" class="progress-bar-fill" style="width:0%"></div></div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-icon blue"><i class="fa-solid fa-code-branch"></i></div>
-            <div class="kpi-info">
-              <span class="kpi-label">المشاريع النشطة</span>
-              <h3 id="kpi-active-projects">0</h3>
-              <small id="kpi-projects-sub">متوسط الإنجاز: 0%</small>
+
+          <div class="kpi-card shadow-kpi">
+            <div class="flex-between" style="width:100%">
+              <div class="kpi-info">
+                <span class="kpi-label">المشاريع والمواد النشطة</span>
+                <h3 id="kpi-active-projects">0</h3>
+                <small id="kpi-projects-sub">متوسط الإنجاز: 0%</small>
+              </div>
+              <div class="kpi-icon blue"><i class="fa-solid fa-code-branch"></i></div>
             </div>
+            <div class="progress-bar-track"><div id="kpi-bar-projects" class="progress-bar-fill" style="width:0%"></div></div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-icon purple"><i class="fa-solid fa-wallet"></i></div>
-            <div class="kpi-info">
-              <span class="kpi-label">صافي الرصيد الحالي</span>
-              <h3 id="kpi-net-balance">0 EGP</h3>
-              <small id="kpi-expense-month">مصروفات الشهر: 0</small>
+
+          <div class="kpi-card shadow-kpi">
+            <div class="flex-between" style="width:100%">
+              <div class="kpi-info">
+                <span class="kpi-label">صافي الرصيد الحالي</span>
+                <h3 id="kpi-net-balance">0 EGP</h3>
+                <small id="kpi-expense-month">مصروفات الشهر: 0</small>
+              </div>
+              <div class="kpi-icon purple"><i class="fa-solid fa-wallet"></i></div>
             </div>
+            <div class="progress-bar-track"><div id="kpi-bar-finance" class="progress-bar-fill" style="width:65%"></div></div>
           </div>
         </div>
 
@@ -502,6 +531,37 @@
           <button type="button" id="btn-open-quran-reader" class="btn btn-gold btn-sm">
             <i class="fa-solid fa-book-open-reader"></i> فتح المصحف وحفظ الوقف التلقائي
           </button>
+        </div>
+        <!-- مشغل القرآن الكريم الصوتي المباشر بأشهر القراء -->
+        <div class="card mb-4" style="margin-bottom: 18px;">
+          <div class="flex-between" style="flex-wrap:wrap; gap:12px;">
+            <div>
+              <h3><i class="fa-solid fa-headphones-simple gold-text"></i> الإذاعة والمشغل الصوتي للقرآن الكريم</h3>
+              <small class="small-muted">استمع لتلاوات خاشعة مباشرة أثناء المذاكرة أو العمل بضغطة زر</small>
+            </div>
+            <div class="filters-row">
+              <select id="quran-reciter-select" class="select-sm">
+                <option value="https://server8.mp3quran.net/afs">الشيخ مشاري راشد العفاسي</option>
+                <option value="https://server10.mp3quran.net/minsh">الشيخ محمد صديق المنشاوي</option>
+                <option value="https://server13.mp3quran.net/husr">الشيخ محمود خليل الحصري</option>
+                <option value="https://server11.mp3quran.net/yasser">الشيخ ياسر الدوسري</option>
+                <option value="https://server6.mp3quran.net/qtm">الشيخ ناصر القطامي</option>
+              </select>
+              <select id="quran-surah-select" class="select-sm">
+                <option value="001">سورة الفاتحة</option>
+                <option value="002">سورة البقرة</option>
+                <option value="018">سورة الكهف</option>
+                <option value="036">سورة يس</option>
+                <option value="055">سورة الرحمن</option>
+                <option value="056">سورة الواقعة</option>
+                <option value="067">سورة الملك</option>
+              </select>
+              <button type="button" id="btn-play-quran-stream" class="btn btn-gold btn-sm">
+                <i class="fa-solid fa-play"></i> تشغيل التلاوة
+              </button>
+            </div>
+          </div>
+          <audio id="quran-audio-player" controls class="mt-2" style="width:100%; height:38px;"></audio>
         </div>
         <div class="dashboard-grid">
           <!-- كارت مواقيت الصلاة الدقيقة لمصر والعداد التنازلي -->
@@ -905,33 +965,43 @@
         </div>
       </section>
 
-      <!-- =====================================================
-           VIEW 15: SETTINGS & ACCOUNT MANAGEMENT
+<!-- =====================================================
+           VIEW 15: SETTINGS & ACCOUNT MANAGEMENT (UPGRADED)
       ====================================================== -->
       <section id="view-settings" class="view-section">
         <div class="dashboard-grid">
-          <!-- Profile & Account -->
+          <!-- الملف الشخصي ورفع الصورة من الجهاز مباشرة -->
           <div class="card">
-            <div class="card-header"><h3><i class="fa-regular fa-id-badge gold-text"></i> الملف الشخصي والحساب</h3></div>
+            <div class="card-header"><h3><i class="fa-regular fa-id-badge gold-text"></i> الهوية والملف الشخصي</h3></div>
             <form id="settings-profile-form">
-              <div class="form-group">
-                <label>الاسم المعروض</label>
+              <div class="profile-avatar-upload-box">
+                <img id="settings-avatar-preview" src="logo.png" alt="Avatar" />
+                <div>
+                  <label class="btn btn-outline btn-sm" style="cursor:pointer;">
+                    <i class="fa-solid fa-camera gold-text"></i> اختيار صورة من جهازك
+                    <input type="file" id="set-photo-file" accept="image/*" class="hidden" />
+                  </label>
+                  <small class="small-muted d-block mt-1">اختر أي صورة شخصية من كمبيوترك مباشرة</small>
+                </div>
+              </div>
+              <div class="form-group mt-2">
+                <label>الاسم المعروض في النظام</label>
                 <input type="text" id="set-display-name" required />
               </div>
               <div class="form-group">
-                <label>رابط الصورة الشخصية (URL)</label>
-                <input type="url" id="set-photo-url" dir="ltr" />
+                <label>اللقب أو التخصص الدراسي (يظهر في بطاقة الإنجاز)</label>
+                <input type="text" id="set-user-bio" placeholder="مثال: هندسة الحاسبات والبرمجيات" />
               </div>
-              <button type="submit" class="btn btn-gold btn-sm">حفظ التعديلات في الحساب</button>
+              <button type="submit" class="btn btn-gold btn-sm btn-block">حفظ وتحديث الملف الشخصي</button>
             </form>
           </div>
 
-          <!-- Preferences -->
+          <!-- التفضيلات المتقدمة والتحكم في النظام -->
           <div class="card">
-            <div class="card-header"><h3><i class="fa-solid fa-sliders gold-text"></i> التفضيلات والعرض</h3></div>
+            <div class="card-header"><h3><i class="fa-solid fa-sliders gold-text"></i> تخصيص النظام والتركيز</h3></div>
             <div class="form-group">
-              <label>العملة الافتراضية</label>
-              <select id="set-currency" class="select-sm">
+              <label>العملة الأساسية للحسابات المالية</label>
+              <select id="set-currency" class="select-sm" style="width:100%">
                 <option value="EGP">جنيه مصري (EGP)</option>
                 <option value="SAR">ريال سعودي (SAR)</option>
                 <option value="USD">دولار أمريكي (USD)</option>
@@ -939,42 +1009,50 @@
               </select>
             </div>
             <div class="form-group">
-              <label>حجم الخط</label>
-              <select id="set-font-size" class="select-sm">
-                <option value="small">صغير (Small)</option>
-                <option value="normal" selected>قياسي (Normal)</option>
-                <option value="large">كبير (Large)</option>
+              <label>حجم خطوط الواجهة</label>
+              <select id="set-font-size" class="select-sm" style="width:100%">
+                <option value="small">صغير ومدمج</option>
+                <option value="normal" selected>قياسي مريح</option>
+                <option value="large">كبير وواضح</option>
               </select>
             </div>
             <div class="form-group">
-              <label>الإشعارات الذكية (Browser Notification API)</label>
-              <button type="button" id="btn-enable-notifications" class="btn btn-outline btn-sm">
-                <i class="fa-regular fa-bell"></i> تفعيل إشعارات المتصفح
+              <label>المدة الافتراضية لجلسة التركيز (بالدقائق)</label>
+              <select id="set-default-pomo" class="select-sm" style="width:100%">
+                <option value="25">25 دقيقة (كلاسيكي)</option>
+                <option value="45">45 دقيقة (متوسط)</option>
+                <option value="60">60 دقيقة (ساعة كاملة)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <button type="button" id="btn-enable-notifications" class="btn btn-outline btn-sm btn-block">
+                <i class="fa-regular fa-bell gold-text"></i> تفعيل التنبيهات الذكية على سطح المكتب
               </button>
             </div>
-            <button id="btn-save-preferences" class="btn btn-gold btn-sm">حفظ الإعدادات في Firestore</button>
+            <button id="btn-save-preferences" class="btn btn-gold btn-sm btn-block">حفظ تفضيلات النظام سحابياً</button>
           </div>
 
-          <!-- Backup, Export, Import & Danger Zone -->
+          <!-- إدارة النسخ الاحتياطي والأمان (بدون أي مصطلحات برمجية معقدة) -->
           <div class="card">
-            <div class="card-header"><h3><i class="fa-solid fa-database gold-text"></i> النسخ الاحتياطي وإدارة البيانات</h3></div>
-            <p class="small-muted">تصدير واستيراد جميع بياناتك الفعلية بصيغة JSON، أو مسح البيانات.</p>
+            <div class="card-header"><h3><i class="fa-solid fa-shield-halved gold-text"></i> النسخ الاحتياطي وأمان الحساب</h3></div>
+            <p class="small-muted">احفظ نسخة كاملة من مهامك وموادك ومشاريعك على جهازك أو استرجعها في أي وقت بضغطة زر.</p>
             <div class="config-actions mt-2">
               <button id="btn-export-data" class="btn btn-outline btn-sm">
-                <i class="fa-solid fa-file-export"></i> تصدير بياناتي (JSON)
+                <i class="fa-solid fa-cloud-arrow-down gold-text"></i> تحميل نسخة احتياطية كاملة
               </button>
               <label class="btn btn-outline btn-sm" style="cursor:pointer;">
-                <i class="fa-solid fa-file-import"></i> استيراد بيانات (JSON)
+                <i class="fa-solid fa-cloud-arrow-up gold-text"></i> استعادة نسخة محفوظة
                 <input type="file" id="input-import-json" accept=".json" class="hidden" />
               </label>
             </div>
             <hr class="divider" />
+            <p class="small-muted mb-2">منطقة التحكم الحساسة:</p>
             <div class="config-actions">
               <button id="btn-delete-all-data" class="btn btn-danger btn-sm">
-                <i class="fa-solid fa-triangle-exclamation"></i> حذف جميع بياناتي من Firestore
+                <i class="fa-solid fa-rotate-left"></i> تصفير وإعادة ضبط بيانات الحساب
               </button>
               <button id="btn-delete-account" class="btn btn-danger btn-sm">
-                <i class="fa-solid fa-user-slash"></i> حذف الحساب نهائياً
+                <i class="fa-solid fa-user-slash"></i> إغلاق وحذف الحساب نهائياً
               </button>
             </div>
           </div>
