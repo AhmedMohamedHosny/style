@@ -33,18 +33,8 @@
     <span data-i18n="offline_warning">أنت غير متصل بالإنترنت حالياً. لن يتم اعتماد العمليات حتى نجاح المزامنة مع Firebase.</span>
   </div>
 
-<!-- خلفية الأنيميشن السينمائي والجزيئات الطائرة -->
-  <canvas id="luxury-bg-canvas" class="luxury-bg-canvas"></canvas>
-  <div class="floating-icons-layer" aria-hidden="true">
-    <i class="fa-solid fa-microchip float-icon f-1"></i>
-    <i class="fa-solid fa-wand-magic-sparkles float-icon f-2"></i>
-    <i class="fa-solid fa-code float-icon f-3"></i>
-    <i class="fa-solid fa-graduation-cap float-icon f-4"></i>
-    <i class="fa-solid fa-mosque float-icon f-5"></i>
-    <i class="fa-solid fa-bolt float-icon f-6"></i>
-    <i class="fa-solid fa-layer-group float-icon f-7"></i>
-    <i class="fa-solid fa-shield-halved float-icon f-8"></i>
-  </div>
+<!-- طبقة الخلفية السينمائية الفخمة (الشخصية الغامضة / الأنمي) بدون أي بطء للجهاز -->
+  <div id="custom-app-wallpaper" class="custom-app-wallpaper"></div>
 
 <!-- =========================================================
        1. AUTHENTICATION VIEW (SLEEK FACEBOOK-STYLE UI + LOGO.PNG)
@@ -220,6 +210,9 @@
           </button>
           <button id="btn-topbar-ambient" class="btn-icon" title="أصوات التركيز والمطر">
             <i class="fa-solid fa-headphones"></i>
+          </button>
+          <button id="btn-wallpaper-studio" class="btn-icon gold-glow" title="تغيير خلفية الموقع والمؤقت (صور غامضة / أنمي / صورتك الخاصة)">
+            <i class="fa-solid fa-image"></i>
           </button>
           <!-- أزرار درع الخصوصية، وضع التركيز، ولوحة الأوامر -->
           <button id="btn-privacy-shield" class="btn-icon" title="درع الخصوصية (إخفاء الأرقام)">

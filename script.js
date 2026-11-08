@@ -217,186 +217,23 @@ async function initFirebaseSystem() {
 }
 
 function initLuxuryParticles() {
-  // إيقاف تشغيل الأنيميشن والعمليات الحسابية نهائياً على الموبايل والتابلت لتسريع الأداء 100%
-  if (window.innerWidth <= 1024) return;
+  // تم استبدال الأنيميشن الثقيل بنظام الخلفيات السينمائية الثابتة لضمان سرعة 100% على كل الأجهزة
+  applySavedWallpapers();
+}
 
-  const canvas = document.getElementById("luxury-bg-canvas");
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
-  let w = (canvas.width = window.innerWidth);
-  let h = (canvas.height = window.innerHeight);
+const DEFAULT_WALLPAPERS = {
+  shadowWarrior: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1920&q=85",
+  animeCyber: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1920&q=85",
+  darkRonin: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1920&q=85",
+  nightHood: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1920&q=85",
+  royalGalaxy: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1920&q=85"
+};
 
-  window.addEventListener("resize", () => {
-    w = canvas.width = window.innerWidth;
-    h = canvas.height = window.innerHeight;
-  });
-
-  const mouse = { x: w / 2, y: h / 2, active: false };
-  const sparks = [];
-  const meteors = [];
-
-  // تفاعل الماوس: شرارات ذهبية + إمالة 3D لكارت الدخول
-  const authCard = document.querySelector(".luxury-glass-card");
-  window.addEventListener("mousemove", (e) => {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
-    mouse.active = true;
-
-    // إضافة شرارات مضيئة تتبع حركة الماوس
-    for (let i = 0; i < 2; i++) {
-      sparks.push({
-        x: mouse.x,
-        y: mouse.y,
-        vx: (Math.random() - 0.5) * 2.8,
-        vy: (Math.random() - 0.5) * 2.8 - 0.5,
-        r: Math.random() * 2.4 + 0.8,
-        alpha: 1,
-        gold: Math.random() > 0.3
-      });
-    }
-
-    // حركة 3D Parallax للكارت
-    if (authCard && !document.getElementById("auth-view")?.classList.contains("hidden")) {
-      const rx = ((e.clientY - h / 2) / (h / 2)) * -7;
-      const ry = ((e.clientX - w / 2) / (w / 2)) * 7;
-      authCard.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
-    }
-  });
-
-  // انفجار شرارات ذهبية عند الضغط بالماوس (Click Burst)
-  window.addEventListener("click", (e) => {
-    for (let i = 0; i < 22; i++) {
-      const angle = (Math.PI * 2 * i) / 22;
-      const speed = Math.random() * 4.5 + 1.5;
-      sparks.push({
-        x: e.clientX,
-        y: e.clientY,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        r: Math.random() * 3 + 1.2,
-        alpha: 1,
-        gold: i % 3 !== 0
-      });
-    }
-  });
-
-  // الجزيئات الطائرة الأساسية
-  const count = Math.min(75, Math.floor((w * h) / 16000));
-  const particles = Array.from({ length: count }, () => ({
-    x: Math.random() * w,
-    y: Math.random() * h,
-    vx: (Math.random() - 0.5) * 0.85,
-    vy: -Math.random() * 1.1 - 0.3,
-    r: Math.random() * 2.8 + 1,
-    gold: Math.random() > 0.25
-  }));
-
-  function spawnMeteor() {
-    if (meteors.length < 3 && Math.random() < 0.035) {
-      meteors.push({
-        x: Math.random() * w,
-        y: -20,
-        vx: (Math.random() - 0.5) * 6 + 3,
-        vy: Math.random() * 5 + 4,
-        len: Math.random() * 90 + 50,
-        alpha: 1
-      });
-    }
-  }
-
-  function animate() {
-    ctx.clearRect(0, 0, w, h);
-    spawnMeteor();
-
-    // 1. رسم الشهب الطائرة (Shooting Golden Meteors)
-    for (let i = meteors.length - 1; i >= 0; i--) {
-      const m = meteors[i];
-      m.x += m.vx;
-      m.y += m.vy;
-      m.alpha -= 0.012;
-
-      const grad = ctx.createLinearGradient(m.x, m.y, m.x - m.vx * 10, m.y - m.vy * 10);
-      grad.addColorStop(0, `rgba(212, 175, 55, ${m.alpha})`);
-      grad.addColorStop(1, "rgba(212, 175, 55, 0)");
-
-      ctx.beginPath();
-      ctx.moveTo(m.x, m.y);
-      ctx.lineTo(m.x - m.vx * 10, m.y - m.vy * 10);
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = 2.2;
-      ctx.stroke();
-
-      if (m.alpha <= 0 || m.y > h + 100) meteors.splice(i, 1);
-    }
-
-    // 2. رسم الجزيئات الطائرة والشبكة الذكية
-    for (let i = 0; i < particles.length; i++) {
-      const p = particles[i];
-      p.x += p.vx;
-      p.y += p.vy;
-
-      if (p.y < -15) p.y = h + 15;
-      if (p.x < -15) p.x = w + 15;
-      if (p.x > w + 15) p.x = -15;
-
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = p.gold ? "rgba(212, 175, 55, 0.85)" : "rgba(16, 185, 129, 0.75)";
-      ctx.shadowBlur = 14;
-      ctx.shadowColor = p.gold ? "#d4af37" : "#10b981";
-      ctx.fill();
-
-      for (let j = i + 1; j < particles.length; j++) {
-        const p2 = particles[j];
-        const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
-        if (dist < 135) {
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(p2.x, p2.y);
-          ctx.strokeStyle = `rgba(212, 175, 55, ${(1 - dist / 135) * 0.25})`;
-          ctx.lineWidth = 0.8;
-          ctx.stroke();
-        }
-      }
-
-      if (mouse.active) {
-        const mDist = Math.hypot(p.x - mouse.x, p.y - mouse.y);
-        if (mDist < 175) {
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(mouse.x, mouse.y);
-          ctx.strokeStyle = `rgba(16, 185, 129, ${(1 - mDist / 175) * 0.45})`;
-          ctx.lineWidth = 1.1;
-          ctx.stroke();
-        }
-      }
-    }
-
-    // 3. رسم شرارات الماوس وانفجارات الكليك
-    for (let i = sparks.length - 1; i >= 0; i--) {
-      const s = sparks[i];
-      s.x += s.vx;
-      s.y += s.vy;
-      s.alpha -= 0.028;
-
-      if (s.alpha <= 0) {
-        sparks.splice(i, 1);
-        continue;
-      }
-
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = s.gold
-        ? `rgba(243, 229, 171, ${s.alpha})`
-        : `rgba(16, 185, 129, ${s.alpha})`;
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = s.gold ? "#d4af37" : "#10b981";
-      ctx.fill();
-    }
-
-    requestAnimationFrame(animate);
-  }
-  animate();
+function applySavedWallpapers() {
+  const appBg = localStorage.getItem("MY_LIFE_OS_APP_BG") || DEFAULT_WALLPAPERS.shadowWarrior;
+  const pomoBg = localStorage.getItem("MY_LIFE_OS_POMO_BG") || DEFAULT_WALLPAPERS.animeCyber;
+  document.documentElement.style.setProperty("--app-wallpaper", `url('${appBg}')`);
+  document.documentElement.style.setProperty("--pomo-wallpaper", `url('${pomoBg}')`);
 }
 /* ============================================================================
    6. AUTHENTICATION & ROUTE PROTECTION
@@ -3438,6 +3275,9 @@ function openPomodoroModal() {
         <button type="button" id="btn-pomo-settings-toggle" class="btn-pomo-secondary">
           <i class="fa-solid fa-sliders"></i> المظهر والصوت
         </button>
+        <button type="button" id="btn-pomo-bg-studio" class="btn-pomo-secondary">
+          <i class="fa-solid fa-image"></i> صورة الخلفية
+        </button>
         <button type="button" id="btn-pomo-reset" class="btn-pomo-secondary" title="إعادة ضبط">
           <i class="fa-solid fa-rotate-right"></i>
         </button>
@@ -3514,10 +3354,12 @@ function openPomodoroModal() {
     openPomodoroModal();
   };
   document.getElementById("btn-pomo-settings-toggle").onclick = () => {
+    document.getElementById("btn-pomo-bg-studio").onclick = openWallpaperStudioModal;
     PomodoroState.showSettingsDrawer = !PomodoroState.showSettingsDrawer;
     PomodoroState.showHistoryDrawer = false;
     openPomodoroModal();
   };
+  
 
   // أزرار استكمال جلسة سابقة من السجل
   document.querySelectorAll("[data-resume-title]").forEach(btn => {
@@ -4075,18 +3917,176 @@ document.addEventListener("DOMContentLoaded", () => {
    FLYING FRIENDLY ALEX BOT + XP LEVELING + KANBAN + EXAM CRUNCH + DAILY CARD
    ========================================================================== */
 
-// 1. رسائل أليكس التلقائية الحنونة والودودة (تظهر كل فترة وتطيب الخاطر)
+// 1. استوديو الخلفيات الفخمة (للموقع العام ولشاشة مؤقت البومودورو - صور غامضة / أنمي / رفع من جهازك)
+function openWallpaperStudioModal() {
+  const presets = [
+    { key: "shadowWarrior", name: "المحارب الغامض", url: DEFAULT_WALLPAPERS.shadowWarrior },
+    { key: "animeCyber", name: "أنمي نيون ليلي", url: DEFAULT_WALLPAPERS.animeCyber },
+    { key: "darkRonin", name: "ساموراي الظلام", url: DEFAULT_WALLPAPERS.darkRonin },
+    { key: "nightHood", name: "سيد الظلال", url: DEFAULT_WALLPAPERS.nightHood },
+    { key: "royalGalaxy", name: "المجرة الملكية", url: DEFAULT_WALLPAPERS.royalGalaxy }
+  ];
+
+  const presetsHtml = presets.map(p => `
+    <div class="wallpaper-preset-card" style="background-image:url('${p.url}')" data-wp-url="${p.url}">
+      <span>${p.name}</span>
+    </div>
+  `).join("");
+
+  openFormModal("🖼️ استوديو الخلفيات الفخمة (الموقع والمؤقت)", `
+    <div class="form-group">
+      <label>تطبيق الصورة المختارة على:</label>
+      <select id="wp-target-select" class="select-sm" style="width:100%">
+        <option value="both">خلفية الموقع + شاشة المؤقت معاً ✨</option>
+        <option value="app">خلفية الموقع الرئيسية فقط 🖥</option>
+        <option value="pomo">خلفية شاشة مؤقت التركيز فقط ⏱️</option>
+      </select>
+    </div>
+
+    <label class="small-muted">اختر من الخلفيات الغامضة والأنمي الجاهزة:</label>
+    <div class="wallpaper-presets-grid">${presetsHtml}</div>
+
+    <div class="form-group mt-2">
+      <label>أو ارفع صورة خاصة من جهازك (أنمي / شخصية غامضة / خلفية مفضلة):</label>
+      <input type="file" id="wp-file-upload" accept="image/*" />
+    </div>
+
+    <div class="form-group">
+      <label>أو الصق رابط صورة مباشر (Image URL):</label>
+      <input type="url" id="wp-custom-url" dir="ltr" placeholder="https://example.com/anime-wallpaper.jpg" />
+    </div>
+  `, async () => {
+    const target = document.getElementById("wp-target-select").value;
+    const customUrl = document.getElementById("wp-custom-url").value.trim();
+    if (customUrl) {
+      saveAndApplyWallpaper(customUrl, target);
+    }
+  });
+
+  // عند الضغط على أي خلفية جاهزة
+  document.querySelectorAll("[data-wp-url]").forEach(card => {
+    card.onclick = () => {
+      const target = document.getElementById("wp-target-select").value;
+      saveAndApplyWallpaper(card.dataset.wpUrl, target);
+      document.querySelectorAll("[data-wp-url]").forEach(c => c.classList.remove("active"));
+      card.classList.add("active");
+    };
+  });
+
+  // عند رفع صورة من الجهاز
+  document.getElementById("wp-file-upload").onchange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const target = document.getElementById("wp-target-select").value;
+      saveAndApplyWallpaper(reader.result, target);
+    };
+    reader.readAsDataURL(file);
+  };
+}
+
+function saveAndApplyWallpaper(imgUrl, target = "both") {
+  if (target === "both" || target === "app") {
+    localStorage.setItem("MY_LIFE_OS_APP_BG", imgUrl);
+  }
+  if (target === "both" || target === "pomo") {
+    localStorage.setItem("MY_LIFE_OS_POMO_BG", imgUrl);
+  }
+  applySavedWallpapers();
+  showToast("تم تحديث الخلفية بنجاح! 🔥", "success");
+}
+
+// 2. خوارزمية أليكس الذكية الواعية بالسياق (Smart Context-Aware Algorithm)
+const AlexBrain = {
+  sessionStartTime: Date.now(),
+  lastMessageKey: "",
+  lastWaterReminderMin: 0
+};
+
+function generateSmartContextualAlexMessage() {
+  const now = new Date();
+  const hour = now.getHours();
+  const minutesOnline = Math.floor((Date.now() - AlexBrain.sessionStartTime) / 60000);
+  const activeSection = document.querySelector(".view-section.active")?.id || "view-dashboard";
+  const userName = (AppState.user?.displayName || "يا صاحبي").split(" ")[0];
+
+  const today = todayISO();
+  const todayPrayerDoc = AppState.collections.prayers.find(p => p.date === today);
+  const prayersDone = todayPrayerDoc
+    ? ["fajr", "dhuhr", "asr", "maghrib", "isha"].filter(k => todayPrayerDoc[k] === true).length
+    : 0;
+
+  const pendingTasks = AppState.collections.tasks.filter(t => t.status !== "Completed");
+  const completedTasks = AppState.collections.tasks.filter(t => t.status === "Completed");
+  const subjects = AppState.collections.subjects;
+
+  const candidates = [];
+
+  // أ) قواعد الوعي بطول الجلسة وصحة المستخدم (Health & Fatigue Algorithm)
+  if (minutesOnline >= 20 && minutesOnline - AlexBrain.lastWaterReminderMin >= 20) {
+    AlexBrain.lastWaterReminderMin = minutesOnline;
+    return `بقالك ${minutesOnline} دقيقة مركز يا ${userName}! قوم اشرب كوباية مية وريح عينك ثواني عن الشاشة 💧👀`;
+  }
+
+  // ب) قواعد الوعي بحالة مؤقت البومودورو لو شغال
+  if (PomodoroState.isRunning) {
+    const minsLeft = Math.ceil(PomodoroState.timeLeft / 60);
+    return `عاش يا بطل! فاضل ${minsLeft} دقيقة في جلسة التركيز الحالية.. كمل بنفس القوة ومتخليش حاجة تشتتك 🔥⏱️`;
+  }
+
+  // ج) قواعد الوعي بالصلاة والعبادة الفعلية للمستخدم اليوم
+  if (prayersDone === 5) {
+    candidates.push(`ما شاء الله يا ${userName}! مسجل 5/5 صلوات النهاردة.. ربنا يتقبل منك ويبارك في وقتك ومذاكرتك 🌿✨`);
+  } else if (prayersDone > 0 && prayersDone < 5) {
+    candidates.push(`سجلت ${prayersDone} من 5 صلوات النهاردة يا ${userName}.. متنساش تكمل باقي فروضك وتجدد نيتك لله 🕌`);
+  }
+
+  // د) قواعد الوعي بالقسم المفتوح حالياً (Active Section Awareness)
+  if (activeSection === "view-university") {
+    if (subjects.length > 0) {
+      candidates.push(`إنت في قسم الجامعة دلوقتي وعندك ${subjects.length} مواد.. تحب نفتح مؤقت التركيز لمادة "${subjects[0].name}"؟ 📚`);
+    } else {
+      candidates.push(`أضف موادك الدراسية هنا يا ${userName} عشان نتابع الـ 29 بند لكل مادة أول بأول! 🎓`);
+    }
+  } else if (activeSection === "view-tasks") {
+    if (pendingTasks.length > 0) {
+      candidates.push(`عندك ${pendingTasks.length} مهام قيد الانتظار، أهمها "${pendingTasks[0].title}".. نبدأ بيها دلوقتي؟ ⚡`);
+    } else if (completedTasks.length > 0) {
+      candidates.push(`عاش بجد! مخلص كل مهامك المعلقة (${completedTasks.length} مكتملة).. تستاهل استراحة رايقة ☕🏆`);
+    }
+  } else if (activeSection === "view-finance") {
+    candidates.push(`متابعة المصاريف أول بأول بتخليك دايماً متحكم في ميزانية الشهر يا ${userName} 💰📊`);
+  } else if (activeSection === "view-islamic") {
+    candidates.push(`ألا بذكر الله تطمئن القلوب.. خد دقيقة سبّح فيها أو اقرأ أذكارك 🌿🤲`);
+  }
+
+  // هـ) قواعد الوعي بتوقيت اليوم (Time-of-Day Intelligence)
+  if (hour >= 22 || hour < 4) {
+    candidates.push(`سهران بتنجز في هدوء الليل يا ${userName}؟ ربنا يفتحها عليك، بس متنساش تاخد كفايتك من النوم 🌙✨`);
+  } else if (hour >= 4 && hour < 10) {
+    candidates.push(`بركة البكور يا ${userName}! الشغل والمذاكرة الصبح بدري بيساوي ساعات طويلة بالليل ☀️🚀`);
+  }
+
+  // و) رسائل المهام والأولويات العامة
+  if (pendingTasks.length > 0) {
+    candidates.push(`فكرك إن مهمة "${pendingTasks[0].title}" مستنياك في الأولويات.. تحب نمسكها نخلصها في جلسة سريعة؟ 🎯`);
+  }
+
+  // اختيار رسالة ذكية لم تتكرر للتو
+  const filtered = candidates.filter(msg => msg !== AlexBrain.lastMessageKey);
+  const pool = filtered.length > 0 ? filtered : ALEX_FRIENDLY_CHECKINS;
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  AlexBrain.lastMessageKey = chosen;
+  return chosen;
+}
+
 const ALEX_FRIENDLY_CHECKINS = [
-  "تعبت ولا إيه يا صاحبي؟ قوم اشرب كوباية مية كده وجدد نشاطك 💧",
   "وحد الله وصلي على النبي في قلبك.. ربنا يبارك في وقتك ومجهودك 🌿",
-  "قاعد بقالك حبة حلوين، افرد ضهرك وريح عينك ثواني عن الشاشة 👀",
-  "سبحان الله وبحمده، سبحان الله العظيم.. خلي لسانك رطب بذكر الله ✨",
-  "هانت يا بطل، خطوة صغيرة كل يوم بتبني مستقبل كبير بإذن الله 🚀",
-  "لو حاسس إنك مضغوط، خد نفس عميق.. إنت بتعمل اللي عليك وربنا مش بيضيع تعب حد 💪",
-  "إيه الأخبار؟ لو زهقان من المذاكرة اضغط عليا ندردش شوية ونفصل! 🤖"
+  "لو حاسس بأي إرهاق خد نفس عميق واشرب مية، صحتك أهم حاجة يا صاحبي 💧",
+  "سبحان الله وبحمده، سبحان الله العظيم.. خلي لسانك رطب بذكر الله ✨"
 ];
 
-// ردود أليكس الودودة السريعة خارج إطار الدراسة
 const ALEX_COMPANION_REPLIES = {
   tired: "حبيبي ألف سلامة عليك من التعب! بص، اقفل اللي في إيدك دلوقتي 10 دقايق، قوم اغسل وشك واشرب كوباية مية أو اعمل حاجة دافية، وماتضغطش على أعصابك.. صحتك ونفسيتك أهم من أي شيتات، ولما تهدى نبقى نكمل سوا خطوة بخطوة 💙",
   zikr: "اللهم صلِّ وسلم وبارك على سيدنا محمد 🌿.. قول معايا: (لا إله إلا أنت سبحانك إني كنت من الظالمين)، (ربِّ اشرح لي صدري ويسر لي أمري). ربنا يفتحها في وشك ويرزقك الفهم والبركة والسكينة يا صاحبي 🤲",
@@ -4094,7 +4094,6 @@ const ALEX_COMPANION_REPLIES = {
   joke: "عارف المهندس لما بيحب يرتاح بيعمل إيه؟ بيعمل لنفسه استراحة بـ setTimeout بس بينسى يحط الـ callback فبينام للصبح 😂! روّق كده وابتسم، إن شاء الله يومك جميل ومليان خير ✨"
 };
 
-// 2. نظام المستويات ونقاط الخبرة التحفيزي (XP & Leveling Engine)
 function updateXPSystem() {
   const completedTasks = AppState.collections.tasks.filter(t => t.status === "Completed").length;
   const totalPrayers = AppState.collections.prayers.reduce((sum, p) => {
@@ -4122,7 +4121,6 @@ function updateXPSystem() {
   if (barEl) barEl.style.width = `${progressPct}%`;
 }
 
-// 3. إعدادات مفتاح وموديل Gemini
 function openGeminiConfigModal() {
   const currentKey = localStorage.getItem("MY_LIFE_OS_GEMINI_KEY") || "";
   const currentModel = localStorage.getItem("MY_LIFE_OS_GEMINI_MODEL") || "gemini-2.0-flash";
@@ -4169,7 +4167,6 @@ async function sendToAlexPopup(promptText) {
 
   appendAlexPopupMessage(promptText, "user");
 
-  // ردود ودية فورية لو المستخدم بيفضفض أو بيتكلم كصديق
   if (/(تعبان|مخنوق|زهقان|مش قادر|فصلت|صداع|ملل)/.test(promptText)) {
     appendAlexPopupMessage(ALEX_COMPANION_REPLIES.tired, "bot");
     return;
@@ -4193,7 +4190,6 @@ async function sendToAlexPopup(promptText) {
   if (thinkingEl) thinkingEl.textContent = reply;
 }
 
-// 4. طيران أليكس الحر في الشاشة كلها (Autonomous Screen Flight)
 let isAlexFlightAllowed = true;
 function flyAlexAroundScreen() {
   if (!isAlexFlightAllowed) return;
@@ -4203,14 +4199,12 @@ function flyAlexAroundScreen() {
   const bubbleText = document.getElementById("alex-bubble-text");
   if (!wrapper) return;
 
-  // لا يطير إذا كانت نافذة الشات مفتوحة حتى لا يزعج المستخدم أثناء الكتابة
   if (popup && !popup.classList.contains("hidden")) return;
 
   const maxRight = Math.max(40, window.innerWidth - 130);
   const maxBottom = Math.max(90, window.innerHeight - 180);
 
-  // اختيار نقطة طيران جديدة أو العودة لمكانه
-  const shouldReturnHome = Math.random() < 0.35;
+  const shouldReturnHome = Math.random() < 0.4;
   const nextRight = shouldReturnHome ? 24 : Math.floor(Math.random() * maxRight);
   const nextBottom = shouldReturnHome ? (window.innerWidth <= 768 ? 85 : 24) : Math.floor(Math.random() * (maxBottom - 60)) + 60;
 
@@ -4218,16 +4212,17 @@ function flyAlexAroundScreen() {
   wrapper.style.insetInlineEnd = `${nextRight}px`;
   wrapper.style.bottom = `${nextBottom}px`;
 
-  // إظهار رسالة لطيفة عشوائية أثناء الطيران
-  const randomMsg = ALEX_FRIENDLY_CHECKINS[Math.floor(Math.random() * ALEX_FRIENDLY_CHECKINS.length)];
+  // توليد رسالة ذكية بناءً على خوارزمية متابعة حالة المستخدم الفعلية
+  const smartMsg = generateSmartContextualAlexMessage();
   if (bubble && bubbleText) {
     bubble.classList.remove("hidden");
-    bubbleText.textContent = randomMsg;
+    bubbleText.textContent = smartMsg;
   }
 
   setTimeout(() => {
     wrapper.classList.remove("is-flying");
   }, 2800);
+
 }
 
 // 5. توليد بطاقة الإنجاز اليومي القابلة للتحميل كصورة (Daily Achievement Card)
@@ -4320,6 +4315,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // زر بطاقة الإنجاز اليومي
   document.getElementById("btn-generate-daily-card")?.addEventListener("click", generateDailyAchievementCard);
+  document.getElementById("btn-wallpaper-studio")?.addEventListener("click", openWallpaperStudioModal);
 
   // زر وضع طوارئ ليلة الامتحان (Exam Crunch Mode)
   document.getElementById("btn-exam-crunch-mode")?.addEventListener("click", () => {
