@@ -670,9 +670,12 @@ function renderDashboard() {
   }
 }
 
-/* --- 9.2 TASKS --- */
+/* --- 9.2 TASKS (STANDARD GRID + INTERACTIVE KANBAN BOARD) --- */
+AppState.isKanbanView = false;
+
 function renderTasks() {
   const container = document.getElementById("tasks-list-container");
+  if (!container) return;
   const q = (document.getElementById("task-search")?.value || "").toLowerCase();
   const statusFilter = document.getElementById("task-filter-status")?.value || "all";
   const priorityFilter = document.getElementById("task-filter-priority")?.value || "all";
@@ -691,10 +694,56 @@ function renderTasks() {
   });
 
   if (!list.length) {
+    container.className = "items-grid";
     container.innerHTML = renderEmptyState("لا توجد مهام مطابقة. أضف مهمتك الحقيقية الأولى الآن.");
     return;
   }
 
+  // وضع لوحة كانبان الاحترافية (3 أعمدة)
+  if (AppState.isKanbanView) {
+    container.className = "kanban-board-grid";
+    const cols = [
+      { key: "Pending", label: "⏳ قيد الانتظار", color: "#f59e0b" },
+      { key: "In Progress", label: "⚡ جاري التنفيذ", color: "#06b6d4" },
+      { key: "Completed", label: "✅ مكتملة", color: "#10b981" }
+    ];
+
+    container.innerHTML = cols.map(col => {
+      const colTasks = list.filter(t => (t.status || "Pending") === col.key);
+      return `
+        <div class="kanban-column">
+          <div class="kanban-col-header" style="border-bottom-color:${col.color}">
+            <span>${col.label}</span>
+            <span class="badge badge-gold">${colTasks.length}</span>
+          </div>
+          <div class="kanban-cards-wrap">
+            ${colTasks.map(t => `
+              <div class="item-card mb-2">
+                <div class="flex-between">
+                  <span class="badge badge-gold">${escapeHTML(t.priority || "High")}</span>
+                  ${t.spentMinutes ? `<small class="gold-text">⏱️ ${t.spentMinutes} د</small>` : ""}
+                </div>
+                <h4 class="mt-2">${escapeHTML(t.title)}</h4>
+                <p class="small-muted">${escapeHTML(t.description || "")}</p>
+                <div class="flex-between mt-2">
+                  <div class="config-actions">
+                    ${col.key !== "Pending" ? `<button class="btn btn-xs btn-outline" data-action="move-kanban" data-id="${t.id}" data-status="Pending">⏳</button>` : ""}
+                    ${col.key !== "In Progress" ? `<button class="btn btn-xs btn-outline" data-action="move-kanban" data-id="${t.id}" data-status="In Progress">⚡</button>` : ""}
+                    ${col.key !== "Completed" ? `<button class="btn btn-xs btn-gold" data-action="move-kanban" data-id="${t.id}" data-status="Completed">✅</button>` : ""}
+                  </div>
+                  <button class="btn btn-xs btn-danger" data-action="delete-item" data-col="tasks" data-id="${t.id}"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </div>
+            `).join("") || `<p class="small-muted text-center">لا توجد مهام في هذا العمود</p>`}
+          </div>
+        </div>
+      `;
+    }).join("");
+    return;
+  }
+
+  // العرض القياسي للكروت
+  container.className = "items-grid";
   container.innerHTML = list.map(t => {
     const isOverdue = t.dueDate && t.dueDate < today && t.status !== "Completed";
     return `
@@ -708,11 +757,14 @@ function renderTasks() {
           </div>
           <h4 class="mt-2">${escapeHTML(t.title)}</h4>
           <p class="small-muted">${escapeHTML(t.description || "")}</p>
-          ${t.subtasks ? `<small class="gold-text"><i class="fa-solid fa-list-ul"></i> المهام الفرعية: ${escapeHTML(t.subtasks)}</small>` : ""}
+          ${t.spentMinutes ? `<small class="gold-text d-block mt-2"><i class="fa-solid fa-stopwatch"></i> إجمالي وقت التركيز المسجل: ${t.spentMinutes} دقيقة</small>` : ""}
         </div>
         <div class="flex-between mt-2">
           <small class="small-muted"><i class="fa-regular fa-clock"></i> ${escapeHTML(t.dueDate || "بدون تاريخ")}</small>
           <div class="config-actions">
+            <button class="btn btn-xs btn-gold" data-action="focus-on-task" data-id="${t.id}" title="فتح في مؤقت التركيز">
+              <i class="fa-solid fa-play"></i> تركيز
+            </button>
             <button class="btn btn-xs btn-outline" data-action="toggle-task" data-id="${t.id}">
               <i class="fa-solid fa-check"></i>
             </button>
@@ -3204,11 +3256,86 @@ function startBinauralBeats(type) {
   } catch (e) {}
 }
 
+PomodoroState.customTaskName = "";
+PomodoroState.showSettingsDrawer = false;
+PomodoroState.showHistoryDrawer = false;
+
+function getFocusSessionsLog() {
+  try {
+    return JSON.parse(localStorage.getItem("MY_LIFE_OS_FOCUS_LOG") || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+async function saveCurrentFocusSession() {
+  const spentSecs = Math.max(60, PomodoroState.duration - PomodoroState.timeLeft);
+  const spentMins = Math.max(1, Math.round(spentSecs / 60));
+  const plannedMins = Math.round(PomodoroState.duration / 60);
+  const effectiveMins = PomodoroState.timeLeft === PomodoroState.duration ? plannedMins : spentMins;
+
+  const customTyped = document.getElementById("pomo-new-task-input")?.value?.trim() || PomodoroState.customTaskName;
+  const selectedLink = document.getElementById("pomo-link-select")?.value || PomodoroState.linkedTarget;
+
+  let sessionTitle = customTyped || "جلسة تركيز عامة";
+  let targetType = "general";
+
+  if (!customTyped && selectedLink) {
+    const [prefix, ...rest] = selectedLink.split(":");
+    sessionTitle = rest.join(":");
+    targetType = prefix; // subj | task | proj
+  }
+
+  // 1. إذا كتب المستخدم مهمة جديدة أو اختار مهمة حالية، نسجلها في حسابه (قسم المهام)
+  if (customTyped) {
+    await createRecord("tasks", {
+      title: customTyped,
+      description: `تم إنجاز جلسة تركيز لمدة ${effectiveMins} دقيقة`,
+      dueDate: todayISO(),
+      priority: "High",
+      status: "In Progress",
+      category: "جلسة تركيز",
+      spentMinutes: effectiveMins
+    });
+  } else if (targetType === "task") {
+    const existingTask = AppState.collections.tasks.find(t => t.title === sessionTitle);
+    if (existingTask) {
+      const newTotal = (Number(existingTask.spentMinutes) || 0) + effectiveMins;
+      await updateRecord("tasks", existingTask.id, {
+        spentMinutes: newTotal,
+        description: `إجمالي وقت التركيز: ${newTotal} دقيقة`
+      });
+    }
+  }
+
+  // 2. حفظ في سجل الجلسات المفصل
+  const logs = getFocusSessionsLog();
+  logs.unshift({
+    id: Date.now().toString(),
+    title: sessionTitle,
+    targetType,
+    minutes: effectiveMins,
+    date: todayISO(),
+    time: new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })
+  });
+  localStorage.setItem("MY_LIFE_OS_FOCUS_LOG", JSON.stringify(logs.slice(0, 50)));
+
+  // زيادة عداد جلسات اليوم ونقاط الخبرة XP
+  const streakKey = "MY_LIFE_OS_POMO_STREAK_" + todayISO();
+  localStorage.setItem(streakKey, Number(localStorage.getItem(streakKey) || 0) + 1);
+  if (typeof updateXPSystem === "function") updateXPSystem();
+
+  showToast(`تم حفظ الجلسة بنجاح: "${sessionTitle}" (${effectiveMins} دقيقة) 💾`, "success");
+  PomodoroState.showHistoryDrawer = true;
+  openPomodoroModal();
+}
+
 function openPomodoroModal() {
   const total = PomodoroState.duration;
   const offset = 854 - (854 * (PomodoroState.timeLeft / total));
   const totalMins = Math.round(PomodoroState.duration / 60);
   const streakCount = Number(localStorage.getItem("MY_LIFE_OS_POMO_STREAK_" + todayISO()) || 0);
+  const sessionsLog = getFocusSessionsLog();
 
   const POMO_THEMES = [
     { id: "gold", name: "الذهب الملكي", hex: "#d4af37" },
@@ -3223,71 +3350,49 @@ function openPomodoroModal() {
       style="background:${t.hex}; color:${t.hex}" data-pomo-color="${t.id}" title="${t.name}"></button>
   `).join("");
 
-  // قائمة المواد والمشاريع لربط جلسة التركيز بها
   const subjectsOpts = AppState.collections.subjects.map(s => `<option value="subj:${escapeHTML(s.name)}" ${PomodoroState.linkedTarget === "subj:"+s.name ? "selected" : ""}>📚 مادة: ${escapeHTML(s.name)}</option>`).join("");
+  const tasksOpts = AppState.collections.tasks.filter(t => t.status !== "Completed").map(t => `<option value="task:${escapeHTML(t.title)}" ${PomodoroState.linkedTarget === "task:"+t.title ? "selected" : ""}>✅ مهمة: ${escapeHTML(t.title)} (${t.spentMinutes || 0}د)</option>`).join("");
   const projectsOpts = AppState.collections.projects.map(p => `<option value="proj:${escapeHTML(p.title)}" ${PomodoroState.linkedTarget === "proj:"+p.title ? "selected" : ""}>💻 مشروع: ${escapeHTML(p.title)}</option>`).join("");
+
+  const historyListHtml = sessionsLog.length
+    ? sessionsLog.map(item => `
+        <div class="session-log-item">
+          <div>
+            <strong>${escapeHTML(item.title)}</strong>
+            <small class="small-muted d-block">⏱️ ذاكرت/عملت لمدة <strong>${item.minutes} دقيقة</strong> • ${escapeHTML(item.date)} (${escapeHTML(item.time)})</small>
+          </div>
+          <button type="button" class="btn btn-xs btn-gold" data-resume-title="${escapeHTML(item.title)}" data-resume-mins="${item.minutes}">
+            <i class="fa-solid fa-play"></i> استكمال
+          </button>
+        </div>
+      `).join("")
+    : `<p class="small-muted text-center">لم تقم بحفظ أي جلسة بعد. اختر مادة أو اكتب مهمة واضغط "حفظ الجلسة"!</p>`;
 
   const modalBody = `
     <div class="pomodoro-card">
-      <!-- اللوجو الفخم + شعلة الإنجاز اليومي -->
+      <!-- الهيدر الفخم باللوجو وشعلة الإنجاز -->
       <div class="pomo-brand-header">
         <div class="pomo-logo-orb">
           <img src="logo.png" alt="MY LIFE OS" onerror="this.style.display='none'" />
         </div>
-        <div class="pomo-brand-title">MY LIFE <span>FOCUS</span></div>
+        <div class="pomo-brand-title">MY LIFE <span>FOCUS STUDIO</span></div>
         <div class="pomo-streak-pill">
-          🔥 جلسات اليوم المكتملة: <strong id="pomo-streak-num">${streakCount}</strong>
+          🔥 جلسات اليوم: <strong>${streakCount}</strong> &bull; إجمالي السجل: <strong>${sessionsLog.length}</strong>
         </div>
       </div>
 
-      <!-- شريط الألوان الـ 5 + أنماط الساعة (Skins) + الصوت والترددات -->
-      <div class="pomo-top-bar">
-        <div class="pomo-color-swatches">
-          ${swatchesHtml}
-        </div>
-
-        <!-- تبديل شكل الساعة (Dial Skins) -->
-        <div class="pomo-sound-group">
-          <button type="button" class="pomo-preset-btn ${PomodoroState.dialSkin === "ring" ? "active" : ""}" data-skin="ring">⭕ دائرية</button>
-          <button type="button" class="pomo-preset-btn ${PomodoroState.dialSkin === "flip" ? "active" : ""}" data-skin="flip">📟 Flip 3D</button>
-          <button type="button" class="pomo-preset-btn ${PomodoroState.dialSkin === "hud" ? "active" : ""}" data-skin="hud">🌌 HUD عملاقة</button>
-        </div>
-
-        <div class="pomo-sound-group">
-          <button type="button" id="btn-sound-tick" class="pomo-preset-btn ${PomodoroState.soundMode === "tick" ? "active" : ""}">
-            <i class="fa-solid fa-stopwatch"></i> <span>تكتكة</span>
-          </button>
-          <button type="button" id="btn-sound-custom" class="pomo-preset-btn ${PomodoroState.soundMode === "custom" ? "active" : ""}">
-            <i class="fa-solid fa-music"></i>
-            <span>${PomodoroState.customAudioName ? escapeHTML(PomodoroState.customAudioName) : "ملف صوتي 🎵"}</span>
-          </button>
-          <input type="file" id="pomo-audio-file-input" accept="audio/*" class="hidden" />
-          ${PomodoroState.customAudioName ? `<button type="button" id="btn-change-audio-file" class="pomo-preset-btn" style="padding:6px 10px;"><i class="fa-solid fa-folder-open"></i></button>` : ""}
-          <button type="button" id="btn-sound-mute" class="pomo-preset-btn ${PomodoroState.soundMode === "mute" ? "active" : ""}">
-            <i class="fa-solid fa-volume-xmark"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- شريط الترددات العقلية (Binaural) + التنفس الرباعي + ربط المادة -->
-      <div class="pomodoro-modes-bar">
-        <button type="button" id="btn-pomo-breathe" class="pomo-preset-btn ${PomodoroState.breathingGuide ? "active" : ""}">
-          <i class="fa-solid fa-lungs"></i> تنفس رباعي (4-4-4)
-        </button>
-        <button type="button" class="pomo-preset-btn ${PomodoroState.binauralMode === "alpha" ? "active" : ""}" data-binaural="alpha">
-          🧠 موجات Alpha 10Hz
-        </button>
-        <button type="button" class="pomo-preset-btn ${PomodoroState.binauralMode === "beta" ? "active" : ""}" data-binaural="beta">
-          ⚡ موجات Beta 20Hz
-        </button>
-        <select id="pomo-link-select" class="pomo-preset-btn" style="max-width:190px;">
-          <option value="">🎯 ربط بمادة أو مشروع...</option>
+      <!-- شريط اختيار مادة/مهمة مسجلة أو كتابة مهمة جديدة فوراً -->
+      <div class="pomo-v3-task-bar">
+        <select id="pomo-link-select">
+          <option value="">🎯 اختر مادة أو مهمة حالية لاستكمالها...</option>
           ${subjectsOpts}
+          ${tasksOpts}
           ${projectsOpts}
         </select>
+        <input type="text" id="pomo-new-task-input" value="${escapeHTML(PomodoroState.customTaskName)}" placeholder="✍️ أو اكتب اسم مهمة جديدة هنا..." />
       </div>
 
-      <!-- أزرار اختيار الوقت السريعة + إدخال أي وقت مخصص -->
+      <!-- أزرار الوقت السريعة -->
       <div class="pomodoro-modes-bar">
         <button type="button" class="pomo-preset-btn ${totalMins === 25 && PomodoroState.mode === "work" ? "active" : ""}" data-pomo-set="25">25 د</button>
         <button type="button" class="pomo-preset-btn ${totalMins === 45 ? "active" : ""}" data-pomo-set="45">45 د</button>
@@ -3299,7 +3404,7 @@ function openPomodoroModal() {
         </div>
       </div>
 
-      <!-- الساعة الفاخرة + هالة التنفس + الموجات الصوتية التفاعلية -->
+      <!-- الساعة السويسرية العملاقة في قلب الشاشة -->
       <div class="pomo-ring-container" data-dial-skin="${PomodoroState.dialSkin}">
         <div id="pomo-breath-ring" class="pomo-breathing-aura ${PomodoroState.breathingGuide ? "active" : ""}"></div>
         <svg class="pomo-svg-ring" viewBox="0 0 320 320">
@@ -3309,31 +3414,69 @@ function openPomodoroModal() {
         </svg>
         <div class="pomo-dial-center">
           <span class="pomo-status-pill" id="pomo-status-text">
-            ${PomodoroState.breathingGuide ? "شهيق 4ث.. حبس 4ث.. زفير 4ث 🌬️" : PomodoroState.isRunning ? "تركيز عميق جارٍ الآن ⚡" : "جاهز للانطلاق 🚀"}
+            ${PomodoroState.customTaskName ? "🎯 " + escapeHTML(PomodoroState.customTaskName) : PomodoroState.linkedTarget ? "🎯 " + escapeHTML(PomodoroState.linkedTarget.split(":")[1]) : PomodoroState.isRunning ? "تركيز عميق جارٍ الآن ⚡" : "جاهز للانطلاق 🚀"}
           </span>
           <div id="pomo-modal-display" class="pomodoro-timer-display">${formatPomoTime(PomodoroState.timeLeft)}</div>
-          <!-- موجات التفاعل الصوتي النيونية -->
           <div class="pomo-visualizer-bars ${PomodoroState.isRunning ? "playing" : ""}">
             ${Array.from({length: 16}, () => `<span class="vis-bar"></span>`).join("")}
           </div>
         </div>
       </div>
 
-      <!-- سلة تفريغ الأفكار المشتتة الفورية (Brain-Dump Pad) -->
-      <div class="pomo-braindump-bar">
-        <input type="text" id="pomo-braindump-input" placeholder="💡 خطرت ببالك فكرة مشتتة؟ اكتبها هنا واحفظها في الملاحظات بدون خروج..." />
-        <button type="button" id="btn-save-braindump" class="pomo-preset-btn active">حفظ فوري</button>
-      </div>
-
-      <!-- أزرار البدء والإعادة -->
-      <div class="pomodoro-actions">
+      <!-- الأزرار الرئيسية: بدء التركيز + حفظ الجلسة + سجل الجلسات + تخصيص الإعدادات -->
+      <div class="pomodoro-actions" style="flex-wrap:wrap;">
         <button type="button" id="btn-pomo-start" class="btn-pomo-main">
           <i class="fa-solid ${PomodoroState.isRunning ? "fa-pause" : "fa-play"}"></i>
           ${PomodoroState.isRunning ? "إيقاف مؤقت" : "بدء التركيز"}
         </button>
-        <button type="button" id="btn-pomo-reset" class="btn-pomo-secondary">
-          <i class="fa-solid fa-rotate-right"></i> إعادة ضبط
+        <button type="button" id="btn-pomo-save-session" class="btn-pomo-secondary" style="border-color:var(--pomo-accent)!important; color:var(--pomo-accent)!important;">
+          <i class="fa-solid fa-floppy-disk"></i> حفظ الجلسة
         </button>
+        <button type="button" id="btn-pomo-history-toggle" class="btn-pomo-secondary">
+          <i class="fa-solid fa-clock-rotate-left"></i> سجل الجلسات (${sessionsLog.length})
+        </button>
+        <button type="button" id="btn-pomo-settings-toggle" class="btn-pomo-secondary">
+          <i class="fa-solid fa-sliders"></i> المظهر والصوت
+        </button>
+        <button type="button" id="btn-pomo-reset" class="btn-pomo-secondary" title="إعادة ضبط">
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+      </div>
+
+      <!-- درج سجل الجلسات واستكمال المهام (يفتح عند الضغط على سجل الجلسات) -->
+      <div id="pomo-history-drawer" class="pomo-drawer-panel ${PomodoroState.showHistoryDrawer ? "" : "hidden"}">
+        <div class="flex-between mb-2">
+          <h4 class="gold-text"><i class="fa-solid fa-chart-line"></i> سجل جلسات المذاكرة والمهام (اضغط استكمال للمتابعة)</h4>
+        </div>
+        <div style="max-height:190px; overflow-y:auto;">${historyListHtml}</div>
+      </div>
+
+      <!-- درج الإعدادات المدمج (الألوان، شكل الساعة، الصوت، والترددات) -->
+      <div id="pomo-settings-drawer" class="pomo-drawer-panel ${PomodoroState.showSettingsDrawer ? "" : "hidden"}">
+        <div class="pomo-v3-dock">
+          <div class="pomo-color-swatches">${swatchesHtml}</div>
+          <button type="button" class="pomo-preset-btn ${PomodoroState.dialSkin === "ring" ? "active" : ""}" data-skin="ring">⭕ دائرية</button>
+          <button type="button" class="pomo-preset-btn ${PomodoroState.dialSkin === "flip" ? "active" : ""}" data-skin="flip">📟 Flip 3D</button>
+          <button type="button" class="pomo-preset-btn ${PomodoroState.dialSkin === "hud" ? "active" : ""}" data-skin="hud">🌌 HUD</button>
+        </div>
+        <div class="pomo-v3-dock mt-2">
+          <button type="button" id="btn-sound-tick" class="pomo-preset-btn ${PomodoroState.soundMode === "tick" ? "active" : ""}">⏱️ تكتكة</button>
+          <button type="button" id="btn-sound-custom" class="pomo-preset-btn ${PomodoroState.soundMode === "custom" ? "active" : ""}">
+            🎵 ${PomodoroState.customAudioName ? escapeHTML(PomodoroState.customAudioName) : "ملف صوتي"}
+          </button>
+          <input type="file" id="pomo-audio-file-input" accept="audio/*" class="hidden" />
+          ${PomodoroState.customAudioName ? `<button type="button" id="btn-change-audio-file" class="pomo-preset-btn"><i class="fa-solid fa-folder-open"></i></button>` : ""}
+          <button type="button" id="btn-sound-mute" class="pomo-preset-btn ${PomodoroState.soundMode === "mute" ? "active" : ""}">🔇 صامت</button>
+          <button type="button" id="btn-pomo-breathe" class="pomo-preset-btn ${PomodoroState.breathingGuide ? "active" : ""}">🌬️ تنفس 4-4-4</button>
+          <button type="button" class="pomo-preset-btn ${PomodoroState.binauralMode === "alpha" ? "active" : ""}" data-binaural="alpha">🧠 Alpha</button>
+          <button type="button" class="pomo-preset-btn ${PomodoroState.binauralMode === "beta" ? "active" : ""}" data-binaural="beta">⚡ Beta</button>
+        </div>
+      </div>
+
+      <!-- سلة تفريغ الأفكار المشتتة السريعة -->
+      <div class="pomo-braindump-bar">
+        <input type="text" id="pomo-braindump-input" placeholder="💡 فكرة عابرة أثناء التركيز؟ احفظها في الملاحظات فوراً..." />
+        <button type="button" id="btn-save-braindump" class="pomo-preset-btn active">حفظ فوري</button>
       </div>
     </div>
   `;
@@ -3348,7 +3491,47 @@ function openPomodoroModal() {
     card.setAttribute("data-pomo-theme", PomodoroState.colorTheme);
   }
 
-  // الألوان الـ 5
+  // ربط حقول اسم المهمة واختيار المادة
+  const linkSel = document.getElementById("pomo-link-select");
+  const newTaskInp = document.getElementById("pomo-new-task-input");
+  linkSel.onchange = (e) => {
+    PomodoroState.linkedTarget = e.target.value;
+    if (e.target.value) {
+      PomodoroState.customTaskName = "";
+      newTaskInp.value = "";
+    }
+    openPomodoroModal();
+  };
+  newTaskInp.oninput = (e) => {
+    PomodoroState.customTaskName = e.target.value;
+  };
+
+  // أزرار حفظ الجلسة وإظهار السجل والإعدادات
+  document.getElementById("btn-pomo-save-session").onclick = saveCurrentFocusSession;
+  document.getElementById("btn-pomo-history-toggle").onclick = () => {
+    PomodoroState.showHistoryDrawer = !PomodoroState.showHistoryDrawer;
+    PomodoroState.showSettingsDrawer = false;
+    openPomodoroModal();
+  };
+  document.getElementById("btn-pomo-settings-toggle").onclick = () => {
+    PomodoroState.showSettingsDrawer = !PomodoroState.showSettingsDrawer;
+    PomodoroState.showHistoryDrawer = false;
+    openPomodoroModal();
+  };
+
+  // أزرار استكمال جلسة سابقة من السجل
+  document.querySelectorAll("[data-resume-title]").forEach(btn => {
+    btn.onclick = () => {
+      PomodoroState.customTaskName = btn.dataset.resumeTitle;
+      PomodoroState.showHistoryDrawer = false;
+      setCustomPomodoroTime(60, "work");
+      startPomodoro();
+      openPomodoroModal();
+      showToast(`تم استكمال العمل على: "${PomodoroState.customTaskName}" 🚀`, "success");
+    };
+  });
+
+  // الألوان والـ Skins والصوت
   document.querySelectorAll("[data-pomo-color]").forEach(dot => {
     dot.onclick = () => {
       PomodoroState.colorTheme = dot.dataset.pomoColor;
@@ -3357,8 +3540,6 @@ function openPomodoroModal() {
       document.querySelectorAll("[data-pomo-color]").forEach(d => d.classList.toggle("active", d === dot));
     };
   });
-
-  // تبديل نمط الساعة (Dial Skins)
   document.querySelectorAll("[data-skin]").forEach(btn => {
     btn.onclick = () => {
       PomodoroState.dialSkin = btn.dataset.skin;
@@ -3366,32 +3547,19 @@ function openPomodoroModal() {
       openPomodoroModal();
     };
   });
-
-  // حلقة التنفس الإرشادي
   document.getElementById("btn-pomo-breathe").onclick = () => {
     PomodoroState.breathingGuide = !PomodoroState.breathingGuide;
     openPomodoroModal();
   };
-
-  // موجات الدماغ Binaural Beats
   document.querySelectorAll("[data-binaural]").forEach(btn => {
     btn.onclick = () => {
       const targetMode = btn.dataset.binaural;
-      if (PomodoroState.binauralMode === targetMode) {
-        stopBinauralBeats();
-      } else {
-        startBinauralBeats(targetMode);
-      }
+      if (PomodoroState.binauralMode === targetMode) stopBinauralBeats();
+      else startBinauralBeats(targetMode);
       openPomodoroModal();
     };
   });
 
-  // ربط الجلسة بمادة أو مشروع
-  document.getElementById("pomo-link-select").onchange = (e) => {
-    PomodoroState.linkedTarget = e.target.value;
-  };
-
-  // حفظ الفكرة المشتتة فوراً في الملاحظات بدون الخروج من المؤقت
   document.getElementById("btn-save-braindump").onclick = async () => {
     const inp = document.getElementById("pomo-braindump-input");
     const val = inp.value.trim();
@@ -3401,11 +3569,10 @@ function openPomodoroModal() {
       title: "💡 فكرة سريعة أثناء جلسة التركيز",
       content: val,
       category: "Brain-Dump",
-      linkedTo: PomodoroState.linkedTarget || "Pomodoro"
+      linkedTo: PomodoroState.customTaskName || PomodoroState.linkedTarget || "Pomodoro"
     });
   };
 
-  // أوضاع الصوت (تكتكة / ملف مخصص / صامت)
   const fileInput = document.getElementById("pomo-audio-file-input");
   document.getElementById("btn-sound-tick").onclick = () => {
     PomodoroState.soundMode = "tick";
@@ -3438,7 +3605,6 @@ function openPomodoroModal() {
     openPomodoroModal();
   };
 
-  // أزرار الوقت
   document.querySelectorAll("[data-pomo-set]").forEach(btn => {
     btn.onclick = () => {
       setCustomPomodoroTime(Number(btn.dataset.pomoSet), btn.dataset.mode || "work");
@@ -3906,46 +4072,82 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 /* ==========================================================================
-   ALEX CARTOON AI MASCOT ENGINE & GEMINI FLASH CONFIGURATOR
+   FLYING FRIENDLY ALEX BOT + XP LEVELING + KANBAN + EXAM CRUNCH + DAILY CARD
    ========================================================================== */
 
-const ALEX_BUBBLE_QUOTES = [
-  "Hey! I'm Alex 🤖 Need any help?",
-  "Ready to crush your goals today? 🚀",
-  "Click me for quick AI study tools! 🧠",
-  "Want a quick quiz on your subjects? 📚",
-  "Remember to stay hydrated & focused! ⚡",
-  "I can plan your schedule in seconds! 📅"
+// 1. رسائل أليكس التلقائية الحنونة والودودة (تظهر كل فترة وتطيب الخاطر)
+const ALEX_FRIENDLY_CHECKINS = [
+  "تعبت ولا إيه يا صاحبي؟ قوم اشرب كوباية مية كده وجدد نشاطك 💧",
+  "وحد الله وصلي على النبي في قلبك.. ربنا يبارك في وقتك ومجهودك 🌿",
+  "قاعد بقالك حبة حلوين، افرد ضهرك وريح عينك ثواني عن الشاشة 👀",
+  "سبحان الله وبحمده، سبحان الله العظيم.. خلي لسانك رطب بذكر الله ✨",
+  "هانت يا بطل، خطوة صغيرة كل يوم بتبني مستقبل كبير بإذن الله 🚀",
+  "لو حاسس إنك مضغوط، خد نفس عميق.. إنت بتعمل اللي عليك وربنا مش بيضيع تعب حد 💪",
+  "إيه الأخبار؟ لو زهقان من المذاكرة اضغط عليا ندردش شوية ونفصل! 🤖"
 ];
 
+// ردود أليكس الودودة السريعة خارج إطار الدراسة
+const ALEX_COMPANION_REPLIES = {
+  tired: "حبيبي ألف سلامة عليك من التعب! بص، اقفل اللي في إيدك دلوقتي 10 دقايق، قوم اغسل وشك واشرب كوباية مية أو اعمل حاجة دافية، وماتضغطش على أعصابك.. صحتك ونفسيتك أهم من أي شيتات، ولما تهدى نبقى نكمل سوا خطوة بخطوة 💙",
+  zikr: "اللهم صلِّ وسلم وبارك على سيدنا محمد 🌿.. قول معايا: (لا إله إلا أنت سبحانك إني كنت من الظالمين)، (ربِّ اشرح لي صدري ويسر لي أمري). ربنا يفتحها في وشك ويرزقك الفهم والبركة والسكينة يا صاحبي 🤲",
+  water: "عاش! يلا قوم دلوقتي اشرب كوباية مية كبيرة، وافرد كتافك وضهرك، وبص لبعيد عن الشاشة لمدة 20 ثانية عشان عينك ترتاح 💧👀.. مستنيك ترجع فريش!",
+  joke: "عارف المهندس لما بيحب يرتاح بيعمل إيه؟ بيعمل لنفسه استراحة بـ setTimeout بس بينسى يحط الـ callback فبينام للصبح 😂! روّق كده وابتسم، إن شاء الله يومك جميل ومليان خير ✨"
+};
+
+// 2. نظام المستويات ونقاط الخبرة التحفيزي (XP & Leveling Engine)
+function updateXPSystem() {
+  const completedTasks = AppState.collections.tasks.filter(t => t.status === "Completed").length;
+  const totalPrayers = AppState.collections.prayers.reduce((sum, p) => {
+    return sum + ["fajr","dhuhr","asr","maghrib","isha"].filter(k => p[k]).length;
+  }, 0);
+  const focusSessions = getFocusSessionsLog().length;
+  const checkItems = AppState.collections.subjects.reduce((sum, s) => {
+    return sum + Object.values(s.checklist || {}).filter(Boolean).length;
+  }, 0);
+
+  const totalXP = (completedTasks * 25) + (totalPrayers * 15) + (focusSessions * 40) + (checkItems * 20);
+  const level = Math.floor(totalXP / 200) + 1;
+  const xpInCurrentLevel = totalXP % 200;
+  const progressPct = Math.min(100, Math.round((xpInCurrentLevel / 200) * 100));
+
+  const titles = ["المبتدئ الطموح", "المنظم النشيط", "مهندس التركيز", "فارس الإنجاز", "أسطورة الإنتاجية"];
+  const rankTitle = titles[Math.min(titles.length - 1, Math.floor((level - 1) / 2))];
+
+  const badgeEl = document.getElementById("user-level-badge");
+  const textEl = document.getElementById("user-xp-text");
+  const barEl = document.getElementById("user-xp-bar");
+
+  if (badgeEl) badgeEl.textContent = `Lv. ${level} • ${rankTitle}`;
+  if (textEl) textEl.textContent = `${totalXP} XP`;
+  if (barEl) barEl.style.width = `${progressPct}%`;
+}
+
+// 3. إعدادات مفتاح وموديل Gemini
 function openGeminiConfigModal() {
   const currentKey = localStorage.getItem("MY_LIFE_OS_GEMINI_KEY") || "";
   const currentModel = localStorage.getItem("MY_LIFE_OS_GEMINI_MODEL") || "gemini-2.0-flash";
 
-  openFormModal("Configure Gemini Flash AI & API Key", `
+  openFormModal("إعداد مفتاح وموديل Gemini AI", `
     <div class="form-group">
-      <label>Select Gemini Flash Model</label>
+      <label>اختر الموديل (Model)</label>
       <select name="model" dir="ltr">
-        <option value="gemini-2.0-flash" ${currentModel === "gemini-2.0-flash" ? "selected" : ""}>Gemini Flash (Latest Fast Model)</option>
-        <option value="gemini-1.5-flash" ${currentModel === "gemini-1.5-flash" ? "selected" : ""}>Gemini 1.5 Flash (Stable)</option>
-        <option value="gemini-1.5-pro" ${currentModel === "gemini-1.5-pro" ? "selected" : ""}>Gemini Pro (Deep Reasoning)</option>
+        <option value="gemini-2.0-flash" ${currentModel === "gemini-2.0-flash" ? "selected" : ""}>Gemini Flash (الأسرع والأحدث)</option>
+        <option value="gemini-1.5-flash" ${currentModel === "gemini-1.5-flash" ? "selected" : ""}>Gemini 1.5 Flash</option>
+        <option value="gemini-1.5-pro" ${currentModel === "gemini-1.5-pro" ? "selected" : ""}>Gemini Pro</option>
       </select>
     </div>
     <div class="form-group">
-      <label>Your Google Gemini API Key (Optional — Auto-Fallback Enabled)</label>
+      <label>مفتاح Google Gemini API الخاص بك (اختياري)</label>
       <input type="password" name="apiKey" dir="ltr" value="${escapeHTML(currentKey)}" placeholder="AIzaSy..." />
-      <small class="small-muted d-block mt-2">Enter your key from Google AI Studio to use your personal Gemini quota directly.</small>
     </div>
   `, async (data) => {
-    if (data.model) {
-      localStorage.setItem("MY_LIFE_OS_GEMINI_MODEL", data.model);
-    }
+    if (data.model) localStorage.setItem("MY_LIFE_OS_GEMINI_MODEL", data.model);
     if (data.apiKey && data.apiKey.trim()) {
       localStorage.setItem("MY_LIFE_OS_GEMINI_KEY", data.apiKey.trim());
-      showToast("Gemini API Key & Model saved successfully!", "success");
+      showToast("تم تفعيل مفتاح Gemini بنجاح", "success");
     } else {
       localStorage.removeItem("MY_LIFE_OS_GEMINI_KEY");
-      showToast("Switched to built-in Free AI Engine", "info");
+      showToast("تم التبديل إلى محرك أليكس المجاني التلقائي", "info");
     }
   });
 }
@@ -3967,23 +4169,184 @@ async function sendToAlexPopup(promptText) {
 
   appendAlexPopupMessage(promptText, "user");
 
-  // فحص إذا كان الأمر إضافة مهمة أو مادة أو مصروف
+  // ردود ودية فورية لو المستخدم بيفضفض أو بيتكلم كصديق
+  if (/(تعبان|مخنوق|زهقان|مش قادر|فصلت|صداع|ملل)/.test(promptText)) {
+    appendAlexPopupMessage(ALEX_COMPANION_REPLIES.tired, "bot");
+    return;
+  }
+  if (/(اذكر الله|ادعيلي|دعاء|صل على النبي|ذكر)/.test(promptText)) {
+    appendAlexPopupMessage(ALEX_COMPANION_REPLIES.zikr, "bot");
+    return;
+  }
+
   const detectedAction = parseNaturalLanguageAIAction(promptText);
   if (detectedAction) {
     const id = await createRecord(detectedAction.collection, detectedAction.payload);
     if (id) {
-      appendAlexPopupMessage(`Done! ✅ ${detectedAction.summary}`, "bot");
+      appendAlexPopupMessage(`تم يا صاحبي! ✅ ${detectedAction.summary}`, "bot");
       return;
     }
   }
 
-  const thinkingEl = appendAlexPopupMessage("Alex is thinking... 🤖", "bot");
-  const reply = await askGeminiOrFallbackAI(promptText);
+  const thinkingEl = appendAlexPopupMessage("ثواني بفكر معاك... 🤖", "bot");
+  const reply = await askGeminiOrFallbackAI(`أجب كصديق مصري ودود ومشجع ومحترم جداً باسم "أليكس": ${promptText}`);
   if (thinkingEl) thinkingEl.textContent = reply;
 }
 
+// 4. طيران أليكس الحر في الشاشة كلها (Autonomous Screen Flight)
+let isAlexFlightAllowed = true;
+function flyAlexAroundScreen() {
+  if (!isAlexFlightAllowed) return;
+  const wrapper = document.getElementById("alex-mascot-Root");
+  const popup = document.getElementById("alex-chat-popup");
+  const bubble = document.getElementById("alex-speech-bubble");
+  const bubbleText = document.getElementById("alex-bubble-text");
+  if (!wrapper) return;
+
+  // لا يطير إذا كانت نافذة الشات مفتوحة حتى لا يزعج المستخدم أثناء الكتابة
+  if (popup && !popup.classList.contains("hidden")) return;
+
+  const maxRight = Math.max(40, window.innerWidth - 130);
+  const maxBottom = Math.max(90, window.innerHeight - 180);
+
+  // اختيار نقطة طيران جديدة أو العودة لمكانه
+  const shouldReturnHome = Math.random() < 0.35;
+  const nextRight = shouldReturnHome ? 24 : Math.floor(Math.random() * maxRight);
+  const nextBottom = shouldReturnHome ? (window.innerWidth <= 768 ? 85 : 24) : Math.floor(Math.random() * (maxBottom - 60)) + 60;
+
+  wrapper.classList.add("is-flying");
+  wrapper.style.insetInlineEnd = `${nextRight}px`;
+  wrapper.style.bottom = `${nextBottom}px`;
+
+  // إظهار رسالة لطيفة عشوائية أثناء الطيران
+  const randomMsg = ALEX_FRIENDLY_CHECKINS[Math.floor(Math.random() * ALEX_FRIENDLY_CHECKINS.length)];
+  if (bubble && bubbleText) {
+    bubble.classList.remove("hidden");
+    bubbleText.textContent = randomMsg;
+  }
+
+  setTimeout(() => {
+    wrapper.classList.remove("is-flying");
+  }, 2800);
+}
+
+// 5. توليد بطاقة الإنجاز اليومي القابلة للتحميل كصورة (Daily Achievement Card)
+function generateDailyAchievementCard() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 800;
+  canvas.height = 450;
+  const ctx = canvas.getContext("2d");
+
+  // خلفية ملكية داكنة
+  const grad = ctx.createLinearGradient(0, 0, 800, 450);
+  grad.addColorStop(0, "#07090e");
+  grad.addColorStop(0.5, "#141926");
+  grad.addColorStop(1, "#0a101d");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 800, 450);
+
+  // إطار ذهبي مزدوج
+  ctx.strokeStyle = "#d4af37";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(20, 20, 760, 410);
+
+  const userName = AppState.user?.displayName || "Eng. Ahmed M Hosny";
+  const levelBadge = document.getElementById("user-level-badge")?.textContent || "Lv. 1";
+  const xpText = document.getElementById("user-xp-text")?.textContent || "0 XP";
+  const todaySessions = getFocusSessionsLog().filter(s => s.date === todayISO());
+  const todayMins = todaySessions.reduce((acc, s) => acc + (Number(s.minutes) || 0), 0);
+  const doneTasks = AppState.collections.tasks.filter(t => t.status === "Completed").length;
+
+  ctx.fillStyle = "#d4af37";
+  ctx.font = "bold 34px Cairo, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("MY LIFE OS — بطاقة الإنجاز اليومي 🏆", 400, 85);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 28px Cairo, sans-serif";
+  ctx.fillText(userName, 400, 145);
+
+  ctx.fillStyle = "#10b981";
+  ctx.font = "bold 22px Cairo, sans-serif";
+  ctx.fillText(`${levelBadge}  |  ${xpText}`, 400, 190);
+
+  ctx.fillStyle = "#f8fafc";
+  ctx.font = "22px Cairo, sans-serif";
+  ctx.fillText(`⏱️ دقائق التركيز اليوم: ${todayMins} دقيقة (${todaySessions.length} جلسات)`, 400, 265);
+  ctx.fillText(`✅ إجمالي المهام المنجزة: ${doneTasks} مهمة`, 400, 315);
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "16px Cairo, sans-serif";
+  ctx.fillText(`التاريخ: ${todayISO()}  •  Eng:Ahmed M Hosny`, 400, 395);
+
+  const link = document.createElement("a");
+  link.download = `my-life-os-achievement-${todayISO()}.png`;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+  showToast("تم تحميل بطاقة إنجازك اليومي كصورة فخمة! 🏆", "success");
+}
+
+// 6. ربط الأحداث عند التحميل
 document.addEventListener("DOMContentLoaded", () => {
-  // ربط زر إعدادات الـ AI في صفحة المساعد ونافذة Alex
+  setTimeout(updateXPSystem, 1500);
+  setInterval(updateXPSystem, 12000);
+
+  // زر تحويل عرض المهام إلى Kanban
+  document.getElementById("btn-toggle-kanban")?.addEventListener("click", () => {
+    AppState.isKanbanView = !AppState.isKanbanView;
+    const lbl = document.getElementById("kanban-toggle-label");
+    if (lbl) lbl.textContent = AppState.isKanbanView ? "عرض البطاقات العادي" : "عرض لوحة Kanban";
+    renderTasks();
+  });
+
+  // أزرار نقل المهام في كانبان + فتح مهمة في المؤقت مباشرة
+  document.addEventListener("click", async (e) => {
+    const moveBtn = e.target.closest('[data-action="move-kanban"]');
+    if (moveBtn) {
+      await updateRecord("tasks", moveBtn.dataset.id, { status: moveBtn.dataset.status });
+      updateXPSystem();
+    }
+
+    const focusTaskBtn = e.target.closest('[data-action="focus-on-task"]');
+    if (focusTaskBtn) {
+      const task = AppState.collections.tasks.find(t => t.id === focusTaskBtn.dataset.id);
+      if (task) {
+        PomodoroState.linkedTarget = `task:${task.title}`;
+        PomodoroState.customTaskName = "";
+        openPomodoroModal();
+      }
+    }
+  });
+
+  // زر بطاقة الإنجاز اليومي
+  document.getElementById("btn-generate-daily-card")?.addEventListener("click", generateDailyAchievementCard);
+
+  // زر وضع طوارئ ليلة الامتحان (Exam Crunch Mode)
+  document.getElementById("btn-exam-crunch-mode")?.addEventListener("click", () => {
+    const subjects = AppState.collections.subjects;
+    if (!subjects.length) {
+      showToast("أضف مادة دراسية أولاً لتفعيل وضع طوارئ ليلة الامتحان", "error");
+      return;
+    }
+    const opts = subjects.map(s => `<option value="${s.id}">${escapeHTML(s.name)}</option>`).join("");
+    openFormModal("🚨 وضع طوارئ ليلة الامتحان (Exam Crunch Mode)", `
+      <div class="form-group">
+        <label>اختر المادة التي تمتحن فيها لتركيز كل أدواتها وقوانينها ومؤقتها:</label>
+        <select id="crunch-subj-select">${opts}</select>
+      </div>
+    `, async () => {
+      const subjId = document.getElementById("crunch-subj-select").value;
+      const subj = subjects.find(s => s.id === subjId);
+      if (!subj) return;
+      PomodoroState.linkedTarget = `subj:${subj.name}`;
+      PomodoroState.customTaskName = `مراجعة ليلة الامتحان: ${subj.name}`;
+      setCustomPomodoroTime(60, "work");
+      openPomodoroModal();
+      showToast(`تم تجهيز جلسة طوارئ 60 دقيقة لمادة ${subj.name} 🔥`, "success");
+    });
+  });
+
+  // أحداث المساعد أليكس الطائر
   const aiSetBtn = document.getElementById("btn-ai-settings");
   if (aiSetBtn) aiSetBtn.onclick = openGeminiConfigModal;
   document.getElementById("btn-alex-api-key")?.addEventListener("click", openGeminiConfigModal);
@@ -3991,23 +4354,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const alexAvatarBtn = document.getElementById("btn-alex-avatar");
   const alexPopup = document.getElementById("alex-chat-popup");
   const alexBubble = document.getElementById("alex-speech-bubble");
-  const alexBubbleText = document.getElementById("alex-bubble-text");
 
-  // تبديل عبارات Alex التشجيعية باللغة الإنجليزية تلقائياً كل 12 ثانية
-  let quoteIdx = 0;
-  setInterval(() => {
-    if (!alexBubble || alexBubble.classList.contains("hidden")) return;
-    quoteIdx = (quoteIdx + 1) % ALEX_BUBBLE_QUOTES.length;
-    if (alexBubbleText) alexBubbleText.textContent = ALEX_BUBBLE_QUOTES[quoteIdx];
-  }, 12000);
+  // طيران أليكس وتبديل رسائله الودودة كل 18 ثانية
+  setInterval(flyAlexAroundScreen, 18000);
 
-  // إغلاق فقاعة الكلام الصغيرة
+  document.getElementById("btn-pin-alex")?.addEventListener("click", () => {
+    isAlexFlightAllowed = !isAlexFlightAllowed;
+    if (!isAlexFlightAllowed) {
+      const wrapper = document.getElementById("alex-mascot-Root");
+      if (wrapper) {
+        wrapper.style.insetInlineEnd = "24px";
+        wrapper.style.bottom = window.innerWidth <= 768 ? "85px" : "24px";
+      }
+    }
+    showToast(isAlexFlightAllowed ? "تم السماح لأليكس بالطيران في الشاشة 🕊️" : "تم تثبيت أليكس في الزاوية 📌", "info");
+  });
+
   document.getElementById("btn-hide-alex-bubble")?.addEventListener("click", (e) => {
     e.stopPropagation();
     alexBubble?.classList.add("hidden");
   });
 
-  // فتح/إغلاق نافذة Alex الذكية عند الضغط على الشخصية الكرتونية
   alexAvatarBtn?.addEventListener("click", () => {
     alexPopup?.classList.toggle("hidden");
     if (!alexPopup?.classList.contains("hidden")) {
@@ -4019,7 +4386,6 @@ document.addEventListener("DOMContentLoaded", () => {
     alexPopup?.classList.add("hidden");
   });
 
-  // إرسال رسالة مباشرة إلى Alex
   document.getElementById("alex-popup-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const inp = document.getElementById("alex-popup-input");
@@ -4029,12 +4395,16 @@ document.addEventListener("DOMContentLoaded", () => {
     await sendToAlexPopup(text);
   });
 
-  // تشغيل الاختصارات الجاهزة الكثيرة (Quick Chips) داخل Alex
   document.querySelectorAll("#alex-quick-chips .alex-chip").forEach(chip => {
     chip.onclick = async () => {
+      const friendlyKey = chip.dataset.alexFriendly;
       const cmd = chip.dataset.alexCmd;
       const prompt = chip.dataset.alexPrompt;
-      if (cmd === "open-pomo") {
+
+      if (friendlyKey && ALEX_COMPANION_REPLIES[friendlyKey]) {
+        appendAlexPopupMessage(chip.textContent, "user");
+        appendAlexPopupMessage(ALEX_COMPANION_REPLIES[friendlyKey], "bot");
+      } else if (cmd === "open-pomo") {
         alexPopup?.classList.add("hidden");
         setCustomPomodoroTime(60, "work");
         openPomodoroModal();

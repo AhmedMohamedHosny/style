@@ -107,13 +107,24 @@
 
     <!-- Desktop Sidebar -->
     <aside id="sidebar" class="sidebar">
-      <div class="sidebar-header">
+<div class="sidebar-header">
         <div class="brand-box">
-<div class="brand-icon">
-  <img src="logo.png" alt="Logo" class="sidebar-logo-img" />
-</div>          <div>
+          <div class="brand-icon">
+            <img src="logo.png" alt="Logo" class="sidebar-logo-img" />
+          </div>
+          <div>
             <h2>MY LIFE <span>OS</span></h2>
             <small id="sidebar-user-status">Online • Synced</small>
+          </div>
+        </div>
+        <!-- نظام المستويات ونقاط الخبرة التحفيزي (XP & Leveling) -->
+        <div class="xp-level-box mt-2">
+          <div class="flex-between">
+            <span id="user-level-badge" class="badge badge-gold">Lv. 1 • المبتدئ الطموح</span>
+            <small id="user-xp-text" class="small-muted">0 XP</small>
+          </div>
+          <div class="progress-bar-track">
+            <div id="user-xp-bar" class="progress-bar-fill" style="width: 10%"></div>
           </div>
         </div>
       </div>
@@ -287,11 +298,12 @@
             <h2><span data-i18n="welcome_back">مرحباً بعودتك،</span> <span id="dash-user-name" class="gold-text">...</span></h2>
             <p data-i18n="dashboard_sub">مركز القيادة اليومي المحسوب مباشرة من بياناتك الفعلية.</p>
           </div>
-          <div class="quick-actions-row">
+<div class="quick-actions-row">
             <button class="btn btn-gold btn-sm" data-quick-add="task"><i class="fa-solid fa-plus"></i> مهمة</button>
             <button class="btn btn-outline btn-sm" data-quick-add="expense"><i class="fa-solid fa-coins"></i> معاملة</button>
             <button class="btn btn-outline btn-sm" data-quick-add="note"><i class="fa-solid fa-pen"></i> ملاحظة</button>
             <button class="btn btn-outline btn-sm" data-quick-add="event"><i class="fa-regular fa-calendar-plus"></i> موعد</button>
+            <button id="btn-generate-daily-card" class="btn btn-gold btn-sm"><i class="fa-solid fa-trophy"></i> بطاقة إنجازي اليوم</button>
           </div>
         </div>
 
@@ -396,9 +408,14 @@
               <option value="overdue">المتأخرة (Overdue)</option>
             </select>
           </div>
-          <button id="btn-open-task-modal" class="btn btn-gold">
-            <i class="fa-solid fa-plus"></i> إضافة مهمة جديدة
-          </button>
+<div class="filters-row">
+            <button type="button" id="btn-toggle-kanban" class="btn btn-outline btn-sm">
+              <i class="fa-solid fa-table-columns gold-text"></i> <span id="kanban-toggle-label">عرض لوحة Kanban</span>
+            </button>
+            <button id="btn-open-task-modal" class="btn btn-gold btn-sm">
+              <i class="fa-solid fa-plus"></i> إضافة مهمة جديدة
+            </button>
+          </div>
         </div>
 
         <div id="tasks-list-container" class="items-grid"></div>
@@ -453,6 +470,7 @@
             <button id="btn-add-subject" class="btn btn-gold btn-sm"><i class="fa-solid fa-book-medical"></i> مادة جديدة</button>
             <button id="btn-add-lecture" class="btn btn-outline btn-sm"><i class="fa-solid fa-file-circle-plus"></i> محاضرة / واجب</button>
             <button id="btn-gpa-simulator" class="btn btn-outline btn-sm"><i class="fa-solid fa-calculator gold-text"></i> حاسبة GPA والامتياز</button>
+            <button id="btn-exam-crunch-mode" class="btn btn-danger btn-sm"><i class="fa-solid fa-fire"></i> طوارئ ليلة الامتحان</button>
             <button id="btn-feynman-ai" class="btn btn-outline btn-sm"><i class="fa-solid fa-brain gold-text"></i> محاكي فاينمان AI</button>
           </div>
         </div>
@@ -1072,88 +1090,90 @@
       </select>
     </div>
   </aside>
-  <!-- =========================================================
-       ALEX — ANIMATED CARTOON AI ASSISTANT WIDGET
+<!-- =========================================================
+       ALEX — FLYING FRIENDLY COMPANION BOT & AI COPILOT
   ========================================================== -->
   <div id="alex-mascot-Root" class="alex-mascot-wrapper">
-    <!-- Speech Bubble -->
+    <!-- فقاعة الكلام التلقائية الدافئة -->
     <div id="alex-speech-bubble" class="alex-speech-bubble">
-      <span id="alex-bubble-text">Hey! I'm Alex 🤖 Need any help?</span>
-      <button type="button" id="btn-hide-alex-bubble" class="alex-bubble-close" title="Dismiss">&times;</button>
+      <span id="alex-bubble-text">عامل إيه يا صاحبي؟ لو تعبت خد نفس واشرب مية 💧</span>
+      <button type="button" id="btn-hide-alex-bubble" class="alex-bubble-close" title="إخفاء">&times;</button>
     </div>
 
-    <!-- Bouncing Cartoon Character SVG -->
-    <button type="button" id="btn-alex-avatar" class="alex-avatar-btn" title="Ask Alex AI">
+    <!-- شخصية أليكس الطائرة مع أجنحة الطاقة -->
+    <button type="button" id="btn-alex-avatar" class="alex-avatar-btn" title="تحدث مع صديقك أليكس">
       <div class="alex-glow-aura"></div>
       <svg class="alex-cartoon-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <!-- Jetpack / Wings Glow -->
+        <ellipse class="alex-wing-left" cx="12" cy="64" rx="8" ry="18" fill="rgba(6, 182, 212, 0.45)" />
+        <ellipse class="alex-wing-right" cx="108" cy="64" rx="8" ry="18" fill="rgba(6, 182, 212, 0.45)" />
         <!-- Antenna -->
-        <line x1="60" y1="10" x2="60" y2="26" stroke="#d4af37" stroke-width="4" stroke-linecap="round" />
-        <circle class="alex-antenna-bulb" cx="60" cy="10" r="6" fill="#10b981" />
-        <!-- Ears -->
-        <rect x="14" y="48" width="10" height="22" rx="5" fill="#d4af37" />
-        <rect x="96" y="48" width="10" height="22" rx="5" fill="#d4af37" />
+        <line x1="60" y1="8" x2="60" y2="24" stroke="#d4af37" stroke-width="4" stroke-linecap="round" />
+        <circle class="alex-antenna-bulb" cx="60" cy="8" r="6" fill="#10b981" />
         <!-- Head / Body -->
-        <rect x="22" y="26" width="76" height="66" rx="26" fill="#141926" stroke="#d4af37" stroke-width="4" />
+        <rect x="22" y="24" width="76" height="66" rx="28" fill="#141926" stroke="#d4af37" stroke-width="4" />
         <!-- Inner Screen Face -->
-        <rect x="30" y="36" width="60" height="44" rx="16" fill="#07090e" stroke="rgba(16,185,129,0.4)" stroke-width="2" />
-        <!-- Animated Glowing Eyes -->
+        <rect x="30" y="34" width="60" height="44" rx="18" fill="#07090e" stroke="rgba(16,185,129,0.5)" stroke-width="2" />
+        <!-- Animated Glowing Happy Eyes -->
         <g class="alex-eyes">
-          <ellipse cx="46" cy="54" rx="6" ry="8" fill="#06b6d4" />
-          <ellipse cx="74" cy="54" rx="6" ry="8" fill="#06b6d4" />
-          <circle cx="48" cy="51" r="2.2" fill="#ffffff" />
-          <circle cx="76" cy="51" r="2.2" fill="#ffffff" />
+          <ellipse cx="46" cy="52" rx="6" ry="8" fill="#06b6d4" />
+          <ellipse cx="74" cy="52" rx="6" ry="8" fill="#06b6d4" />
+          <circle cx="48" cy="49" r="2.4" fill="#ffffff" />
+          <circle cx="76" cy="49" r="2.4" fill="#ffffff" />
         </g>
-        <!-- Happy Smile -->
-        <path class="alex-mouth" d="M 48 67 Q 60 76 72 67" fill="none" stroke="#10b981" stroke-width="3.5" stroke-linecap="round" />
+        <!-- Warm Friendly Blush & Smile -->
+        <circle cx="38" cy="62" r="4" fill="rgba(244, 63, 94, 0.45)" />
+        <circle cx="82" cy="62" r="4" fill="rgba(244, 63, 94, 0.45)" />
+        <path class="alex-mouth" d="M 47 64 Q 60 75 73 64" fill="none" stroke="#10b981" stroke-width="3.5" stroke-linecap="round" />
         <!-- Floating Hands -->
-        <circle class="alex-hand-left" cx="14" cy="84" r="7" fill="#141926" stroke="#d4af37" stroke-width="3" />
-        <circle class="alex-hand-right" cx="106" cy="84" r="7" fill="#141926" stroke="#d4af37" stroke-width="3" />
+        <circle class="alex-hand-left" cx="14" cy="82" r="7" fill="#141926" stroke="#d4af37" stroke-width="3" />
+        <circle class="alex-hand-right" cx="106" cy="82" r="7" fill="#141926" stroke="#d4af37" stroke-width="3" />
       </svg>
-      <span class="alex-name-tag">ALEX AI</span>
+      <span class="alex-name-tag">ALEX • صديقك</span>
     </button>
 
-    <!-- Alex Interactive Chat & Quick Actions Popup -->
+    <!-- نافذة دردشة أليكس الودودة والذكية -->
     <div id="alex-chat-popup" class="alex-chat-popup hidden">
       <div class="alex-popup-header">
         <div class="alex-header-info">
           <span class="alex-online-dot"></span>
-          <strong>Alex — AI Copilot</strong>
-          <small id="alex-model-badge" class="badge badge-gold">Gemini Flash</small>
+          <strong>أليكس (Alex) — رفيقك الذكي</strong>
         </div>
         <div class="alex-header-actions">
-          <button type="button" id="btn-alex-api-key" class="btn-icon" title="Configure Gemini API Key & Model">
+          <button type="button" id="btn-pin-alex" class="btn-icon" title="تثبيت / السماح لأليكس بالطيران في الشاشة">
+            <i class="fa-solid fa-paper-plane"></i>
+          </button>
+          <button type="button" id="btn-alex-api-key" class="btn-icon" title="إعداد مفتاح Gemini">
             <i class="fa-solid fa-key"></i>
           </button>
-          <button type="button" id="btn-alex-close" class="btn-icon" title="Close">
+          <button type="button" id="btn-alex-close" class="btn-icon" title="إغلاق">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
       </div>
 
-      <!-- Ready-made Quick Actions (Lots of Cool Presets) -->
+      <!-- أزرار دردشة ودية ونفسية وسريعة -->
       <div class="alex-quick-chips" id="alex-quick-chips">
-        <button type="button" class="alex-chip" data-alex-prompt="Give me a smart daily plan based on my current tasks and subjects.">📅 Plan My Day</button>
-        <button type="button" class="alex-chip" data-alex-prompt="Quiz me with 3 short multiple-choice questions on Logic Design & Engineering.">🧠 Quick Quiz</button>
-        <button type="button" class="alex-chip" data-alex-prompt="Summarize my progress, active projects, and pending tasks in English.">📊 Status Report</button>
-        <button type="button" class="alex-chip" data-alex-prompt="Give me a high-energy motivational boost for studying and coding right now!">🔥 Motivate Me</button>
-        <button type="button" class="alex-chip" data-alex-prompt="Explain a clean JavaScript / Firebase best practice tip in 3 lines.">💻 Code Tip</button>
-        <button type="button" class="alex-chip" data-alex-prompt="Suggest a 2-hour deep study strategy using Pomodoro and Feynman technique.">⏱️ Study Strategy</button>
-        <button type="button" class="alex-chip" data-alex-prompt="Help me debug a code error or explain a difficult engineering concept.">🛠️ Debug / Explain</button>
-        <button type="button" class="alex-chip" data-alex-prompt="Give me 3 creative full-stack project ideas I can build next.">💡 Project Ideas</button>
-        <button type="button" class="alex-chip" data-alex-cmd="open-pomo">🚀 Start 60m Focus</button>
-        <button type="button" class="alex-chip" data-alex-cmd="rain-sound">🌧️ Toggle Rain Sound</button>
+        <button type="button" class="alex-chip" data-alex-friendly="tired">😮‍💨 حاسس إني تعبان ومفصول</button>
+        <button type="button" class="alex-chip" data-alex-friendly="zikr">🌿 ذكرني بالله وادعيلي</button>
+        <button type="button" class="alex-chip" data-alex-friendly="water">💧 فكرني أشرب مية وأفصل</button>
+        <button type="button" class="alex-chip" data-alex-friendly="joke">😄 قولي حاجة تفتح النفس</button>
+        <button type="button" class="alex-chip" data-alex-prompt="رتب لي يومي بشكل هادئ ومريح بدون ضغط بناءً على مهامي.">📅 رتب يومي بهدوء</button>
+        <button type="button" class="alex-chip" data-alex-prompt="اسألني 3 أسئلة سريعة وخفيفة في موادي الدراسية.">🧠 اختبرني سريعاً</button>
+        <button type="button" class="alex-chip" data-alex-cmd="open-pomo">⏱️ جلسة تركيز</button>
+        <button type="button" class="alex-chip" data-alex-cmd="rain-sound">🌧️ صوت مطر هادئ</button>
       </div>
 
-      <!-- Alex Messages Stream -->
+      <!-- رسائل المحادثة مع أليكس -->
       <div id="alex-messages-stream" class="alex-messages-stream">
         <div class="alex-bubble-msg bot">
-          Hi! I'm <strong>Alex</strong>, your personal AI assistant. Tap any quick action above or ask me anything in English or Arabic!
+          أهلاً بيك يا صاحبي! أنا <strong>أليكس</strong> 🤖.. أنا هنا مش بس عشان المذاكرة، لو زهقان أو تعبان أو عايز ندردش في أي حاجة تفتح نفسك اكتبلي أو اختار من الأزرار اللي فوق!
         </div>
       </div>
 
-      <!-- Alex Direct Input -->
+      <!-- حقل الكتابة المباشر -->
       <form id="alex-popup-form" class="alex-popup-input-row">
-        <input type="text" id="alex-popup-input" placeholder="Ask Alex anything or type a command..." required />
+        <input type="text" id="alex-popup-input" placeholder="احكي مع أليكس كصاحبك أو اطلب منه أي مساعدة..." required />
         <button type="submit" class="btn btn-gold btn-sm">
           <i class="fa-solid fa-paper-plane"></i>
         </button>

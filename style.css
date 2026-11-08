@@ -2853,3 +2853,151 @@ html[dir="ltr"] .scratchpad-trigger-btn {
     height: 58px;
   }
 }
+/* ==========================================================================
+   ENTERPRISE UI UPGRADE, POMODORO V3 STUDIO, KANBAN & FLYING ALEX
+   ========================================================================== */
+
+/* 1. تحسينات الـ UI الاحترافية (Bento Micro-Borders & Smooth Transitions) */
+.view-section.active {
+  animation: smoothViewEnter 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes smoothViewEnter {
+  from { opacity: 0; transform: translateY(10px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.card, .item-card, .kpi-card, .os-mini-widget {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease, box-shadow 0.25s ease !important;
+}
+
+.item-card:hover, .card:hover {
+  border-color: rgba(212, 175, 55, 0.48) !important;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.7), 0 0 20px rgba(212, 175, 55, 0.08) !important;
+}
+
+.xp-level-box {
+  background: rgba(10, 14, 23, 0.65);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+/* 2. تصميم المؤقت الجديد الفخم والنظيف (Pomodoro Studio V3) */
+.pomo-v3-task-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  max-width: 620px;
+  background: rgba(15, 20, 32, 0.85);
+  border: 1px solid rgba(var(--pomo-accent-rgb), 0.35);
+  padding: 8px 12px;
+  border-radius: 16px;
+  backdrop-filter: blur(18px);
+}
+
+.pomo-v3-task-bar select,
+.pomo-v3-task-bar input {
+  flex: 1;
+  min-width: 180px;
+  background: rgba(8, 11, 18, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 10px !important;
+  padding: 8px 12px !important;
+  font-size: 0.86rem !important;
+  color: #ffffff !important;
+}
+
+/* شريط الإعدادات المدمج (Floating Control Dock) لمنع زحمة الأزرار */
+.pomo-v3-dock {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 20, 32, 0.78);
+  border: 1px solid rgba(var(--pomo-accent-rgb), 0.25);
+  padding: 8px 16px;
+  border-radius: 99px;
+}
+
+.pomo-drawer-panel {
+  width: 100%;
+  max-width: 640px;
+  background: rgba(12, 16, 26, 0.92);
+  border: 1px solid rgba(var(--pomo-accent-rgb), 0.35);
+  border-radius: 18px;
+  padding: 14px;
+  margin-top: 6px;
+  animation: fadeIn 0.2s ease;
+  text-align: start;
+}
+
+.session-log-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(20, 26, 40, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+/* 3. لوحة كانبان التفاعلية للمهام (Kanban Board) */
+.kanban-board-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.kanban-column {
+  background: rgba(15, 20, 32, 0.78);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  min-height: 360px;
+}
+
+.kanban-col-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid var(--gold-primary);
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .kanban-board-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 4. طيران أليكس الحر في الشاشة (Smooth Screen Roaming) */
+.alex-mascot-wrapper {
+  transition: bottom 2.8s cubic-bezier(0.34, 1.56, 0.64, 1),
+              inset-inline-end 2.8s cubic-bezier(0.34, 1.56, 0.64, 1),
+              transform 0.4s ease !important;
+}
+
+.alex-mascot-wrapper.is-flying .alex-wing-left,
+.alex-mascot-wrapper.is-flying .alex-wing-right {
+  animation: wingFlutter 0.18s infinite alternate;
+}
+
+@keyframes wingFlutter {
+  from { transform: scaleX(0.7); opacity: 0.4; }
+  to { transform: scaleX(1.35); opacity: 0.9; }
+}
+
+.alex-speech-bubble {
+  direction: rtl !important;
+  text-align: right !important;
+  max-width: 280px !important;
+  line-height: 1.5;
+}
