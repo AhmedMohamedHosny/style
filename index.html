@@ -34,7 +34,7 @@
       <h2>Desktop Experience Required</h2>
       <p><strong>MY LIFE OS</strong> is a high-performance personal operating system engineered exclusively for <strong>Desktop & Laptop</strong> workstations.</p>
       <div class="guard-badge">
-        <i class="fa-solid fa-Triangle-exclamation"></i> Mobile & Phone browsers are not supported. Please open this platform on your PC or Laptop.
+        <i class="fa-solid fa-triangle-exclamation"></i> Mobile & Phone browsers are not supported. Please open this platform on your PC or Laptop.
       </div>
     </div>
   </div>
@@ -263,11 +263,14 @@
       ====================================================== -->
       <section id="view-dashboard" class="view-section active">
 <!-- البانر الرئيسي المدمج مع الموجز الذكي المتفاعل مع الوقت (صباحاً / مساءً) -->
-        <div class="welcome-banner">
+<div class="welcome-banner">
           <div style="max-width: 680px;">
-            <div class="flex-between" style="justify-content:flex-start; gap:10px; margin-bottom:6px;">
-              <span id="briefing-time-badge" class="badge badge-gold"><i class="fa-solid fa-sparkles"></i> موجز القيادة الذكي</span>
+            <div class="flex-between" style="justify-content:flex-start; gap:10px; margin-bottom:6px; flex-wrap:wrap;">
+              <span id="briefing-time-badge" class="badge badge-gold"><i class="fa-solid fa-wand-magic-sparkles"></i> موجز القيادة الذكي</span>
               <span class="small-muted" id="briefing-time-label">تحديث لحظي</span>
+              <button type="button" id="btn-speak-briefing" class="btn btn-xs btn-outline" title="استمع لملخص يومك ومهامك بصوت مسموع">
+                <i class="fa-solid fa-volume-high gold-text"></i> اقرأ لي موجز اليوم صوتياً
+              </button>
             </div>
             <h2><span id="time-greeting-prefix">مرحباً بعودتك،</span> <span id="dash-user-name" class="gold-text">...</span></h2>
             <p id="morning-briefing-text" class="briefing-content">جاري تحليل يومك ومهامك الحالية...</p>
@@ -277,6 +280,7 @@
             <button class="btn btn-outline btn-sm" data-quick-add="expense"><i class="fa-solid fa-coins"></i> معاملة</button>
             <button class="btn btn-outline btn-sm" data-quick-add="note"><i class="fa-solid fa-pen"></i> ملاحظة</button>
             <button class="btn btn-outline btn-sm" data-quick-add="event"><i class="fa-regular fa-calendar-plus"></i> موعد</button>
+            <button id="btn-open-time-capsule" class="btn btn-outline btn-sm"><i class="fa-solid fa-hourglass-half gold-text"></i> كبسولة الزمن</button>
             <button id="btn-generate-daily-card" class="btn btn-gold btn-sm"><i class="fa-solid fa-trophy"></i> بطاقة إنجازي</button>
           </div>
         </div>
@@ -390,13 +394,20 @@
             </div>
             <div id="dash-active-projects" class="widget-body"></div>
           </div>
-
-          <div class="card">
+<div class="card">
             <div class="card-header">
               <h3><i class="fa-regular fa-note-sticky gold-text"></i> آخر الملاحظات المثبتة</h3>
               <button class="btn-link" data-goto="notes">الملاحظات</button>
             </div>
             <div id="dash-recent-notes" class="widget-body"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-vault gold-text"></i> كبسولة الزمن (رسائل للمستقبل)</h3>
+              <button class="btn-link" id="btn-add-capsule-card">+ رسالة جديدة</button>
+            </div>
+            <div id="dash-time-capsules" class="widget-body"></div>
           </div>
         </div>
       </section>
@@ -520,7 +531,7 @@
            VIEW 5: ISLAMIC LIFE (QURAN & WORSHIP)
       ====================================================== -->
       <section id="view-islamic" class="view-section">
-        <!-- شريط منبه صيام النوافل ومصحف الحفظ التلقائي -->
+<!-- شريط منبه صيام النوافل ومصحف الحفظ التلقائي -->
         <div class="section-toolbar">
           <div class="flex-between" style="gap:12px; flex-wrap:wrap;">
             <span id="fasting-reminder-badge" class="badge badge-gold">
@@ -528,40 +539,103 @@
             </span>
             <span id="quran-bookmark-label" class="small-muted">آخر وقف مصحف: صفحة 1 - سورة الفاتحة</span>
           </div>
-          <button type="button" id="btn-open-quran-reader" class="btn btn-gold btn-sm">
-            <i class="fa-solid fa-book-open-reader"></i> فتح المصحف وحفظ الوقف التلقائي
-          </button>
+          <div class="filters-row">
+            <button type="button" id="btn-khatmah-settings" class="btn btn-outline btn-sm">
+              <i class="fa-solid fa-kaaba gold-text"></i> خطة الختمة الذكية
+            </button>
+            <button type="button" id="btn-open-quran-reader" class="btn btn-gold btn-sm">
+              <i class="fa-solid fa-book-open-reader"></i> فتح المصحف وحفظ الوقف التلقائي
+            </button>
+          </div>
         </div>
-        <!-- مشغل القرآن الكريم الصوتي المباشر بأشهر القراء -->
+
+        <!-- كارت ختمة القرآن الذكية وحاسبة الورد اليومي (Smart Khatmah Planner) -->
         <div class="card mb-4" style="margin-bottom: 18px;">
           <div class="flex-between" style="flex-wrap:wrap; gap:12px;">
             <div>
-              <h3><i class="fa-solid fa-headphones-simple gold-text"></i> الإذاعة والمشغل الصوتي للقرآن الكريم</h3>
-              <small class="small-muted">استمع لتلاوات خاشعة مباشرة أثناء المذاكرة أو العمل بضغطة زر</small>
+              <h3><i class="fa-solid fa-book-quran gold-text"></i> ختمة القرآن الذكية وحاسبة الختم (604 صفحة)</h3>
+              <p id="khatmah-daily-advice" class="small-muted mt-1">حدد مدة الختمة ليحسب لك النظام الورد اليومي المطلوب بالصفحات.</p>
+            </div>
+            <div class="filters-row">
+              <span id="khatmah-pct-badge" class="badge badge-emerald">إنجاز الختمة: 0%</span>
+              <button type="button" id="btn-khatmah-done-today" class="btn btn-gold btn-sm">
+                <i class="fa-solid fa-check-double"></i> أتممت ورد اليوم (+حفظ)
+              </button>
+            </div>
+          </div>
+          <div class="progress-bar-track mt-2">
+            <div id="khatmah-progress-bar" class="progress-bar-fill" style="width: 0%"></div>
+          </div>
+        </div>
+        <!-- مشغل القرآن الكريم الصوتي المباشر بأشهر القراء -->
+<!-- الإذاعات المباشرة (إذاعة القرآن الكريم من القاهرة + أشهر الإذاعات) والمشغل الصوتي -->
+        <div class="card mb-4" style="margin-bottom: 18px;">
+          <!-- صف البث الإذاعي المباشر 24/7 -->
+          <div class="flex-between" style="flex-wrap:wrap; gap:12px; padding-bottom:14px; border-bottom:1px solid var(--border-subtle);">
+            <div>
+              <div class="flex-between" style="justify-content:flex-start; gap:8px;">
+                <h3><i class="fa-solid fa-tower-broadcast gold-text"></i> البث المباشر للإذاعات الإسلامية (24 ساعة)</h3>
+                <span id="radio-live-indicator" class="badge badge-danger hidden"><span class="live-dot" style="background:#ef4444; box-shadow:0 0 8px #ef4444;"></span> مباشر الآن</span>
+              </div>
+              <small id="radio-current-station-label" class="small-muted">اختر إذاعة القرآن الكريم من القاهرة أو أي إذاعة مباشرة لتعمل في الخلفية أثناء مذاكرتك</small>
+            </div>
+            <div class="filters-row">
+              <button type="button" id="btn-cairo-radio-quick" class="btn btn-gold btn-sm">
+                <i class="fa-solid fa-radio"></i> 🇪🇬 إذاعة القرآن الكريم من القاهرة (مباشر)
+              </button>
+              <select id="live-radio-select" class="select-sm">
+                <option value="cairo">🇪🇬 إذاعة القرآن الكريم من القاهرة (البث الرسمي)</option>
+                <option value="https://backup.qurango.net/radio/abdulbasit_abdulsamad_mojawwad">🎙️ إذاعة الشيخ عبد الباسط عبد الصمد (مجود)</option>
+                <option value="https://backup.qurango.net/radio/mohammed_siddiq_alminshawi_mojawwad">🎙️ إذاعة الشيخ محمد صديق المنشاوي (مجود)</option>
+                <option value="https://backup.qurango.net/radio/mahmoud_khalil_alhussary_mojawwad">🎙️ إذاعة الشيخ محمود خليل الحصري</option>
+                <option value="https://backup.qurango.net/radio/mustafa_ismail">🎙️ إذاعة الشيخ مصطفى إسماعيل</option>
+                <option value="https://backup.qurango.net/radio/mohammad_refaat">🎙️ إذاعة الشيخ محمد رفعت (تراث نادر)</option>
+                <option value="https://backup.qurango.net/radio/mahmoud_ali_albanna_mojawwad">🎙️ إذاعة الشيخ محمود علي البنا</option>
+                <option value="https://backup.qurango.net/radio/haram">🕋 إذاعة الحرم المكي والتلاوات الحجازية</option>
+                <option value="https://backup.qurango.net/radio/salma">🌿 إذاعة التلاوات الخاشعة الهادئة</option>
+                <option value="https://backup.qurango.net/radio/tafseer">📖 إذاعة تفسير القرآن الكريم</option>
+                <option value="https://backup.qurango.net/radio/roqiah">🛡️ إذاعة الرقية الشرعية وآيات السكينة</option>
+                <option value="https://backup.qurango.net/radio/athkar">☀️ إذاعة أذكار الصباح والمساء</option>
+                <option value="https://backup.qurango.net/radio/fatwa">📚 إذاعة الفتاوى والعلوم الشرعية</option>
+              </select>
+              <button type="button" id="btn-play-live-radio" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-satellite-dish gold-text"></i> تشغيل الإذاعة المختارة
+              </button>
+            </div>
+          </div>
+
+          <!-- صف اختيار السور والقراء حسب الطلب -->
+          <div class="flex-between mt-2" style="flex-wrap:wrap; gap:12px;">
+            <div>
+              <strong><i class="fa-solid fa-headphones-simple gold-text"></i> أو اختر سورة محددة بصوت قارئك المفضل:</strong>
             </div>
             <div class="filters-row">
               <select id="quran-reciter-select" class="select-sm">
                 <option value="https://server8.mp3quran.net/afs">الشيخ مشاري راشد العفاسي</option>
                 <option value="https://server10.mp3quran.net/minsh">الشيخ محمد صديق المنشاوي</option>
                 <option value="https://server13.mp3quran.net/husr">الشيخ محمود خليل الحصري</option>
+                <option value="https://server7.mp3quran.net/basit">الشيخ عبد الباسط عبد الصمد</option>
                 <option value="https://server11.mp3quran.net/yasser">الشيخ ياسر الدوسري</option>
                 <option value="https://server6.mp3quran.net/qtm">الشيخ ناصر القطامي</option>
+                <option value="https://server12.mp3quran.net/maher">الشيخ ماهر المعيقلي</option>
               </select>
               <select id="quran-surah-select" class="select-sm">
                 <option value="001">سورة الفاتحة</option>
                 <option value="002">سورة البقرة</option>
+                <option value="003">سورة آل عمران</option>
                 <option value="018">سورة الكهف</option>
+                <option value="019">سورة مريم</option>
                 <option value="036">سورة يس</option>
                 <option value="055">سورة الرحمن</option>
                 <option value="056">سورة الواقعة</option>
                 <option value="067">سورة الملك</option>
               </select>
               <button type="button" id="btn-play-quran-stream" class="btn btn-gold btn-sm">
-                <i class="fa-solid fa-play"></i> تشغيل التلاوة
+                <i class="fa-solid fa-play"></i> تشغيل السورة
               </button>
             </div>
           </div>
-          <audio id="quran-audio-player" controls class="mt-2" style="width:100%; height:38px;"></audio>
+          <audio id="quran-audio-player" controls class="mt-2" style="width:100%; height:40px;"></audio>
         </div>
         <div class="dashboard-grid">
           <!-- كارت مواقيت الصلاة الدقيقة لمصر والعداد التنازلي -->
@@ -686,7 +760,9 @@
               <option value="expense">المصروفات فقط</option>
             </select>
           </div>
-          <div class="filters-row">
+<div class="filters-row">
+            <button id="btn-add-subscription" class="btn btn-outline btn-sm"><i class="fa-solid fa-calendar-check gold-text"></i> اشتراك / قسط شهري</button>
+            <button id="btn-add-saving-goal" class="btn btn-outline btn-sm"><i class="fa-solid fa-piggy-bank gold-text"></i> هدف ادخار (الحصالة)</button>
             <button id="btn-set-budget" class="btn btn-outline btn-sm"><i class="fa-solid fa-bullseye"></i> تحديد الميزانية</button>
             <button id="btn-add-transaction" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> تسجيل معاملة مالية</button>
           </div>
@@ -717,10 +793,24 @@
           </div>
         </div>
 
-        <div class="dashboard-grid">
+<div class="dashboard-grid">
           <div class="card">
             <div class="card-header"><h3>سجل المعاملات المالية</h3></div>
             <div id="transactions-container" class="widget-body"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-rotate gold-text"></i> الالتزامات والاشتراكات الشهرية الثابتة</h3>
+              <span id="subs-total-badge" class="badge badge-gold">0 EGP / شهرياً</span>
+            </div>
+            <div id="subscriptions-container" class="widget-body"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-piggy-bank gold-text"></i> الحصالة الذكية وأهداف الادخار</h3>
+              <span id="savings-total-badge" class="badge badge-emerald">0 EGP مدخر</span>
+            </div>
+            <div id="savings-goals-container" class="widget-body"></div>
           </div>
           <div class="card">
             <div class="card-header"><h3>مقارنة الدخل بالمصروفات</h3></div>
@@ -838,7 +928,7 @@
           <!-- Playlist Manager & Local/Direct Player -->
           <div class="card">
             <div class="card-header">
-              <h3><i class="fa-solid fa-list-music gold-text"></i> مدير قوائم التشغيل والمشغل</h3>
+<h3><i class="fa-solid fa-music gold-text"></i> مدير قوائم التشغيل والمشغل</h3>
               <button id="btn-add-playlist-item" class="btn btn-outline btn-sm"><i class="fa-solid fa-plus"></i> إضافة لقائمة التشغيل</button>
             </div>
 <div class="player-box">

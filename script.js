@@ -260,14 +260,15 @@ function bindAuthListener() {
       document.getElementById("user-display-name").textContent = displayName;
       document.getElementById("user-display-email").textContent = user.email;
       document.getElementById("dash-user-name").textContent = displayName;
-      document.getElementById("set-display-name").value = displayName;
-      document.getElementById("set-photo-url").value = user.photoURL || "";
+document.getElementById("set-display-name").value = displayName;
+      const savedBio = localStorage.getItem("MY_LIFE_OS_USER_BIO") || "";
+      const bioInput = document.getElementById("set-user-bio");
+      if (bioInput) bioInput.value = savedBio;
 
-      if (user.photoURL) {
-        document.getElementById("user-avatar-img").src = user.photoURL;
-      } else {
-        document.getElementById("user-avatar-img").src = "logo.png";
-      }
+      const avatarSrc = localStorage.getItem("MY_LIFE_OS_CUSTOM_AVATAR") || user.photoURL || "logo.png";
+      document.getElementById("user-avatar-img").src = avatarSrc;
+      const previewImg = document.getElementById("settings-avatar-preview");
+      if (previewImg) previewImg.src = avatarSrc;
 
       await setDoc(doc(AppState.db, "users", user.uid), {
         ownerUid: user.uid,
@@ -1708,8 +1709,16 @@ document.addEventListener("DOMContentLoaded", () => {
     renderAllViews();
   };
 
-  // Modal Close
+// Modal Close (محمي بقفل التشتت الصارم أثناء جلسة التركيز)
   document.getElementById("btn-close-modal").onclick = () => {
+    const isPomoModal = document.querySelector("#universal-modal .modal-card")?.classList.contains("pomo-fullscreen-active");
+    if (isPomoModal && PomodoroState.isRunning && PomodoroState.strictLock) {
+      attemptBreakStrictLock(() => {
+        pausePomodoro();
+        document.getElementById("universal-modal").classList.add("hidden");
+      });
+      return;
+    }
     document.getElementById("universal-modal").classList.add("hidden");
   };
 
@@ -2206,24 +2215,31 @@ document.getElementById("btn-ai-settings").onclick = () => {
     renderCalendar();
   };
 
-  // Settings & Profile
+// Settings & Profile
   document.getElementById("settings-profile-form").onsubmit = async (e) => {
     e.preventDefault();
     if (!AppState.user) return;
     const displayName = document.getElementById("set-display-name").value.trim();
-    const photoURL = document.getElementById("set-photo-url").value.trim();
-    await updateProfile(AppState.user, { displayName, photoURL });
+    const userBio = document.getElementById("set-user-bio")?.value.trim() || "";
+    localStorage.setItem("MY_LIFE_OS_USER_BIO", userBio);
+
+    await updateProfile(AppState.user, { displayName });
+    document.getElementById("user-display-name").textContent = displayName;
+    document.getElementById("dash-user-name").textContent = displayName;
     showToast("تم تحديث بيانات الملف الشخصي بنجاح", "success");
   };
 
-  document.getElementById("btn-save-preferences").onclick = async () => {
+document.getElementById("btn-save-preferences").onclick = async () => {
     const currency = document.getElementById("set-currency").value;
     const fontSize = document.getElementById("set-font-size").value;
+    const defaultPomo = Number(document.getElementById("set-default-pomo")?.value || 25);
+    setCustomPomodoroTime(defaultPomo, "work");
+
     const existing = AppState.collections.user_settings[0];
     if (existing) {
-      await updateRecord("user_settings", existing.id, { currency, fontSize });
+      await updateRecord("user_settings", existing.id, { currency, fontSize, defaultPomo });
     } else {
-      await createRecord("user_settings", { currency, fontSize });
+      await createRecord("user_settings", { currency, fontSize, defaultPomo });
     }
   };
 
@@ -2306,20 +2322,7 @@ document.getElementById("btn-ai-settings").onclick = () => {
 
 // 1. مؤثرات صوتية تكنولوجية لمسية ناعمة (Tactile Audio Clicks)
 function playTactileClick() {
-  try {
-    const ctx = getAudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(1200, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.04);
-    gain.gain.setValueAtTime(0.08, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.04);
-  } catch (e) {}
+  if (typeof playCustomUISound === "function") playCustomUISound();
 }
 
 document.addEventListener("click", (e) => {
@@ -3304,7 +3307,11 @@ function openPomodoroModal() {
         <button type="button" id="btn-pomo-settings-toggle" class="btn-pomo-secondary">
           <i class="fa-solid fa-sliders"></i> المظهر والصوت
         </button>
-<button type="button" id="btn-pomo-bg-studio" class="btn-pomo-secondary">
+<button type="button" id="btn-pomo-strict-lock" class="btn-pomo-secondary ${PomodoroState.strictLock ? "strict-lock-active" : ""}" title="يمنع الخروج أو فتح مواقع أخرى حتى ينتهي الوقت">
+          <i class="fa-solid ${PomodoroState.strictLock ? "fa-lock" : "fa-lock-open"}"></i>
+          ${PomodoroState.strictLock ? "قفل التشتت: مفعل 🔒" : "قفل التشتت"}
+        </button>
+        <button type="button" id="btn-pomo-bg-studio" class="btn-pomo-secondary">
           <i class="fa-solid fa-image"></i> صورة الخلفية
         </button>
         <button type="button" id="btn-pomo-pure-fullscreen" class="btn-pomo-secondary" title="إخفاء كل الأزرار وشريط ويندوز">
@@ -3314,11 +3321,16 @@ function openPomodoroModal() {
           <i class="fa-solid fa-rotate-right"></i>
         </button>
       </div>
+      ${PomodoroState.strictLock ? `
+        <div class="strict-lock-banner">
+          <span>🛡️ <strong>وضع قفل التشتت الصارم نشط:</strong> مغادرة التاب أو إيقاف الجلسة مبكراً يخصم 50 XP!</span>
+          <span class="badge badge-danger">محاولات التشتت: <strong id="pomo-distraction-count">${PomodoroState.distractionCount || 0}</strong></span>
+        </div>
+      ` : ""}
       <!-- زر عائم خفيف يظهر فقط عند إخفاء كل شيء للعودة -->
       <button type="button" id="btn-exit-pure-cinema" class="pomo-exit-cinema-btn">
         <i class="fa-solid fa-compress"></i> إظهار الأزرار (أو اضغط ESC)
       </button>
-      </div>
 
       <!-- درج سجل الجلسات واستكمال المهام (يفتح عند الضغط على سجل الجلسات) -->
       <div id="pomo-history-drawer" class="pomo-drawer-panel ${PomodoroState.showHistoryDrawer ? "" : "hidden"}">
@@ -3515,15 +3527,7 @@ document.getElementById("btn-pomo-settings-toggle").onclick = () => {
     const val = document.getElementById("pomo-custom-mins").value;
     if (val) { setCustomPomodoroTime(val, "work"); openPomodoroModal(); }
   };
-  document.getElementById("btn-pomo-start").onclick = () => {
-    if (PomodoroState.isRunning) pausePomodoro(); else startPomodoro();
-    openPomodoroModal();
-  };
-  document.getElementById("btn-pomo-reset").onclick = () => {
-    resetPomodoro();
-    openPomodoroModal();
-  };
-}
+document.getElementById("btn-pomo-start").onclick = () => {
 
 // 4. نافذة أصوات التركيز والدراسة
 function openAmbientModal() {
@@ -4536,5 +4540,608 @@ document.addEventListener("DOMContentLoaded", () => {
         await sendToAlexPopup(prompt);
       }
     };
+  });
+});
+/* ==========================================================================
+   STRICT FOCUS LOCK, SMART KHATMAH PLANNER & RECURRING SUBSCRIPTIONS ENGINE
+   ========================================================================== */
+
+PomodoroState.strictLock = false;
+PomodoroState.distractionCount = 0;
+
+// 1. إنذار صوتي فوري عند محاولة فتح تاب تاني أو الخروج أثناء قفل التشتت
+function playStrictLockSiren() {
+  try {
+    const ctx = getAudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(640, ctx.currentTime);
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.18);
+    osc.frequency.setValueAtTime(640, ctx.currentTime + 0.36);
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.65);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.65);
+  } catch (e) {}
+}
+
+// التحقق من سبب الطوارئ لكسر قفل التشتت مع خصم XP
+function attemptBreakStrictLock(onUnlockedCallback) {
+  playStrictLockSiren();
+  const reason = prompt(
+    "🔒 قفل التشتت الصارم مفعل!\n\nلا يُسمح بإيقاف الجلسة أو الخروج قبل انتهاء الوقت.\nإذا كان لديك ظرف طارئ حقيقي، اكتب سبب الطوارئ بالتفصيل (15 حرفاً على الأقل) مع العلم أنه سيتم خصم 50 XP:"
+  );
+  if (reason === null) return;
+  if (reason.trim().length < 15) {
+    showToast("❌ السبب قصير جداً وغير مقنع! ارجع كمل مذاكرتك يا بطل 💪", "error");
+    return;
+  }
+  const penalty = Number(localStorage.getItem("MY_LIFE_OS_XP_PENALTY") || 0) + 50;
+  localStorage.setItem("MY_LIFE_OS_XP_PENALTY", penalty);
+  PomodoroState.strictLock = false;
+  showToast("⚠️ تم كسر قفل التشتت اضطرارياً وخصم 50 XP من رصيدك", "error");
+  if (typeof updateXPSystem === "function") updateXPSystem();
+  if (typeof onUnlockedCallback === "function") onUnlockedCallback();
+}
+
+// رادار كشف مغادرة التاب أو تصغير المتصفح أثناء قفل التشتت
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && PomodoroState.isRunning && PomodoroState.strictLock) {
+    PomodoroState.distractionCount = (PomodoroState.distractionCount || 0) + 1;
+    playStrictLockSiren();
+    document.title = "🚨 ارجع لمذاكرتك فوراً! (قفل التشتت)";
+    const countEl = document.getElementById("pomo-distraction-count");
+    if (countEl) countEl.textContent = PomodoroState.distractionCount;
+  } else {
+    document.title = "MY LIFE OS | نظام تشغيل الحياة الشخصي";
+  }
+});
+
+// 2. محرك ختمة القرآن الذكية وحاسبة الختم (604 صفحة)
+function getKhatmahData() {
+  try {
+    return JSON.parse(localStorage.getItem("MY_LIFE_OS_KHATMAH") || '{"targetDays":30,"currentPage":1,"daysLeft":30}');
+  } catch (e) {
+    return { targetDays: 30, currentPage: 1, daysLeft: 30 };
+  }
+}
+
+function renderSmartKhatmah() {
+  const k = getKhatmahData();
+  const totalPages = 604;
+  const currentPage = Math.min(totalPages, Math.max(0, Number(k.currentPage) || 0));
+  const daysLeft = Math.max(1, Number(k.daysLeft) || 30);
+  const remainingPages = Math.max(0, totalPages - currentPage);
+  const dailyPages = Math.ceil(remainingPages / daysLeft);
+  const pct = Math.round((currentPage / totalPages) * 100);
+
+  const adviceEl = document.getElementById("khatmah-daily-advice");
+  const badgeEl = document.getElementById("khatmah-pct-badge");
+  const barEl = document.getElementById("khatmah-progress-bar");
+
+  if (adviceEl) {
+    if (remainingPages === 0) {
+      adviceEl.innerHTML = `🎉 <strong class="gold-text">مبارك! أتممت ختمة القرآن الكريم كاملة (604 صفحة) تقبل الله منك!</strong>`;
+    } else {
+      adviceEl.innerHTML = `وصلت لصفحة <strong>${currentPage}</strong> من 604 &bull; متبقي <strong>${daysLeft} يوم</strong> &bull; وردك اليومي المطلوب: <strong class="gold-text">${dailyPages} صفحة يومياً</strong> (حوالي ${Math.max(1, Math.round(dailyPages / 4))} صفحات بعد كل صلاة).`;
+    }
+  }
+  if (badgeEl) badgeEl.textContent = `إنجاز الختمة: ${pct}% (${currentPage}/604)`;
+  if (barEl) barEl.style.width = `${pct}%`;
+}
+
+// 3. محرك الاشتراكات والأقساط الشهرية الثابتة
+function getSubscriptionsList() {
+  try {
+    return JSON.parse(localStorage.getItem("MY_LIFE_OS_SUBSCRIPTIONS") || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+function renderRecurringSubscriptions() {
+  const box = document.getElementById("subscriptions-container");
+  const totalBadge = document.getElementById("subs-total-badge");
+  if (!box) return;
+
+  const subs = getSubscriptionsList();
+  const totalMonthly = subs.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+  if (totalBadge) totalBadge.textContent = `${totalMonthly.toLocaleString()} ${AppState.currency} / شهرياً`;
+
+  if (!subs.length) {
+    box.innerHTML = renderEmptyState("لا توجد اشتراكات أو التزامات شهرية مضافة (مثل الإنترنت، الجيم، كورسات).");
+    return;
+  }
+
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const todayDay = now.getDate();
+
+  box.innerHTML = subs.map((s, idx) => {
+    const isPaidThisMonth = s.lastPaidMonth === currentMonthKey;
+    const dueDay = Number(s.dueDay) || 1;
+    const daysDiff = dueDay - todayDay;
+    let statusHtml = "";
+
+    if (isPaidThisMonth) {
+      statusHtml = `<span class="badge badge-emerald"><i class="fa-solid fa-check"></i> مدفوع هذا الشهر</span>`;
+    } else if (daysDiff === 0) {
+      statusHtml = `<span class="badge badge-danger">مستحق الدفع اليوم! 🔴</span>`;
+    } else if (daysDiff > 0 && daysDiff <= 3) {
+      statusHtml = `<span class="badge badge-warning">مستحق خلال ${daysDiff} أيام ⚠️</span>`;
+    } else if (daysDiff < 0) {
+      statusHtml = `<span class="badge badge-danger">متأخر منذ يوم ${dueDay} بالشهر</span>`;
+    } else {
+      statusHtml = `<span class="badge badge-gold">يتجدد يوم ${dueDay} شهرياً</span>`;
+    }
+
+    return `
+      <div class="prayer-row" style="flex-wrap:wrap; gap:8px;">
+        <div>
+          <strong>${escapeHTML(s.title)}</strong>
+          <small class="small-muted d-block">${Number(s.amount).toLocaleString()} ${AppState.currency} • ${escapeHTML(s.category || "اشتراك ثابت")}</small>
+        </div>
+        <div class="config-actions">
+          ${statusHtml}
+          ${!isPaidThisMonth ? `
+            <button type="button" class="btn btn-xs btn-gold" data-pay-sub="${idx}" title="خصم وتسجيل في المعاملات المالية">
+              <i class="fa-solid fa-bolt"></i> دفع وتسجيل
+            </button>
+          ` : ""}
+          <button type="button" class="btn btn-xs btn-danger" data-del-sub="${idx}">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderSmartKhatmah();
+  setTimeout(renderRecurringSubscriptions, 900);
+
+  // إعداد خطة ختمة القرآن الذكية
+  document.getElementById("btn-khatmah-settings")?.addEventListener("click", () => {
+    const k = getKhatmahData();
+    openFormModal("إعداد خطة ختمة القرآن الذكية", `
+      <div class="form-group">
+        <label>في كم يوم تريد ختم القرآن الكريم؟</label>
+        <select name="targetDays">
+          <option value="30" ${k.targetDays == 30 ? "selected" : ""}>30 يوماً (ختمة شهرية - جزء يومياً)</option>
+          <option value="15" ${k.targetDays == 15 ? "selected" : ""}>15 يوماً (جزآن يومياً)</option>
+          <option value="10" ${k.targetDays == 10 ? "selected" : ""}>10 أيام (3 أجزاء يومياً)</option>
+          <option value="7" ${k.targetDays == 7 ? "selected" : ""}>7 أيام (ختمة أسبوعية)</option>
+          <option value="60" ${k.targetDays == 60 ? "selected" : ""}>60 يوماً (نصف جزء يومياً)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>رقم الصفحة التي وصلت إليها حالياً (من 1 إلى 604)</label>
+        <input type="number" name="currentPage" min="0" max="604" value="${k.currentPage || 1}" required />
+      </div>
+      <div class="form-group">
+        <label>الأيام المتبقية في خطتك الحالية</label>
+        <input type="number" name="daysLeft" min="1" max="365" value="${k.daysLeft || 30}" required />
+      </div>
+    `, async (data) => {
+      const updated = {
+        targetDays: Number(data.targetDays) || 30,
+        currentPage: Number(data.currentPage) || 1,
+        daysLeft: Number(data.daysLeft) || 30
+      };
+      localStorage.setItem("MY_LIFE_OS_KHATMAH", JSON.stringify(updated));
+      localStorage.setItem("MY_LIFE_OS_QURAN_BOOKMARK", `صفحة ${updated.currentPage} من المصحف`);
+      renderSmartKhatmah();
+      refreshSuperOSWidgets();
+      showToast("تم تحديث خطة ختمة القرآن الذكية بنجاح 🌿", "success");
+    });
+  });
+
+  // زر إتمام ورد اليوم تلقائياً
+  document.getElementById("btn-khatmah-done-today")?.addEventListener("click", async () => {
+    const k = getKhatmahData();
+    const remPages = Math.max(0, 604 - (Number(k.currentPage) || 0));
+    if (remPages === 0) {
+      showToast("لقد أتممت الختمة بالفعل! يمكنك بدء ختمة جديدة من زر خطة الختمة.", "info");
+      return;
+    }
+    const dailyPages = Math.ceil(remPages / Math.max(1, Number(k.daysLeft) || 1));
+    const fromPage = Number(k.currentPage) || 1;
+    const toPage = Math.min(604, fromPage + dailyPages);
+
+    k.currentPage = toPage;
+    k.daysLeft = Math.max(1, (Number(k.daysLeft) || 1) - 1);
+    localStorage.setItem("MY_LIFE_OS_KHATMAH", JSON.stringify(k));
+    localStorage.setItem("MY_LIFE_OS_QURAN_BOOKMARK", `صفحة ${toPage} من المصحف`);
+    renderSmartKhatmah();
+    refreshSuperOSWidgets();
+
+    await createRecord("quran_progress", {
+      surah: `ورد الختمة (صفحة ${fromPage} إلى ${toPage})`,
+      type: "تلاوة ختمة",
+      fromAyah: fromPage,
+      toAyah: toPage,
+      ayahCount: dailyPages * 15,
+      date: todayISO()
+    });
+    showToast(`تقبل الله! تم تسجيل قراءة ${dailyPages} صفحة والوصول لصفحة ${toPage} 🌿`, "success");
+  });
+
+  // إضافة اشتراك أو قسط شهري جديد
+  document.getElementById("btn-add-subscription")?.addEventListener("click", () => {
+    openFormModal("إضافة اشتراك أو التزام شهري ثابت", `
+      <div class="form-group"><label>اسم الاشتراك / القسط</label><input name="title" required placeholder="باقة الإنترنت، اشتراك الجيم، كورسات..." /></div>
+      <div class="form-group"><label>المبلغ الشهري (${AppState.currency})</label><input type="number" step="0.01" name="amount" required /></div>
+      <div class="form-group"><label>يوم التجديد أو الاستحقاق في الشهر (1 - 31)</label><input type="number" min="1" max="31" name="dueDay" value="1" required /></div>
+      <div class="form-group"><label>التصنيف</label><input name="category" placeholder="فواتير، دراسة، رياضة، خدمات..." /></div>
+    `, async (data) => {
+      const subs = getSubscriptionsList();
+      subs.push({
+        title: data.title,
+        amount: Number(data.amount) || 0,
+        dueDay: Number(data.dueDay) || 1,
+        category: data.category || "اشتراك شهري",
+        lastPaidMonth: ""
+      });
+      localStorage.setItem("MY_LIFE_OS_SUBSCRIPTIONS", JSON.stringify(subs));
+      renderRecurringSubscriptions();
+      showToast("تمت إضافة الالتزام الشهري بنجاح 📅", "success");
+    });
+  });
+
+  // أزرار دفع أو حذف اشتراك شهري
+  document.addEventListener("click", async (e) => {
+    const payBtn = e.target.closest("[data-pay-sub]");
+    if (payBtn) {
+      const idx = Number(payBtn.dataset.paySub);
+      const subs = getSubscriptionsList();
+      const item = subs[idx];
+      if (!item) return;
+
+      const now = new Date();
+      item.lastPaidMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      localStorage.setItem("MY_LIFE_OS_SUBSCRIPTIONS", JSON.stringify(subs));
+      renderRecurringSubscriptions();
+
+      await createRecord("transactions", {
+        title: `دفع اشتراك: ${item.title}`,
+        amount: Number(item.amount),
+        type: "expense",
+        category: item.category || "اشتراك شهري",
+        date: todayISO()
+      });
+    }
+
+    const delBtn = e.target.closest("[data-del-sub]");
+    if (delBtn) {
+      const idx = Number(delBtn.dataset.delSub);
+      const subs = getSubscriptionsList();
+      subs.splice(idx, 1);
+      localStorage.setItem("MY_LIFE_OS_SUBSCRIPTIONS", JSON.stringify(subs));
+      renderRecurringSubscriptions();
+      showToast("تم حذف الاشتراك الشهري", "info");
+    }
+  });
+});
+/* ==========================================================================
+   CAIRO QURAN LIVE RADIO, TIME-CAPSULE VAULT, SMART PIGGY BANK & VOICE TTS
+   ========================================================================== */
+
+// 1. محرك البث المباشر لإذاعة القرآن الكريم من القاهرة (مع سيرفرات بديلة تلقائية) + 12 إذاعة
+const CAIRO_QURAN_RADIO_STREAMS = [
+  "https://stream.radiojar.com/8s5u5tpdtwzuv",
+  "https://n0a.radiojar.com/8s5u5tpdtwzuv",
+  "https://n02.radiojar.com/8s5u5tpdtwzuv",
+  "https://backup.qurango.net/radio/abdulbasit_abdulsamad_mojawwad"
+];
+
+let cairoStreamIndex = 0;
+
+function playLiveIslamicRadio(stationVal, stationName) {
+  const player = document.getElementById("quran-audio-player");
+  const liveBadge = document.getElementById("radio-live-indicator");
+  const labelEl = document.getElementById("radio-current-station-label");
+  if (!player) return;
+
+  if (stationVal === "cairo") {
+    cairoStreamIndex = 0;
+    player.src = CAIRO_QURAN_RADIO_STREAMS[cairoStreamIndex];
+    player.onerror = () => {
+      cairoStreamIndex++;
+      if (cairoStreamIndex < CAIRO_QURAN_RADIO_STREAMS.length) {
+        player.src = CAIRO_QURAN_RADIO_STREAMS[cairoStreamIndex];
+        player.play().catch(() => {});
+      }
+    };
+  } else {
+    player.onerror = null;
+    player.src = stationVal;
+  }
+
+  player.play().then(() => {
+    if (liveBadge) liveBadge.classList.remove("hidden");
+    if (labelEl) labelEl.innerHTML = `🔴 <strong>يعمل الآن على الهواء:</strong> ${escapeHTML(stationName)}`;
+    showToast(`تم تشغيل ${stationName} 📻🌿`, "success");
+  }).catch(() => {
+    showToast("جاري الاتصال بسيرفر البث المباشر...", "info");
+  });
+}
+
+// 2. قارئ الموجز اليومي الصوتي الذكي (Voice Daily Briefing TTS)
+function speakDailyBriefingTTS() {
+  if (!("speechSynthesis" in window)) {
+    showToast("متصفحك الحالي لا يدعم القراءة الصوتية المباشرة TTS", "error");
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+
+  const userName = (AppState.user?.displayName || "يا باشمهندس").split(" ")[0];
+  const briefingText = document.getElementById("morning-briefing-text")?.textContent || "";
+  const nextPrayerText = document.getElementById("next-prayer-countdown")?.textContent || "";
+  const fullSpeech = `السلام عليكم يا ${userName}. إليك موجز القيادة الذكي ليومك: ${briefingText}. ${nextPrayerText}. أتمنى لك يوماً مباركاً ومليئاً بالإنجاز.`;
+
+  const utterance = new SpeechSynthesisUtterance(fullSpeech);
+  utterance.lang = "ar-EG";
+  utterance.rate = 0.98;
+
+  const voices = window.speechSynthesis.getVoices();
+  const arabicVoice = voices.find(v => v.lang.includes("ar"));
+  if (arabicVoice) utterance.voice = arabicVoice;
+
+  const btn = document.getElementById("btn-speak-briefing");
+  if (btn) btn.innerHTML = `<i class="fa-solid fa-waveform-lines fa-beat gold-text"></i> جاري القراءة... (اضغط للإيقاف)`;
+
+  utterance.onend = () => {
+    if (btn) btn.innerHTML = `<i class="fa-solid fa-volume-high gold-text"></i> اقرأ لي موجز اليوم صوتياً`;
+  };
+
+  window.speechSynthesis.speak(utterance);
+  showToast("أليكس يقرأ لك ملخص يومك الآن 🔊", "info");
+}
+
+// 3. محرك كبسولة الزمن ورسائل المستقبل (Future Self Time-Capsule)
+function getTimeCapsules() {
+  try {
+    return JSON.parse(localStorage.getItem("MY_LIFE_OS_TIME_CAPSULES") || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+function renderTimeCapsules() {
+  const box = document.getElementById("dash-time-capsules");
+  if (!box) return;
+
+  const list = getTimeCapsules();
+  if (!list.length) {
+    box.innerHTML = renderEmptyState("اكتب رسالة أو هدفاً لنفسك في المستقبل وسيُغلق بقفل زمني حتى يحين موعده!");
+    return;
+  }
+
+  const today = todayISO();
+  box.innerHTML = list.map((cap, idx) => {
+    const isUnlocked = today >= cap.unlockDate;
+    const diffDays = Math.max(0, Math.ceil((new Date(cap.unlockDate) - new Date(today)) / (1000 * 60 * 60 * 24)));
+
+    return `
+      <div class="prayer-row capsule-card ${isUnlocked ? "capsule-unlocked" : "capsule-locked"}">
+        <div style="flex:1;">
+          <div class="flex-between">
+            <strong>
+              <i class="fa-solid ${isUnlocked ? "fa-lock-open gold-text" : "fa-lock text-danger"}"></i>
+              ${escapeHTML(cap.title)}
+            </strong>
+            <span class="badge ${isUnlocked ? "badge-emerald" : "badge-warning"}">
+              ${isUnlocked ? "متاحة للفتح الآن 🔓" : `تُفتح بعد ${diffDays} يوم ⏳`}
+            </span>
+          </div>
+          ${isUnlocked
+            ? `<p class="small-note mt-1">📜 رسالتك: "${escapeHTML(cap.message)}"</p>`
+            : `<small class="small-muted d-block mt-1">🔒 مشفرة ومغلقة حتى تاريخ ${escapeHTML(cap.unlockDate)}</small>`
+          }
+        </div>
+        <button type="button" class="btn btn-xs btn-danger" data-del-capsule="${idx}" title="حذف الكبسولة">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
+    `;
+  }).join("");
+}
+
+function openCreateTimeCapsuleModal() {
+  const nextMonth = new Date();
+  nextMonth.setDate(nextMonth.getDate() + 30);
+  const defaultUnlock = nextMonth.toISOString().split("T")[0];
+
+  openFormModal("⏳ إنشاء كبسولة زمن جديدة لنفسك في المستقبل", `
+    <div class="form-group">
+      <label>عنوان الرسالة أو الهدف المستقبلي</label>
+      <input name="title" required placeholder="مثال: رسالتي لنفسي بعد امتحانات الفاينل" />
+    </div>
+    <div class="form-group">
+      <label>ماذا تريد أن تقول لنفسك في المستقبل؟ (سيتم تشفيرها وقفلها)</label>
+      <textarea name="message" rows="4" required placeholder="إن شاء الله أكون قفلت مواد الترم ده بامتياز وخلصت المشروع..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>تاريخ فك القفل وفتح الرسالة</label>
+      <input type="date" name="unlockDate" min="${todayISO()}" value="${defaultUnlock}" required />
+    </div>
+  `, async (data) => {
+    const list = getTimeCapsules();
+    list.unshift({
+      title: data.title,
+      message: data.message,
+      unlockDate: data.unlockDate,
+      createdAt: todayISO()
+    });
+    localStorage.setItem("MY_LIFE_OS_TIME_CAPSULES", JSON.stringify(list));
+    renderTimeCapsules();
+    showToast(`تم إغلاق وتشفير كبسولة الزمن حتى تاريخ ${data.unlockDate} 🔒⏳`, "success");
+  });
+}
+
+// 4. محرك الحصالة الذكية وأهداف الادخار البصرية (Visual Savings Goals)
+function getSavingsGoals() {
+  try {
+    return JSON.parse(localStorage.getItem("MY_LIFE_OS_SAVINGS_GOALS") || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+function renderSavingsGoals() {
+  const box = document.getElementById("savings-goals-container");
+  const totalBadge = document.getElementById("savings-total-badge");
+  if (!box) return;
+
+  const goals = getSavingsGoals();
+  const totalSaved = goals.reduce((sum, g) => sum + (Number(g.savedAmount) || 0), 0);
+  if (totalBadge) totalBadge.textContent = `${totalSaved.toLocaleString()} ${AppState.currency} مدخر`;
+
+  if (!goals.length) {
+    box.innerHTML = renderEmptyState("حدد هدفاً مالياً تدخر من أجله (مثل تطوير اللابتوب أو شراء شاشة ثانية) وتابع شريط الإنجاز!");
+    return;
+  }
+
+  box.innerHTML = goals.map((g, idx) => {
+    const target = Math.max(1, Number(g.targetAmount) || 1);
+    const saved = Math.min(target, Number(g.savedAmount) || 0);
+    const pct = Math.min(100, Math.round((saved / target) * 100));
+
+    return `
+      <div class="prayer-row" style="flex-direction:column; align-items:stretch; gap:8px;">
+        <div class="flex-between">
+          <div>
+            <strong>🎯 ${escapeHTML(g.title)}</strong>
+            <small class="small-muted d-block">المدخر: <strong>${saved.toLocaleString()}</strong> من <strong>${target.toLocaleString()} ${AppState.currency}</strong></small>
+          </div>
+          <div class="config-actions">
+            <span class="badge ${pct >= 100 ? "badge-emerald" : "badge-gold"}">${pct}%</span>
+            <button type="button" class="btn btn-xs btn-gold" data-deposit-goal="${idx}">
+              <i class="fa-solid fa-plus"></i> إيداع في الحصالة
+            </button>
+            <button type="button" class="btn btn-xs btn-danger" data-del-goal="${idx}">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" style="width:${pct}%"></div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderTimeCapsules();
+  setTimeout(renderSavingsGoals, 900);
+
+  // أزرار تشغيل إذاعة القرآن الكريم من القاهرة والإذاعات المباشرة
+  document.getElementById("btn-cairo-radio-quick")?.addEventListener("click", () => {
+    const sel = document.getElementById("live-radio-select");
+    if (sel) sel.value = "cairo";
+    playLiveIslamicRadio("cairo", "إذاعة القرآن الكريم من القاهرة (البث المباشر)");
+  });
+
+  document.getElementById("btn-play-live-radio")?.addEventListener("click", () => {
+    const sel = document.getElementById("live-radio-select");
+    if (!sel) return;
+    const stationName = sel.options[sel.selectedIndex]?.text || "الإذاعة المباشرة";
+    playLiveIslamicRadio(sel.value, stationName);
+  });
+
+  document.getElementById("live-radio-select")?.addEventListener("change", (e) => {
+    const sel = e.target;
+    const stationName = sel.options[sel.selectedIndex]?.text || "الإذاعة المباشرة";
+    playLiveIslamicRadio(sel.value, stationName);
+  });
+
+  // زر القراءة الصوتية للموجز اليومي (TTS)
+  document.getElementById("btn-speak-briefing")?.addEventListener("click", () => {
+    if (window.speechSynthesis && window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      document.getElementById("btn-speak-briefing").innerHTML = `<i class="fa-solid fa-volume-high gold-text"></i> اقرأ لي موجز اليوم صوتياً`;
+      return;
+    }
+    speakDailyBriefingTTS();
+  });
+
+  // أزرار كبسولة الزمن
+  document.getElementById("btn-open-time-capsule")?.addEventListener("click", openCreateTimeCapsuleModal);
+  document.getElementById("btn-add-capsule-card")?.addEventListener("click", openCreateTimeCapsuleModal);
+
+  // زر إضافة هدف جديد في الحصالة الذكية
+  document.getElementById("btn-add-saving-goal")?.addEventListener("click", () => {
+    openFormModal("🐷 إضافة هدف جديد في الحصالة الذكية", `
+      <div class="form-group">
+        <label>اسم الهدف الذي تدخر من أجله</label>
+        <input name="title" required placeholder="مثال: تطوير اللابتوب / شراء شاشة ثانية..." />
+      </div>
+      <div class="form-group">
+        <label>المبلغ الإجمالي المطلوب (${AppState.currency})</label>
+        <input type="number" step="1" name="targetAmount" required placeholder="15000" />
+      </div>
+      <div class="form-group">
+        <label>المبلغ المتوفر معك حالياً كبداية (${AppState.currency})</label>
+        <input type="number" step="1" name="savedAmount" value="0" required />
+      </div>
+    `, async (data) => {
+      const goals = getSavingsGoals();
+      goals.push({
+        title: data.title,
+        targetAmount: Number(data.targetAmount) || 1000,
+        savedAmount: Number(data.savedAmount) || 0
+      });
+      localStorage.setItem("MY_LIFE_OS_SAVINGS_GOALS", JSON.stringify(goals));
+      renderSavingsGoals();
+      showToast("تم إنشاء هدف الادخار في الحصالة الذكية بنجاح 🎯", "success");
+    });
+  });
+
+  // أحداث إيداع مبلغ في الحصالة أو حذف كبسولة / هدف
+  document.addEventListener("click", (e) => {
+    const depBtn = e.target.closest("[data-deposit-goal]");
+    if (depBtn) {
+      const idx = Number(depBtn.dataset.depositGoal);
+      const goals = getSavingsGoals();
+      const g = goals[idx];
+      if (!g) return;
+
+      const amountStr = prompt(`💰 كم المبلغ الذي تريد إيداعه في حصالة "${g.title}"؟ (${AppState.currency})`, "200");
+      if (!amountStr) return;
+      const addVal = Number(amountStr);
+      if (isNaN(addVal) || addVal <= 0) return;
+
+      g.savedAmount = (Number(g.savedAmount) || 0) + addVal;
+      localStorage.setItem("MY_LIFE_OS_SAVINGS_GOALS", JSON.stringify(goals));
+      renderSavingsGoals();
+      if (typeof updateXPSystem === "function") updateXPSystem();
+      showToast(`عاش يا بطل! تم إيداع ${addVal} ${AppState.currency} في حصالة "${g.title}" 🎉`, "success");
+    }
+
+    const delGoalBtn = e.target.closest("[data-del-goal]");
+    if (delGoalBtn) {
+      const idx = Number(delGoalBtn.dataset.delGoal);
+      const goals = getSavingsGoals();
+      goals.splice(idx, 1);
+      localStorage.setItem("MY_LIFE_OS_SAVINGS_GOALS", JSON.stringify(goals));
+      renderSavingsGoals();
+      showToast("تم حذف هدف الادخار", "info");
+    }
+
+    const delCapBtn = e.target.closest("[data-del-capsule]");
+    if (delCapBtn) {
+      const idx = Number(delCapBtn.dataset.delCapsule);
+      const list = getTimeCapsules();
+      list.splice(idx, 1);
+      localStorage.setItem("MY_LIFE_OS_TIME_CAPSULES", JSON.stringify(list));
+      renderTimeCapsules();
+      showToast("تم حذف كبسولة الزمن", "info");
+    }
   });
 });
