@@ -3523,11 +3523,60 @@ document.getElementById("btn-pomo-settings-toggle").onclick = () => {
       openPomodoroModal();
     };
   });
-  document.getElementById("btn-apply-custom-pomo").onclick = () => {
+document.getElementById("btn-apply-custom-pomo").onclick = () => {
     const val = document.getElementById("pomo-custom-mins").value;
     if (val) { setCustomPomodoroTime(val, "work"); openPomodoroModal(); }
   };
-document.getElementById("btn-pomo-start").onclick = () => {
+
+  document.getElementById("btn-pomo-strict-lock").onclick = () => {
+    if (PomodoroState.isRunning && PomodoroState.strictLock) {
+      attemptBreakStrictLock(() => {
+        PomodoroState.strictLock = false;
+        openPomodoroModal();
+      });
+      return;
+    }
+    PomodoroState.strictLock = !PomodoroState.strictLock;
+    if (PomodoroState.strictLock) {
+      PomodoroState.distractionCount = 0;
+      showToast("تم تفعيل قفل التشتت الصارم 🔒! لن تتمكن من الخروج قبل انتهاء الوقت.", "success");
+    } else {
+      showToast("تم إلغاء قفل التشتت", "info");
+    }
+    openPomodoroModal();
+  };
+
+  document.getElementById("btn-pomo-start").onclick = async () => {
+    if (PomodoroState.isRunning) {
+      if (PomodoroState.strictLock) {
+        attemptBreakStrictLock(() => {
+          pausePomodoro();
+          openPomodoroModal();
+        });
+        return;
+      }
+      pausePomodoro();
+    } else {
+      startPomodoro();
+      if (PomodoroState.strictLock && !document.fullscreenElement) {
+        try { await document.documentElement.requestFullscreen(); } catch (e) {}
+      }
+    }
+    openPomodoroModal();
+  };
+
+  document.getElementById("btn-pomo-reset").onclick = () => {
+    if (PomodoroState.isRunning && PomodoroState.strictLock) {
+      attemptBreakStrictLock(() => {
+        resetPomodoro();
+        openPomodoroModal();
+      });
+      return;
+    }
+    resetPomodoro();
+    openPomodoroModal();
+  };
+}
 
 // 4. نافذة أصوات التركيز والدراسة
 function openAmbientModal() {
@@ -4234,8 +4283,9 @@ function updateXPSystem() {
     return sum + Object.values(s.checklist || {}).filter(Boolean).length;
   }, 0);
 
-  const totalXP = (completedTasks * 25) + (totalPrayers * 15) + (focusSessions * 40) + (checkItems * 20);
-  const level = Math.floor(totalXP / 200) + 1;
+const penaltyXP = Number(localStorage.getItem("MY_LIFE_OS_XP_PENALTY") || 0);
+  const totalXP = Math.max(0, (completedTasks * 25) + (totalPrayers * 15) + (focusSessions * 40) + (checkItems * 20) - penaltyXP);
+    const level = Math.floor(totalXP / 200) + 1;
   const xpInCurrentLevel = totalXP % 200;
   const progressPct = Math.min(100, Math.round((xpInCurrentLevel / 200) * 100));
 
