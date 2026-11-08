@@ -4030,13 +4030,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function openWallpaperStudioModal() {
   const presets = [
+    // ⚔️ رجال غامضة وأجواء فخمة
+    { name: "🕵️‍♂️ فارس الظل الغامض", url: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1920&q=85" },
+    { name: "👤 وقفة رجل هادئ", url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=1920&q=85" },
+    { name: "🧥 هيبة في الغموض", url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1920&q=85" },
+    // 🌸 أنمي ومذاكرة هادئة (محترمة وفخمة)
+    { name: "🎧 أنمي تركيز ومذاكرة", url: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1920&q=85" },
+    { name: "☕ أجواء أنمي دافئة", url: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=1920&q=85" },
+    { name: "🌸 فتاة الأنمي والهدوء", url: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1920&q=85" },
     // شباب وفخامة وغموض
     { name: "⚔️ المحارب الغامض", url: DEFAULT_WALLPAPERS.shadowWarrior },
     { name: "🥷 ساموراي الظلام", url: DEFAULT_WALLPAPERS.darkRonin },
     { name: "💻 هاكر النيون", url: DEFAULT_WALLPAPERS.cyberCoder },
     { name: "🌑 سيد الظلال", url: DEFAULT_WALLPAPERS.nightHood },
     // بنات ورسوم لطيفة
-    { name: "🌸 فتاة الأنمي والمذاكرة", url: DEFAULT_WALLPAPERS.animeGirlStudy },
     { name: "🌺 أزهار الساكورا الوردية", url: DEFAULT_WALLPAPERS.sakuraPink },
     { name: "🕯️ غرفة دافئة لطيفة", url: DEFAULT_WALLPAPERS.cozyAesthetic },
     { name: "☁️ غيوم وردية هادئة", url: DEFAULT_WALLPAPERS.pastelClouds },
