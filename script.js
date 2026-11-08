@@ -4122,16 +4122,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-mini-pomo-open")?.addEventListener("click", openPomodoroModal);
 });
 
-function saveAndApplyWallpaper(imgUrl, target = "both") {
-  if (target === "both" || target === "app") {
-    localStorage.setItem("MY_LIFE_OS_APP_BG", imgUrl);
-  }
-  if (target === "both" || target === "pomo") {
-    localStorage.setItem("MY_LIFE_OS_POMO_BG", imgUrl);
-  }
-  applySavedWallpapers();
-  showToast("تم تحديث الخلفية بنجاح! 🔥", "success");
-}
 
 // 2. خوارزمية أليكس الذكية الواعية بالسياق (Smart Context-Aware Algorithm)
 const AlexBrain = {
