@@ -3001,12 +3001,40 @@ function updatePomodoroDisplays() {
   const displayEl = document.getElementById("pomo-modal-display");
   if (displayEl) displayEl.textContent = timeStr;
 
+  const total = Math.max(1, PomodoroState.duration);
+  const elapsedRatio = Math.min(1, Math.max(0, (total - PomodoroState.timeLeft) / total));
+  const pct = Math.round(elapsedRatio * 100);
+
   const circleProgress = document.getElementById("pomo-circle-bar");
   if (circleProgress) {
-    const total = PomodoroState.duration;
     const offset = 854 - (854 * (PomodoroState.timeLeft / total));
     circleProgress.style.strokeDashoffset = offset;
   }
+
+  // 4. الإضاءة الديناميكية المتفاعلة مع الوقت (Dynamic Aura Shift)
+  const ringBox = document.querySelector(".pomo-ring-container");
+  if (ringBox && PomodoroState.isRunning) {
+    ringBox.classList.toggle("aura-stage-mid", elapsedRatio >= 0.5 && elapsedRatio < 0.8);
+    ringBox.classList.toggle("aura-stage-final", elapsedRatio >= 0.8);
+    ringBox.classList.toggle("aura-last-two-mins", PomodoroState.timeLeft <= 120);
+  }
+
+  // 9. تحديث مرحلة نمو شجرة الالتزام داخل البومودورو والـ Mini-HUD
+  const treeStages = [
+    { icon: "🌱", label: "بذرة التركيز" },
+    { icon: "🌿", label: "نبتة خضراء" },
+    { icon: "🌳", label: "شجرة مورقة" },
+    { icon: "🌲✨", label: "شجرة ذهبية مثمرة" }
+  ];
+  const stageIdx = Math.min(3, Math.floor(elapsedRatio * 4));
+  const treeEl = document.getElementById("pomo-tree-stage");
+  if (treeEl) treeEl.innerHTML = `${treeStages[stageIdx].icon} <small>${treeStages[stageIdx].label} (${pct}%)</small>`;
+  const miniTree = document.getElementById("mini-hud-tree");
+  if (miniTree) miniTree.textContent = treeStages[stageIdx].icon;
+
+  // 7. تحديث شريط تقدم الـ Mini-HUD المصغر
+  const miniBar = document.getElementById("mini-pomo-bar");
+  if (miniBar) miniBar.style.width = `${pct}%`;
 
   const badge = document.getElementById("topbar-pomo-badge");
   if (badge) {
@@ -3239,14 +3267,15 @@ function openPomodoroModal() {
 
   const modalBody = `
     <div class="pomodoro-card">
-      <!-- الهيدر الفخم باللوجو وشعلة الإنجاز -->
+<!-- الهيدر الفخم باللوجو + كرات الطاقة الذهبية لمستويات اليوم (Orbs) -->
       <div class="pomo-brand-header">
         <div class="pomo-logo-orb">
           <img src="logo.png" alt="MY LIFE OS" onerror="this.style.display='none'" />
         </div>
-        <div class="pomo-brand-title">MY LIFE <span>FOCUS STUDIO</span></div>
-        <div class="pomo-streak-pill">
-          🔥 جلسات اليوم: <strong>${streakCount}</strong> &bull; إجمالي السجل: <strong>${sessionsLog.length}</strong>
+        <div class="pomo-brand-title">MY LIFE <span>FOCUS STUDIO V4</span></div>
+        <div class="pomo-orbs-row" title="كرات الطاقة لجلسات اليوم">
+          ${Array.from({ length: 6 }, (_, i) => `<span class="pomo-energy-orb ${i < streakCount ? "lit" : ""}"></span>`).join("")}
+          <span class="pomo-streak-pill">🔥 اليوم: <strong>${streakCount}</strong> &bull; السجل: <strong>${sessionsLog.length}</strong></span>
         </div>
       </div>
 
@@ -3273,7 +3302,7 @@ function openPomodoroModal() {
         </div>
       </div>
 
-      <!-- الساعة السويسرية العملاقة في قلب الشاشة -->
+      <!-- الساعة السويسرية العملاقة في قلب الشاشة + شجرة الالتزام التفاعلية -->
       <div class="pomo-ring-container" data-dial-skin="${PomodoroState.dialSkin}">
         <div id="pomo-breath-ring" class="pomo-breathing-aura ${PomodoroState.breathingGuide ? "active" : ""}"></div>
         <svg class="pomo-svg-ring" viewBox="0 0 320 320">
@@ -3286,36 +3315,48 @@ function openPomodoroModal() {
             ${PomodoroState.customTaskName ? "🎯 " + escapeHTML(PomodoroState.customTaskName) : PomodoroState.linkedTarget ? "🎯 " + escapeHTML(PomodoroState.linkedTarget.split(":")[1]) : PomodoroState.isRunning ? "تركيز عميق جارٍ الآن ⚡" : "جاهز للانطلاق 🚀"}
           </span>
           <div id="pomo-modal-display" class="pomodoro-timer-display">${formatPomoTime(PomodoroState.timeLeft)}</div>
+          <div id="pomo-tree-stage" class="pomo-tree-badge">🌱 <small>بذرة التركيز</small></div>
           <div class="pomo-visualizer-bars ${PomodoroState.isRunning ? "playing" : ""}">
             ${Array.from({length: 16}, () => `<span class="vis-bar"></span>`).join("")}
           </div>
         </div>
       </div>
 
-      <!-- الأزرار الرئيسية: بدء التركيز + حفظ الجلسة + سجل الجلسات + تخصيص الإعدادات -->
+      <!-- 5. شريط الاقتباسات والحِكم الهادئ المتغير (Focus Wisdom Ticker) -->
+      <div id="pomo-wisdom-ticker" class="pomo-wisdom-ticker">
+        ✨ "وَقُل رَّبِّ زِدْنِي عِلْمًا" — كل دقيقة تركيز اليوم تبني مستقبلك الهندسي غداً
+      </div>
+
+      <!-- الأزرار الرئيسية + ميكسر الأصوات + نافذة Mini-HUD -->
       <div class="pomodoro-actions" style="flex-wrap:wrap;">
         <button type="button" id="btn-pomo-start" class="btn-pomo-main">
           <i class="fa-solid ${PomodoroState.isRunning ? "fa-pause" : "fa-play"}"></i>
           ${PomodoroState.isRunning ? "إيقاف مؤقت" : "بدء التركيز"}
         </button>
         <button type="button" id="btn-pomo-save-session" class="btn-pomo-secondary" style="border-color:var(--pomo-accent)!important; color:var(--pomo-accent)!important;">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ الجلسة
+          <i class="fa-solid fa-floppy-disk"></i> حفظ الجلسة (+شجرة 🌳)
+        </button>
+        <button type="button" id="btn-pomo-mixer-open" class="btn-pomo-secondary">
+          <i class="fa-solid fa-sliders"></i> ميكسر الأصوات (4 قنوات)
+        </button>
+        <button type="button" id="btn-pomo-mini-hud" class="btn-pomo-secondary" title="تحويل إلى كبسولة عائمة مصغرة في الزاوية">
+          <i class="fa-solid fa-window-restore"></i> نافذة HUD مصغرة
         </button>
         <button type="button" id="btn-pomo-history-toggle" class="btn-pomo-secondary">
-          <i class="fa-solid fa-clock-rotate-left"></i> سجل الجلسات (${sessionsLog.length})
+          <i class="fa-solid fa-clock-rotate-left"></i> السجل (${sessionsLog.length})
         </button>
         <button type="button" id="btn-pomo-settings-toggle" class="btn-pomo-secondary">
-          <i class="fa-solid fa-sliders"></i> المظهر والصوت
+          <i class="fa-solid fa-palette"></i> المظهر
         </button>
-<button type="button" id="btn-pomo-strict-lock" class="btn-pomo-secondary ${PomodoroState.strictLock ? "strict-lock-active" : ""}" title="يمنع الخروج أو فتح مواقع أخرى حتى ينتهي الوقت">
+        <button type="button" id="btn-pomo-strict-lock" class="btn-pomo-secondary ${PomodoroState.strictLock ? "strict-lock-active" : ""}" title="يمنع الخروج أو فتح مواقع أخرى حتى ينتهي الوقت">
           <i class="fa-solid ${PomodoroState.strictLock ? "fa-lock" : "fa-lock-open"}"></i>
           ${PomodoroState.strictLock ? "قفل التشتت: مفعل 🔒" : "قفل التشتت"}
         </button>
         <button type="button" id="btn-pomo-bg-studio" class="btn-pomo-secondary">
-          <i class="fa-solid fa-image"></i> صورة الخلفية
+          <i class="fa-solid fa-image"></i> الخلفية
         </button>
-        <button type="button" id="btn-pomo-pure-fullscreen" class="btn-pomo-secondary" title="إخفاء كل الأزرار وشريط ويندوز">
-          <i class="fa-solid fa-expand"></i> شاشة نقية كاملة
+        <button type="button" id="btn-pomo-pure-fullscreen" class="btn-pomo-secondary">
+          <i class="fa-solid fa-expand"></i> شاشة نقية
         </button>
         <button type="button" id="btn-pomo-reset" class="btn-pomo-secondary" title="إعادة ضبط">
           <i class="fa-solid fa-rotate-right"></i>
@@ -5199,6 +5240,406 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem("MY_LIFE_OS_TIME_CAPSULES", JSON.stringify(list));
       renderTimeCapsules();
       showToast("تم حذف كبسولة الزمن", "info");
+    }
+  });
+});
+/* ==========================================================================
+   MEGA 10 FEATURES ENGINE: PIN LOCK, CV PDF, 4-CH MIXER, FOREST, VOICE CMD
+   ========================================================================== */
+
+// --- [ميزة 1]: قفل التطبيق بكود PIN عند ترك الجهاز 5 دقائق أو الضغط على Alt+L ---
+let idleLockTimer = null;
+
+function triggerPinLockScreen() {
+  const savedPin = localStorage.getItem("MY_LIFE_OS_PIN_CODE");
+  if (!savedPin) {
+    const newPin = prompt("🔐 لم تقم بتعيين كود PIN بعد.\nأدخل كود PIN مكون من 4 أرقام لتأمين النظام:");
+    if (newPin && /^\d{4}$/.test(newPin.trim())) {
+      localStorage.setItem("MY_LIFE_OS_PIN_CODE", newPin.trim());
+      showToast("تم حفظ كود الـ PIN وتأمين الشاشة 🔒", "success");
+    } else {
+      if (newPin !== null) showToast("يرجى إدخال 4 أرقام صحيحة فقط", "error");
+      return;
+    }
+  }
+  const overlay = document.getElementById("pin-lock-overlay");
+  if (overlay) {
+    overlay.classList.remove("hidden");
+    const inp = document.getElementById("pin-unlock-input");
+    if (inp) { inp.value = ""; inp.focus(); }
+  }
+}
+
+function resetIdleLockTimer() {
+  if (idleLockTimer) clearTimeout(idleLockTimer);
+  const savedPin = localStorage.getItem("MY_LIFE_OS_PIN_CODE");
+  if (!savedPin) return;
+  // قفل تلقائي بعد 5 دقائق من عدم الحركة
+  idleLockTimer = setTimeout(() => {
+    const overlay = document.getElementById("pin-lock-overlay");
+    if (overlay && overlay.classList.contains("hidden")) {
+      triggerPinLockScreen();
+    }
+  }, 5 * 60 * 1000);
+}
+
+// --- [ميزة 2]: مُصدّر السيرة الذاتية وبورتفوليو المشاريع (One-Click CV & Portfolio PDF) ---
+function exportOneClickPortfolioPDF() {
+  const userName = AppState.user?.displayName || "Eng. Ahmed M Hosny";
+  const userEmail = AppState.user?.email || "";
+  const userBio = localStorage.getItem("MY_LIFE_OS_USER_BIO") || "Software & Computer Engineering";
+  const projects = AppState.collections.projects || [];
+  const subjects = AppState.collections.subjects || [];
+  const roadmap = JSON.parse(localStorage.getItem("MY_LIFE_OS_ROADMAP") || '{"html":true,"css":true,"js":true,"firebase":true}');
+  const masteredSkills = Object.entries(roadmap).filter(([_, v]) => v).map(([k]) => k.toUpperCase());
+
+  const printWin = window.open("", "_blank", "width=950,height=800");
+  if (!printWin) {
+    showToast("يرجى السماح بالنوافذ المنبثقة لطباعة وحفظ الـ CV كـ PDF", "error");
+    return;
+  }
+
+  const projectsHtml = projects.length
+    ? projects.map(p => `
+        <div class="cv-item">
+          <div class="cv-row"><strong>${escapeHTML(p.title)}</strong> <span>${escapeHTML(p.techStack || "Full-Stack")} (${p.progress || 100}%)</span></div>
+          <p>${escapeHTML(p.description || "")}</p>
+          ${p.githubUrl ? `<small>GitHub: ${escapeHTML(p.githubUrl)}</small> ` : ""}
+          ${p.liveUrl ? `<small>| Live: ${escapeHTML(p.liveUrl)}</small>` : ""}
+        </div>
+      `).join("")
+    : `<p>لا توجد مشاريع مسجلة حالياً.</p>`;
+
+  const subjectsHtml = subjects.length
+    ? subjects.map(s => `<span class="cv-tag">${escapeHTML(s.name)}</span>`).join(" ")
+    : `<span>لم يتم إدخال مواد</span>`;
+
+  printWin.document.write(`
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+      <meta charset="UTF-8" />
+      <title>CV & Portfolio — ${escapeHTML(userName)}</title>
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        body { font-family: 'Cairo', sans-serif; color: #0f172a; background: #fff; padding: 36px; max-width: 850px; margin: 0 auto; }
+        .cv-header { border-bottom: 3px solid #d4af37; padding-bottom: 16px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: center; }
+        .cv-header h1 { margin: 0; font-size: 28px; color: #07090e; }
+        .cv-header p { margin: 4px 0 0; color: #475569; font-weight: 600; }
+        h2 { font-size: 18px; color: #b58900; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 22px; }
+        .cv-item { margin-bottom: 14px; padding: 10px 14px; background: #f8fafc; border-right: 4px solid #d4af37; border-radius: 6px; }
+        .cv-row { display: flex; justify-content: space-between; font-size: 15px; }
+        .cv-tag { display: inline-block; background: #0f172a; color: #d4af37; padding: 4px 12px; border-radius: 99px; font-size: 13px; font-weight: 700; margin: 4px; }
+        @media print { .no-print { display: none; } }
+      </style>
+    </head>
+    <body>
+      <div class="no-print" style="margin-bottom:20px; text-align:left;">
+        <button onclick="window.print()" style="background:#d4af37; color:#000; border:none; padding:10px 22px; border-radius:8px; font-family:inherit; font-weight:800; cursor:pointer;">🖨️ حفظ كملف PDF / طباعة فورية</button>
+      </div>
+      <div class="cv-header">
+        <div>
+          <h1>${escapeHTML(userName)}</h1>
+          <p>${escapeHTML(userBio)}</p>
+          <small>${escapeHTML(userEmail)}</small>
+        </div>
+        <div style="text-align:left; direction:ltr;">
+          <strong>MY LIFE OS VERIFIED PORTFOLIO</strong><br/>
+          <small>Date: ${todayISO()}</small>
+        </div>
+      </div>
+      <h2>🛠️ المهارات التقنية والهندسية المتقنة (Technical Skills)</h2>
+      <div>${masteredSkills.map(sk => `<span class="cv-tag">${escapeHTML(sk)}</span>`).join("")}</div>
+      <h2>💻 أبرز المشاريع البرمجية والهندسية (Projects Portfolio)</h2>
+      ${projectsHtml}
+      <h2>🎓 المواد الدراسية والأكاديمية (Academic Coursework)</h2>
+      <div>${subjectsHtml}</div>
+    </body>
+    </html>
+  `);
+  printWin.document.close();
+}
+
+// --- [ميزة 3]: ميكسر الأصوات المحيطية الرباعي (4-Channel Soundscape Mixer) ---
+const SoundMixerState = {
+  rain: 0,
+  cafe: 0,
+  fire: 0,
+  nodes: {}
+};
+
+function updateMixerChannel(ch, volumePct) {
+  const vol = Math.max(0, Math.min(100, Number(volumePct) || 0)) / 100;
+  SoundMixerState[ch] = Math.round(vol * 100);
+
+  if (vol === 0) {
+    if (SoundMixerState.nodes[ch]) {
+      try { SoundMixerState.nodes[ch].source.stop(); SoundMixerState.nodes[ch].source.disconnect(); } catch (e) {}
+      delete SoundMixerState.nodes[ch];
+    }
+    return;
+  }
+
+  const ctx = getAudioContext();
+  if (!SoundMixerState.nodes[ch]) {
+    const bufferSize = ctx.sampleRate * 2;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let lastOut = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      data[i] = (lastOut + (ch === "fire" ? 0.08 : 0.03) * white) / 1.04;
+      lastOut = data[i];
+      if (ch === "fire" && Math.random() < 0.002) data[i] = 0.8; // فرقعة حطب خفيفة
+    }
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = ch === "rain" ? "lowpass" : ch === "cafe" ? "bandpass" : "lowpass";
+    filter.frequency.value = ch === "rain" ? 950 : ch === "cafe" ? 600 : 280;
+
+    const gain = ctx.createGain();
+    gain.gain.value = vol * 0.35;
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    source.start();
+    SoundMixerState.nodes[ch] = { source, gain };
+  } else {
+    SoundMixerState.nodes[ch].gain.gain.value = vol * 0.35;
+  }
+}
+
+function openFourChannelMixerModal() {
+  openFormModal("🎚️ ميكسر الأصوات المحيطية الرباعي (دمج حر)", `
+    <p class="small-muted mb-2">ادمج أكثر من صوت معاً بالدرجة التي تريح أعصابك أثناء التركيز:</p>
+    <div class="form-group">
+      <label class="flex-between"><span>🌧️ صوت المطر الهادئ</span> <strong id="lbl-mix-rain">${SoundMixerState.rain}%</strong></label>
+      <input type="range" min="0" max="100" value="${SoundMixerState.rain}" data-mixer-ch="rain" />
+    </div>
+    <div class="form-group">
+      <label class="flex-between"><span>☕ ضوضاء مقهى مذاكرة دافئ</span> <strong id="lbl-mix-cafe">${SoundMixerState.cafe}%</strong></label>
+      <input type="range" min="0" max="100" value="${SoundMixerState.cafe}" data-mixer-ch="cafe" />
+    </div>
+    <div class="form-group">
+      <label class="flex-between"><span>🔥 مدفأة حطب ليلية</span> <strong id="lbl-mix-fire">${SoundMixerState.fire}%</strong></label>
+      <input type="range" min="0" max="100" value="${SoundMixerState.fire}" data-mixer-ch="fire" />
+    </div>
+  `, async () => {});
+
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  document.querySelectorAll("[data-mixer-ch]").forEach(slider => {
+    slider.oninput = (e) => {
+      const ch = e.target.dataset.mixerCh;
+      const val = e.target.value;
+      document.getElementById(`lbl-mix-${ch}`).textContent = `${val}%`;
+      updateMixerChannel(ch, val);
+    };
+  });
+}
+
+// --- [ميزة 5]: شريط الاقتباسات والتحفيز الهادئ المتغير (Focus Wisdom Ticker) ---
+const FOCUS_WISDOM_QUOTES = [
+  "✨ «وَقُل رَّبِّ زِدْنِي عِلْمًا» — كل دقيقة تركيز اليوم تبني مستقبلك الهندسي غداً",
+  "🔥 الانضباط هو الجسر بين أهدافك وإنجازاتك الحقيقية",
+  "🧠 العقل مثل العضلة، كلما دربته على التركيز العميق زادت قوته",
+  "🌿 «وَأَن لَّيْسَ لِلْإِنسَانِ إِلَّا مَا سَعَىٰ» — سعيك الآن محفوظ ومبارك",
+  "⚡ المهندس المحترف يصنع النظام ولا ينتظر الظروف المثالية"
+];
+let wisdomIdx = 0;
+setInterval(() => {
+  const ticker = document.getElementById("pomo-wisdom-ticker");
+  if (ticker && PomodoroState.isRunning) {
+    wisdomIdx = (wisdomIdx + 1) % FOCUS_WISDOM_QUOTES.length;
+    ticker.style.opacity = "0";
+    setTimeout(() => {
+      ticker.textContent = FOCUS_WISDOM_QUOTES[wisdomIdx];
+      ticker.style.opacity = "1";
+    }, 300);
+  }
+}, 45000);
+
+// --- [ميزة 8]: نظام المساعد الصوتي السريع (Voice Command Palette) ---
+function startVoiceCommandPalette() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast("متصفحك الحالي لا يدعم الأوامر الصوتية المباشرة", "error");
+    return;
+  }
+  const rec = new SpeechRecognition();
+  rec.lang = "ar-EG";
+  showToast("🎙️ تحدث الآن بأمرك (مثال: شغل إذاعة القاهرة / افتح البومودورو / أضف مهمة...)", "info");
+
+  rec.onresult = async (ev) => {
+    const cmd = ev.results[0][0].transcript.trim();
+    showToast(`الأمر الصوتي: "${cmd}"`, "info");
+
+    if (/إذاعة|قرآن|القاهرة/.test(cmd)) {
+      switchView("islamic");
+      playLiveIslamicRadio("cairo", "إذاعة القرآن الكريم من القاهرة (البث المباشر)");
+    } else if (/بومودورو|مؤقت|تركيز/.test(cmd)) {
+      openPomodoroModal();
+    } else if (/قفل الشاشة|أغلق الشاشة/.test(cmd)) {
+      triggerPinLockScreen();
+    } else {
+      await sendToAlexPopup(cmd);
+    }
+  };
+  rec.start();
+}
+
+// --- [ميزة 9]: شجرة الالتزام التفاعلية وحديقة الإنجاز (Gamified Habit Forest) ---
+function getHabitForestList() {
+  try {
+    return JSON.parse(localStorage.getItem("MY_LIFE_OS_HABIT_FOREST") || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+function addTreeToForest(title, mins, status = "healthy") {
+  const forest = getHabitForestList();
+  forest.unshift({
+    title: title || "جلسة تركيز",
+    mins: mins || 25,
+    status, // healthy | withered
+    date: todayISO()
+  });
+  localStorage.setItem("MY_LIFE_OS_HABIT_FOREST", JSON.stringify(forest.slice(0, 60)));
+  renderHabitForestWidget();
+}
+
+function renderHabitForestWidget() {
+  const box = document.getElementById("dash-habit-forest");
+  const badge = document.getElementById("forest-count-badge");
+  if (!box) return;
+
+  const forest = getHabitForestList();
+  const healthyCount = forest.filter(t => t.status === "healthy").length;
+  if (badge) badge.textContent = `${healthyCount} شجرة مثمرة 🌳`;
+
+  if (!forest.length) {
+    box.innerHTML = renderEmptyState("أكمل جلسات البومودورو واحفظها لتزرع أشجاراً ذهبية في حديقة التزامك!");
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="forest-trees-grid">
+      ${forest.slice(0, 12).map(t => `
+        <div class="forest-tree-cell ${t.status === "withered" ? "withered" : ""}" title="${escapeHTML(t.title)} (${t.mins} د) - ${t.date}">
+          <span class="tree-emoji">${t.status === "withered" ? "🥀" : t.mins >= 45 ? "🌲" : "🌳"}</span>
+          <small>${t.mins}د</small>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+// --- [ميزة 10]: محفظة النسخ الاحتياطي التلقائي الأسبوعي (Auto Weekly Backup) ---
+function checkAndRunWeeklyAutoBackup() {
+  const autoEnabled = localStorage.getItem("MY_LIFE_OS_AUTO_BACKUP") !== "off";
+  const lbl = document.getElementById("auto-backup-label");
+  if (lbl) lbl.textContent = `النسخ التلقائي الأسبوعي: ${autoEnabled ? "مفعل ✅" : "متوقف"}`;
+  if (!autoEnabled || !AppState.user) return;
+
+  const lastBackup = localStorage.getItem("MY_LIFE_OS_LAST_AUTO_BACKUP");
+  const nowMs = Date.now();
+  if (!lastBackup || (nowMs - Number(lastBackup)) > 7 * 24 * 60 * 60 * 1000) {
+    localStorage.setItem("MY_LIFE_OS_LAST_AUTO_BACKUP", String(nowMs));
+    localStorage.setItem("MY_LIFE_OS_LOCAL_VAULT_SNAPSHOT", JSON.stringify({
+      savedAt: todayISO(),
+      collections: AppState.collections
+    }));
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderHabitForestWidget();
+  setTimeout(checkAndRunWeeklyAutoBackup, 4000);
+
+  // تحديث ساعة شاشة القفل
+  setInterval(() => {
+    const lockClock = document.getElementById("pin-lock-clock");
+    if (lockClock) {
+      lockClock.textContent = new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    }
+  }, 1000);
+
+  // مراقبة عدم النشاط لقفل الشاشة تلقائياً بعد 5 دقائق + اختصار Alt+L
+  ["mousemove", "keydown", "click"].forEach(ev => window.addEventListener(ev, resetIdleLockTimer));
+  resetIdleLockTimer();
+
+  window.addEventListener("keydown", (e) => {
+    if (e.altKey && e.key.toLowerCase() === "l") {
+      e.preventDefault();
+      triggerPinLockScreen();
+    }
+  });
+
+  document.getElementById("btn-lock-screen")?.addEventListener("click", triggerPinLockScreen);
+
+  document.getElementById("btn-setup-pin")?.addEventListener("click", () => {
+    const pin = prompt("🔐 أدخل كود PIN جديد (4 أرقام) لقفل الشاشة السريع (أو اتركه فارغاً لإلغاء القفل):", localStorage.getItem("MY_LIFE_OS_PIN_CODE") || "");
+    if (pin === null) return;
+    if (pin.trim() === "") {
+      localStorage.removeItem("MY_LIFE_OS_PIN_CODE");
+      showToast("تم إلغاء قفل الـ PIN", "info");
+    } else if (/^\d{4}$/.test(pin.trim())) {
+      localStorage.setItem("MY_LIFE_OS_PIN_CODE", pin.trim());
+      showToast("تم حفظ كود الـ PIN بنجاح! جرب الضغط على Alt+L لقفل الشاشة 🔒", "success");
+    } else {
+      showToast("يرجى إدخال 4 أرقام فقط", "error");
+    }
+  });
+
+  document.getElementById("pin-unlock-form")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const entered = document.getElementById("pin-unlock-input").value.trim();
+    const savedPin = localStorage.getItem("MY_LIFE_OS_PIN_CODE") || "0000";
+    if (entered === savedPin) {
+      document.getElementById("pin-lock-overlay").classList.add("hidden");
+      showToast("مرحباً بعودتك يا هندسة! تم فتح القفل 🔓", "success");
+    } else {
+      playStrictLockSiren();
+      showToast("❌ كود الـ PIN غير صحيح!", "error");
+    }
+  });
+
+  // أزرار الميزات الجديدة (CV PDF، الأوامر الصوتية، النسخ التلقائي، الميكسر، والـ Mini-HUD)
+  document.getElementById("btn-export-portfolio-pdf")?.addEventListener("click", exportOneClickPortfolioPDF);
+  document.getElementById("btn-voice-cmd")?.addEventListener("click", startVoiceCommandPalette);
+
+  document.getElementById("btn-toggle-auto-backup")?.addEventListener("click", () => {
+    const cur = localStorage.getItem("MY_LIFE_OS_AUTO_BACKUP") !== "off";
+    localStorage.setItem("MY_LIFE_OS_AUTO_BACKUP", cur ? "off" : "on");
+    checkAndRunWeeklyAutoBackup();
+    showToast(cur ? "تم إيقاف النسخ التلقائي الأسبوعي" : "تم تفعيل النسخ الاحتياطي التلقائي الأسبوعي ✅", "info");
+  });
+
+  document.getElementById("btn-mini-pomo-pause")?.addEventListener("click", () => {
+    if (PomodoroState.isRunning) pausePomodoro(); else startPomodoro();
+    const icon = document.querySelector("#btn-mini-pomo-pause i");
+    if (icon) icon.className = `fa-solid ${PomodoroState.isRunning ? "fa-pause" : "fa-play"}`;
+  });
+
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("#btn-pomo-mixer-open")) {
+      openFourChannelMixerModal();
+    }
+    if (e.target.closest("#btn-pomo-mini-hud")) {
+      if (!PomodoroState.isRunning) startPomodoro();
+      document.getElementById("universal-modal")?.classList.add("hidden");
+      document.getElementById("mini-floating-pomo")?.classList.remove("hidden");
+      showToast("تم تصغير المؤقت إلى نافذة Mini-HUD العائمة في الزاوية ⏱️", "info");
+    }
+    if (e.target.closest("#btn-pomo-save-session")) {
+      const mins = Math.max(1, Math.round(PomodoroState.duration / 60));
+      addTreeToForest(PomodoroState.customTaskName || "جلسة تركيز", mins, "healthy");
     }
   });
 });
