@@ -39,11 +39,34 @@
     </div>
   </div>
 
-  <!-- المؤقت العائم المصغر (يظهر تلقائياً عند إغلاق شاشة البومودورو والعداد شغال) -->
+<!-- 7. النافذة العائمة المصغرة الاحترافية (Compact Mini-HUD 200x60) -->
   <div id="mini-floating-pomo" class="mini-floating-pomo hidden">
-    <span class="live-dot"></span>
-    <strong id="mini-pomo-time">25:00</strong>
-    <button type="button" id="btn-mini-pomo-open" class="btn btn-xs btn-gold">فتح المؤقت</button>
+    <div class="mini-hud-top">
+      <span class="live-dot"></span>
+      <span id="mini-hud-tree">🌱</span>
+      <strong id="mini-pomo-time">25:00</strong>
+      <button type="button" id="btn-mini-pomo-pause" class="btn-icon-xs" title="إيقاف/تشغيل"><i class="fa-solid fa-pause"></i></button>
+      <button type="button" id="btn-mini-pomo-open" class="btn-icon-xs gold-text" title="تكبير المؤقت"><i class="fa-solid fa-expand"></i></button>
+    </div>
+    <div class="mini-hud-progress-track">
+      <div id="mini-pomo-bar" class="mini-hud-progress-fill" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <!-- 1. شاشة قفل النظام الذكية بكود PIN (Smart Auto-Lock Screen - Alt+L) -->
+  <div id="pin-lock-overlay" class="pin-lock-overlay hidden">
+    <div class="pin-lock-card luxury-glass-card">
+      <div class="brand-logo-circle pulse-gold-ring">
+        <img src="logo.png" alt="Logo" class="brand-logo-img" onerror="this.style.display='none'" />
+      </div>
+      <h2 class="shimmer-title mt-2">MY LIFE <span>OS</span> LOCKED</h2>
+      <p id="pin-lock-clock" class="gold-text" style="font-family:'Inter',sans-serif; font-size:1.5rem; font-weight:800; margin:6px 0;">00:00</p>
+      <p class="small-muted mb-2">النظام مؤمّن لحماية خصوصيتك. أدخل كود الـ PIN (4 أرقام) للمتابعة:</p>
+      <form id="pin-unlock-form" class="pin-input-wrap">
+        <input type="password" id="pin-unlock-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="••••" required autofocus />
+        <button type="submit" class="btn btn-gold btn-block mt-2"><i class="fa-solid fa-unlock-keyhole"></i> فتح النظام</button>
+      </form>
+    </div>
   </div>
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
@@ -234,7 +257,13 @@
           <button id="btn-wallpaper-studio" class="btn-icon gold-glow" title="تغيير خلفية الموقع والمؤقت (صور غامضة / أنمي / صورتك الخاصة)">
             <i class="fa-solid fa-image"></i>
           </button>
-          <!-- أزرار درع الخصوصية، وضع التركيز، ولوحة الأوامر -->
+<!-- أزرار الأوامر الصوتية، قفل الشاشة، درع الخصوصية، ووضع التركيز -->
+          <button id="btn-voice-cmd" class="btn-icon gold-glow" title="الأوامر الصوتية السريعة (قل: أضف مهمة، شغل إذاعة القاهرة، افتح البومودورو...)">
+            <i class="fa-solid fa-microphone-lines"></i>
+          </button>
+          <button id="btn-lock-screen" class="btn-icon" title="قفل الشاشة بكود PIN (Alt+L)">
+            <i class="fa-solid fa-lock"></i>
+          </button>
           <button id="btn-privacy-shield" class="btn-icon" title="درع الخصوصية (إخفاء الأرقام)">
             <i class="fa-solid fa-eye"></i>
           </button>
@@ -402,12 +431,20 @@
             <div id="dash-recent-notes" class="widget-body"></div>
           </div>
 
-          <div class="card">
+<div class="card">
             <div class="card-header">
               <h3><i class="fa-solid fa-vault gold-text"></i> كبسولة الزمن (رسائل للمستقبل)</h3>
               <button class="btn-link" id="btn-add-capsule-card">+ رسالة جديدة</button>
             </div>
             <div id="dash-time-capsules" class="widget-body"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-tree gold-text"></i> حديقة أشجار التركيز (Habit Forest)</h3>
+              <span id="forest-count-badge" class="badge badge-emerald">0 شجرة مثمرة</span>
+            </div>
+            <div id="dash-habit-forest" class="widget-body"></div>
           </div>
         </div>
       </section>
@@ -703,8 +740,11 @@
             <button type="button" id="btn-open-buglog" class="btn btn-outline btn-sm">
               <i class="fa-solid fa-bug gold-text"></i> سجل الأخطاء (Bug Log)
             </button>
-            <button type="button" id="btn-open-roadmap" class="btn btn-outline btn-sm">
+<button type="button" id="btn-open-roadmap" class="btn btn-outline btn-sm">
               <i class="fa-solid fa-route gold-text"></i> خريطة المهارات (Roadmap)
+            </button>
+            <button type="button" id="btn-export-portfolio-pdf" class="btn btn-gold btn-sm">
+              <i class="fa-solid fa-file-pdf"></i> تصدير CV & Portfolio احترافي
             </button>
           </div>
           <button id="btn-open-project-modal" class="btn btn-gold btn-sm">
@@ -1126,7 +1166,7 @@
           <div class="card">
             <div class="card-header"><h3><i class="fa-solid fa-shield-halved gold-text"></i> النسخ الاحتياطي وأمان الحساب</h3></div>
             <p class="small-muted">احفظ نسخة كاملة من مهامك وموادك ومشاريعك على جهازك أو استرجعها في أي وقت بضغطة زر.</p>
-            <div class="config-actions mt-2">
+<div class="config-actions mt-2" style="flex-wrap:wrap;">
               <button id="btn-export-data" class="btn btn-outline btn-sm">
                 <i class="fa-solid fa-cloud-arrow-down gold-text"></i> تحميل نسخة احتياطية كاملة
               </button>
@@ -1134,6 +1174,12 @@
                 <i class="fa-solid fa-cloud-arrow-up gold-text"></i> استعادة نسخة محفوظة
                 <input type="file" id="input-import-json" accept=".json" class="hidden" />
               </label>
+              <button type="button" id="btn-setup-pin" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-key gold-text"></i> تعيين كود قفل الشاشة (PIN)
+              </button>
+              <button type="button" id="btn-toggle-auto-backup" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-clock-rotate-left gold-text"></i> <span id="auto-backup-label">النسخ التلقائي الأسبوعي: مفعل</span>
+              </button>
             </div>
             <hr class="divider" />
             <p class="small-muted mb-2">منطقة التحكم الحساسة:</p>
