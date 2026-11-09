@@ -629,6 +629,9 @@ function renderTasks() {
             <button class="btn btn-xs btn-gold" data-action="focus-on-task" data-id="${t.id}" title="فتح في مؤقت التركيز">
               <i class="fa-solid fa-play"></i> تركيز
             </button>
+            <button class="btn btn-xs btn-outline" data-action="edit-item" data-col="tasks" data-id="${t.id}" title="تعديل المهمة">
+              <i class="fa-solid fa-pen"></i>
+            </button>
             <button class="btn btn-xs btn-outline" data-action="toggle-task" data-id="${t.id}">
               <i class="fa-solid fa-check"></i>
             </button>
@@ -942,6 +945,9 @@ function renderProjects() {
             ${p.githubUrl ? `<a href="${escapeHTML(p.githubUrl)}" target="_blank" class="btn-link"><i class="fa-brands fa-github"></i> GitHub</a>` : ""}
             ${p.liveUrl ? `<a href="${escapeHTML(p.liveUrl)}" target="_blank" class="btn-link"><i class="fa-solid fa-globe"></i> Live</a>` : ""}
           </div>
+          <button class="btn btn-xs btn-outline" data-action="edit-item" data-col="projects" data-id="${p.id}" title="تعديل المشروع">
+            <i class="fa-solid fa-pen"></i>
+          </button>
           <button class="btn btn-xs btn-danger" data-action="delete-item" data-col="projects" data-id="${p.id}">
             <i class="fa-solid fa-trash"></i>
           </button>
@@ -1096,9 +1102,17 @@ function renderNotes() {
       </div>
       <div class="flex-between mt-2">
         <small class="small-muted">${escapeHTML(n.linkedTo || "")}</small>
-        <button class="btn btn-xs btn-danger" data-action="delete-item" data-col="notes" data-id="${n.id}">
-          <i class="fa-solid fa-trash"></i>
-        </button>
+<div class="config-actions">
+          <button class="btn btn-xs btn-gold" data-action="note-to-flashcard" data-id="${n.id}" title="تحويل الملاحظة إلى بطاقة مراجعة 3D">
+            <i class="fa-solid fa-clone"></i> بطاقة 3D
+          </button>
+          <button class="btn btn-xs btn-outline" data-action="edit-item" data-col="notes" data-id="${n.id}" title="تعديل الملاحظة">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button class="btn btn-xs btn-danger" data-action="delete-item" data-col="notes" data-id="${n.id}">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
       </div>
     </div>
   `).join("");
@@ -3296,6 +3310,7 @@ function openPomodoroModal() {
         <button type="button" class="pomo-preset-btn ${totalMins === 45 ? "active" : ""}" data-pomo-set="45">45 د</button>
         <button type="button" class="pomo-preset-btn ${totalMins === 60 ? "active" : ""}" data-pomo-set="60"><i class="fa-solid fa-crown"></i> ساعة (60 د)</button>
         <button type="button" class="pomo-preset-btn ${PomodoroState.mode === "break" ? "active" : ""}" data-pomo-set="5" data-mode="break">☕ راحة 5 د</button>
+        <button type="button" id="btn-pomo-stopwatch" class="pomo-preset-btn ${PomodoroState.isStopwatch ? "active" : ""}">♾️ عد تصاعدي مفتوح (Flow)</button>
         <div class="pomo-custom-input-wrap">
           <input type="number" id="pomo-custom-mins" min="1" max="240" value="${totalMins}" />
           <button type="button" id="btn-apply-custom-pomo" class="pomo-preset-btn active" style="padding:4px 12px;">تحديد</button>
@@ -5850,6 +5865,436 @@ document.addEventListener("DOMContentLoaded", () => {
       list.splice(idx, 1);
       localStorage.setItem("MY_LIFE_OS_FLASHCARDS", JSON.stringify(list));
       openFlashcardsStudioModal();
+    }
+  });
+});
+/* ==========================================================================
+   V5 ULTIMATE ENGINE: DEV LAB, SPLIT STUDY, ALEX V3, EDIT & SCREENSAVER
+   ========================================================================== */
+
+// 1. نظام التعديل الفوري لكل الكروت (Quick Edit Engine) + تحويل الملاحظة لـ Flashcard
+document.addEventListener("click", async (e) => {
+  const editBtn = e.target.closest('[data-action="edit-item"]');
+  if (editBtn) {
+    const col = editBtn.dataset.col;
+    const id = editBtn.dataset.id;
+    const item = (AppState.collections[col] || []).find(x => x.id === id);
+    if (!item) return;
+
+    if (col === "tasks") {
+      openFormModal("✏️ تعديل بيانات المهمة", `
+        <div class="form-group"><label>عنوان المهمة</label><input name="title" value="${escapeHTML(item.title)}" required /></div>
+        <div class="form-group"><label>الوصف</label><textarea name="description" rows="2">${escapeHTML(item.description || "")}</textarea></div>
+        <div class="form-group"><label>تاريخ الاستحقاق</label><input type="date" name="dueDate" value="${escapeHTML(item.dueDate || todayISO())}" required /></div>
+        <div class="form-group"><label>الأولوية</label>
+          <select name="priority">
+            <option value="High" ${item.priority === "High" ? "selected" : ""}>High</option>
+            <option value="Urgent" ${item.priority === "Urgent" ? "selected" : ""}>Urgent</option>
+            <option value="Medium" ${item.priority === "Medium" ? "selected" : ""}>Medium</option>
+            <option value="Low" ${item.priority === "Low" ? "selected" : ""}>Low</option>
+          </select>
+        </div>
+      `, async (data) => await updateRecord("tasks", id, data));
+    } else if (col === "projects") {
+      openFormModal("✏️ تعديل المشروع البرمجي", `
+        <div class="form-group"><label>اسم المشروع</label><input name="title" value="${escapeHTML(item.title)}" required /></div>
+        <div class="form-group"><label>الوصف</label><textarea name="description" rows="2">${escapeHTML(item.description || "")}</textarea></div>
+        <div class="form-group"><label>التقنيات</label><input name="techStack" value="${escapeHTML(item.techStack || "")}" /></div>
+        <div class="form-group"><label>نسبة الإنجاز (%)</label><input type="number" min="0" max="100" name="progress" value="${Number(item.progress) || 0}" required /></div>
+      `, async (data) => await updateRecord("projects", id, data));
+    } else if (col === "notes") {
+      openFormModal("✏️ تعديل الملاحظة", `
+        <div class="form-group"><label>العنوان</label><input name="title" value="${escapeHTML(item.title)}" required /></div>
+        <div class="form-group"><label>المحتوى</label><textarea name="content" rows="4" required>${escapeHTML(item.content || "")}</textarea></div>
+      `, async (data) => await updateRecord("notes", id, data));
+    }
+  }
+
+  // تحويل الملاحظة بضغطة واحدة إلى بطاقة مراجعة 3D
+  const toFcBtn = e.target.closest('[data-action="note-to-flashcard"]');
+  if (toFcBtn) {
+    const note = (AppState.collections.notes || []).find(n => n.id === toFcBtn.dataset.id);
+    if (!note) return;
+    const list = getFlashcardsList();
+    list.unshift({
+      subject: note.linkedTo || note.category || "ملاحظات",
+      question: note.title,
+      answer: note.content
+    });
+    localStorage.setItem("MY_LIFE_OS_FLASHCARDS", JSON.stringify(list));
+    showToast("تم تحويل الملاحظة إلى بطاقة مراجعة 3D بنجاح! 🃏", "success");
+    launchAlexConfetti();
+  }
+
+  // زر العد التصاعدي المفتوح (Flow Stopwatch Mode) داخل البومودورو
+  if (e.target.closest("#btn-pomo-stopwatch")) {
+    PomodoroState.isStopwatch = !PomodoroState.isStopwatch;
+    if (PomodoroState.isStopwatch) {
+      pausePomodoro();
+      PomodoroState.timeLeft = 0;
+      PomodoroState.duration = 3600;
+      showToast("تم تفعيل وضع العد التصاعدي المفتوح (Flow Stopwatch) ♾️", "info");
+    } else {
+      setCustomPomodoroTime(25, "work");
+    }
+    openPomodoroModal();
+  }
+});
+
+// 2. شرارات احتفال أليكس الذهبية الفورية (Instant Confetti Burst) + تعبيرات وجه أليكس
+function launchAlexConfetti() {
+  const canvas = document.getElementById("confetti-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const pieces = Array.from({ length: 65 }, () => ({
+    x: window.innerWidth / 2 + (Math.random() - 0.5) * 200,
+    y: window.innerHeight / 2,
+    vx: (Math.random() - 0.5) * 14,
+    vy: -Math.random() * 14 - 4,
+    size: Math.random() * 7 + 4,
+    color: ["#d4af37", "#10b981", "#06b6d4", "#f43f5e", "#f3e5ab"][Math.floor(Math.random() * 5)],
+    alpha: 1
+  }));
+
+  function frame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let active = false;
+    pieces.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.38; // جاذبية
+      p.alpha -= 0.016;
+      if (p.alpha > 0) {
+        active = true;
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+      }
+    });
+    ctx.globalAlpha = 1;
+    if (active) requestAnimationFrame(frame);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  frame();
+}
+
+// تحديث ملامح أليكس وتحدياته اليومية وكبسولة الامتحان العلوية
+function updateAlexV3AndTopbarRadar() {
+  // أ) نظارة الشمس أثناء البومودورو
+  const glasses = document.getElementById("alex-sunglasses");
+  if (glasses) glasses.classList.toggle("hidden", !PomodoroState.isRunning);
+
+  // ب) تحديات أليكس اليومية (3 مهام يومية)
+  const today = todayISO();
+  const doneTasksToday = AppState.collections.tasks.filter(t => t.status === "Completed").length >= 1;
+  const doneFocusToday = getFocusSessionsLog().filter(s => s.date === today).length >= 1;
+  const todayPrayerDoc = AppState.collections.prayers.find(p => p.date === today);
+  const donePrayersToday = todayPrayerDoc && ["fajr","dhuhr","asr","maghrib","isha"].filter(k => todayPrayerDoc[k]).length >= 3;
+
+  const quests = [
+    { label: "إتمام مهمة واحدة على الأقل", done: doneTasksToday },
+    { label: "حفظ جلسة تركيز بومودورو اليوم", done: doneFocusToday },
+    { label: "تسجيل 3 صلوات أو أكثر اليوم", done: donePrayersToday }
+  ];
+  const doneCount = quests.filter(q => q.done).length;
+  const qProg = document.getElementById("alex-quests-progress");
+  const qList = document.getElementById("alex-quests-list");
+  if (qProg) qProg.textContent = `${doneCount} / 3`;
+  if (qList) {
+    qList.innerHTML = quests.map(q => `
+      <div class="alex-quest-row ${q.done ? "done" : ""}">
+        <span>${q.done ? "✅" : "⭕"} ${q.label}</span>
+      </div>
+    `).join("");
+  }
+
+  // ج) كبسولة رادار الامتحان في الشريط العلوي
+  const topPill = document.getElementById("topbar-exam-pill");
+  if (topPill) {
+    const upcoming = AppState.collections.events
+      .filter(ev => ev.date >= today && (ev.type === "Exam" || ev.type === "University"))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    if (upcoming.length > 0) {
+      const next = upcoming[0];
+      const days = Math.ceil((new Date(next.date) - new Date(today)) / 86400000);
+      topPill.innerHTML = `<i class="fa-solid fa-bell gold-text"></i> ${escapeHTML(next.title)}: ${days === 0 ? "اليوم!" : "باقي " + days + " يوم"}`;
+    } else {
+      topPill.innerHTML = `<i class="fa-solid fa-shield-check"></i> لا توجد امتحانات قريبة`;
+    }
+  }
+}
+
+// 3. مختبر الهندسة والبرمجة المدمج (Live Code Sandbox + Logic & Base Converter + API Tester + Mindmap)
+function openLiveCodeSandboxModal() {
+  const savedHtml = localStorage.getItem("MY_LIFE_OS_SANDBOX_HTML") || `<div class="box">\n  <h2>مرحباً يا بشمهندس أحمد 🚀</h2>\n  <button onclick="greet()">اضغط للتجربة</button>\n</div>`;
+  const savedCss = localStorage.getItem("MY_LIFE_OS_SANDBOX_CSS") || `body { font-family: sans-serif; text-align: center; background: #0f172a; color: #f8fafc; padding-top: 40px; }\n.box { border: 2px solid #d4af37; padding: 20px; border-radius: 12px; display: inline-block; }\nbutton { background: #d4af37; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }`;
+  const savedJs = localStorage.getItem("MY_LIFE_OS_SANDBOX_JS") || `function greet() {\n  alert("الكود يعمل بنجاح داخل MY LIFE OS!");\n}`;
+
+  openFormModal("💻 محرر الأكواد الحي (Live HTML / CSS / JS Sandbox)", `
+    <div class="split-workspace-grid">
+      <div>
+        <label class="small-muted">كود HTML:</label>
+        <textarea id="sb-html" rows="4" dir="ltr" style="font-family:monospace;">${escapeHTML(savedHtml)}</textarea>
+        <label class="small-muted mt-1">كود CSS:</label>
+        <textarea id="sb-css" rows="4" dir="ltr" style="font-family:monospace;">${escapeHTML(savedCss)}</textarea>
+        <label class="small-muted mt-1">كود JavaScript:</label>
+        <textarea id="sb-js" rows="4" dir="ltr" style="font-family:monospace;">${escapeHTML(savedJs)}</textarea>
+      </div>
+      <div>
+        <div class="flex-between mb-1">
+          <strong class="gold-text">المعاينة الحية الفورية (Live Preview):</strong>
+          <button type="button" id="btn-run-sandbox" class="btn btn-xs btn-gold"><i class="fa-solid fa-play"></i> تشغيل وتحديث</button>
+        </div>
+        <iframe id="sb-preview" class="sandbox-preview-frame"></iframe>
+      </div>
+    </div>
+  `, async () => {});
+
+  const card = document.querySelector("#universal-modal .modal-card");
+  card?.classList.add("wide-lab-modal");
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  const updatePreview = () => {
+    const h = document.getElementById("sb-html").value;
+    const c = document.getElementById("sb-css").value;
+    const j = document.getElementById("sb-js").value;
+    localStorage.setItem("MY_LIFE_OS_SANDBOX_HTML", h);
+    localStorage.setItem("MY_LIFE_OS_SANDBOX_CSS", c);
+    localStorage.setItem("MY_LIFE_OS_SANDBOX_JS", j);
+    const frame = document.getElementById("sb-preview");
+    if (frame) {
+      frame.srcdoc = `<!DOCTYPE html><html><head><style>${c}</style></head><body>${h}<script>${j}<\/script></body></html>`;
+    }
+  };
+  document.getElementById("btn-run-sandbox").onclick = updatePreview;
+  updatePreview();
+}
+
+function openLogicAndBaseConverterModal() {
+  openFormModal("🔢 محول الأنظمة العددية وبوابات المنطق (Logic Design Lab)", `
+    <div class="form-group">
+      <label>أدخل رقماً عشرياً (Decimal) لتحويله فوراً:</label>
+      <input type="number" id="conv-dec" value="42" dir="ltr" />
+    </div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div class="subject-progress-box"><strong>Binary (ثنائي)</strong><div id="conv-bin" class="gold-text mt-1" dir="ltr">101010</div></div>
+      <div class="subject-progress-box"><strong>Hex (سداسي عشر)</strong><div id="conv-hex" class="gold-text mt-1" dir="ltr">2A</div></div>
+      <div class="subject-progress-box"><strong>Octal (ثماني)</strong><div id="conv-oct" class="gold-text mt-1" dir="ltr">52</div></div>
+    </div>
+    <h4 class="gold-text mt-2">جدول الحقيقة للبوابات المنطقية (Logic Gates Truth Table):</h4>
+    <table class="truth-table">
+      <thead><tr><th>A</th><th>B</th><th>AND</th><th>OR</th><th>XOR</th><th>NAND</th><th>NOR</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td></tr>
+        <tr><td>0</td><td>1</td><td>0</td><td>1</td><td>1</td><td>1</td><td>0</td></tr>
+        <tr><td>1</td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td><td>0</td></tr>
+        <tr><td>1</td><td>1</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+      </tbody>
+    </table>
+  `, async () => {});
+
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  const decInp = document.getElementById("conv-dec");
+  decInp.oninput = () => {
+    const n = Math.max(0, parseInt(decInp.value, 10) || 0);
+    document.getElementById("conv-bin").textContent = n.toString(2);
+    document.getElementById("conv-hex").textContent = n.toString(16).toUpperCase();
+    document.getElementById("conv-oct").textContent = n.toString(8);
+  };
+}
+
+function openApiTesterModal() {
+  openFormModal("🌐 فاحص الـ APIs السريع (Mini-Postman)", `
+    <div class="input-action-row">
+      <select id="api-method" class="select-sm" style="width:110px;"><option value="GET">GET</option><option value="POST">POST</option></select>
+      <input type="url" id="api-url" dir="ltr" value="https://jsonplaceholder.typicode.com/todos/1" placeholder="https://api.example.com/data" />
+      <button type="button" id="btn-send-api" class="btn btn-gold btn-sm">إرسال الطلب</button>
+    </div>
+    <pre id="api-response-box" dir="ltr" class="code-snippet-box mt-2" style="min-height:180px; max-height:280px;">اضغط "إرسال الطلب" لمعاينة رد السيرفر...</pre>
+  `, async () => {});
+
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  document.getElementById("btn-send-api").onclick = async () => {
+    const url = document.getElementById("api-url").value.trim();
+    const method = document.getElementById("api-method").value;
+    const out = document.getElementById("api-response-box");
+    out.textContent = "⏳ جاري الاتصال بالسيرفر...";
+    try {
+      const t0 = performance.now();
+      const res = await fetch(url, { method });
+      const data = await res.text();
+      const ms = Math.round(performance.now() - t0);
+      out.textContent = `Status: ${res.status} (${ms} ms)\n\n` + data.slice(0, 2000);
+    } catch (err) {
+      out.textContent = "❌ خطأ اتصال: " + err.message;
+    }
+  };
+}
+
+function openMindmapCanvasModal() {
+  const nodes = JSON.parse(localStorage.getItem("MY_LIFE_OS_MINDMAP") || '[{"topic":"مشروع التخرج","sub":"تحديد الفكرة ➔ قاعدة البيانات ➔ الواجهة"}]');
+  const html = nodes.map((n, i) => `
+    <div class="prayer-row">
+      <div><strong class="gold-text">🧠 ${escapeHTML(n.topic)}</strong><p class="small-muted mt-1">${escapeHTML(n.sub)}</p></div>
+      <button type="button" class="btn btn-xs btn-danger" onclick="const l=JSON.parse(localStorage.getItem('MY_LIFE_OS_MINDMAP')||'[]');l.splice(${i},1);localStorage.setItem('MY_LIFE_OS_MINDMAP',JSON.stringify(l));this.closest('.prayer-row').remove();"><i class="fa-solid fa-trash"></i></button>
+    </div>
+  `).join("");
+
+  openFormModal("🧠 لوحة الخرائط الذهنية وتفرعات الأفكار (Mindmap)", `
+    <div class="form-group"><label>الفكرة الرئيسية أو المادة</label><input name="topic" required placeholder="مثال: معمارية النظام / قوانين الفيزياء" /></div>
+    <div class="form-group"><label>التفرعات والخطوات المتسلسلة (افصل بينها بـ ➔)</label><input name="sub" required placeholder="الخطوة الأولى ➔ الخطوة الثانية ➔ النتيجة" /></div>
+    <div style="max-height:220px; overflow-y:auto;" class="mt-2">${html}</div>
+  `, async (data) => {
+    nodes.unshift({ topic: data.topic, sub: data.sub });
+    localStorage.setItem("MY_LIFE_OS_MINDMAP", JSON.stringify(nodes));
+    showToast("تم حفظ الخريطة الذهنية بنجاح 🧠", "success");
+  });
+}
+
+// 4. أدوات الجامعة الخارقة: الجدول الأسبوعي البصري + المذاكرة المنقسمة (Split-Screen) + سجل الديون
+function openWeeklyTimetableModal() {
+  const days = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+  const tableData = JSON.parse(localStorage.getItem("MY_LIFE_OS_TIMETABLE") || "{}");
+
+  const colsHtml = days.map(d => `
+    <div class="timetable-day-col">
+      <h5>${d}</h5>
+      <textarea data-tt-day="${d}" rows="6" placeholder="اكتب محاضرات وسكاشن وقاعات يوم ${d}...">${escapeHTML(tableData[d] || "")}</textarea>
+    </div>
+  `).join("");
+
+  openFormModal("📅 الجدول الأسبوعي البصري للمحاضرات والسكاشن", `
+    <p class="small-muted mb-2">اكتب مواعيد محاضراتك وأرقام القاعات أو المعامل لكل يوم (يُحفظ تلقائياً):</p>
+    <div class="weekly-timetable-grid">${colsHtml}</div>
+  `, async () => {});
+
+  document.querySelector("#universal-modal .modal-card")?.classList.add("wide-lab-modal");
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  document.querySelectorAll("[data-tt-day]").forEach(area => {
+    area.oninput = () => {
+      tableData[area.dataset.ttDay] = area.value;
+      localStorage.setItem("MY_LIFE_OS_TIMETABLE", JSON.stringify(tableData));
+    };
+  });
+}
+
+function openSplitScreenStudyModal() {
+  openFormModal("📖 وضع المذاكرة المنقسمة (ملف المحاضرة بجانب التلخيص الفوري)", `
+    <div class="form-group">
+      <label>اختر ملف PDF من جهازك أو الصق رابط المحاضرة لفتحه في النصف الأيمن:</label>
+      <input type="file" id="split-pdf-file" accept=".pdf,image/*" />
+    </div>
+    <div class="split-workspace-grid">
+      <div>
+        <strong class="gold-text d-block mb-1">📄 عارض المحاضرة / الشيت:</strong>
+        <iframe id="split-pdf-frame" class="sandbox-preview-frame" style="background:#141926;"></iframe>
+      </div>
+      <div>
+        <strong class="gold-text d-block mb-1">✍️ ملخصك وملاحظاتك الفورية:</strong>
+        <input type="text" name="title" required placeholder="عنوان الملخص (مثال: ملخص المحاضرة 4)..." class="mb-2" />
+        <textarea name="content" rows="12" required placeholder="اكتب النقاط المهمة والقوانين أثناء قراءتك للملف..."></textarea>
+      </div>
+    </div>
+  `, async (data) => {
+    await createRecord("notes", {
+      title: data.title,
+      content: data.content,
+      category: "ملخص محاضرة"
+    });
+  });
+
+  document.querySelector("#universal-modal .modal-card")?.classList.add("wide-lab-modal");
+  document.getElementById("split-pdf-file").onchange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      document.getElementById("split-pdf-frame").src = URL.createObjectURL(file);
+    }
+  };
+}
+
+function openDebtTrackerModal() {
+  const debts = JSON.parse(localStorage.getItem("MY_LIFE_OS_DEBTS") || "[]");
+  const listHtml = debts.map((d, i) => `
+    <div class="prayer-row">
+      <div>
+        <strong>${escapeHTML(d.person)}</strong>
+        <span class="badge ${d.type === "for_me" ? "badge-emerald" : "badge-danger"}">${d.type === "for_me" ? "ليّ عنده" : "عليّ له"}: ${d.amount} ${AppState.currency}</span>
+        <small class="small-muted d-block">${escapeHTML(d.note || "")}</small>
+      </div>
+      <button type="button" class="btn btn-xs btn-gold" onclick="const l=JSON.parse(localStorage.getItem('MY_LIFE_OS_DEBTS')||'[]');l.splice(${i},1);localStorage.setItem('MY_LIFE_OS_DEBTS',JSON.stringify(l));this.closest('.prayer-row').remove();">تمت التسوية ✅</button>
+    </div>
+  `).join("") || `<p class="small-muted text-center">لا توجد ديون أو حسابات معلقة حالياً.</p>`;
+
+  openFormModal("🤝 مسجل الديون والمصاريف المشتركة (ليك أو عليك)", `
+    <div class="form-group"><label>اسم الشخص / الزميل</label><input name="person" required placeholder="مثال: أحمد / مصاريف مشروع الكلية" /></div>
+    <div class="form-group"><label>المبلغ (${AppState.currency})</label><input type="number" name="amount" required /></div>
+    <div class="form-group"><label>الحالة</label>
+      <select name="type"><option value="for_me">ليّ عنده (فلوس ليا)</option><option value="on_me">عليّ له (فلوس عليا)</option></select>
+    </div>
+    <div class="form-group"><label>ملاحظة</label><input name="note" placeholder="ملازم وتصوير / غداء..." /></div>
+    <div style="max-height:200px; overflow-y:auto;" class="mt-2">${listHtml}</div>
+  `, async (data) => {
+    debts.unshift(data);
+    localStorage.setItem("MY_LIFE_OS_DEBTS", JSON.stringify(debts));
+    showToast("تم تسجيل الحساب المشترك بنجاح 🤝", "success");
+  });
+}
+
+// 5. تفعيل جميع الأزرار وشاشة التوقف السينمائية وفلتر العين
+document.addEventListener("DOMContentLoaded", () => {
+  setInterval(updateAlexV3AndTopbarRadar, 4000);
+
+  document.getElementById("btn-live-sandbox")?.addEventListener("click", openLiveCodeSandboxModal);
+  document.getElementById("btn-logic-converter")?.addEventListener("click", openLogicAndBaseConverterModal);
+  document.getElementById("btn-api-tester")?.addEventListener("click", openApiTesterModal);
+  document.getElementById("btn-mindmap-canvas")?.addEventListener("click", openMindmapCanvasModal);
+  document.getElementById("btn-weekly-timetable")?.addEventListener("click", openWeeklyTimetableModal);
+  document.getElementById("btn-split-study")?.addEventListener("click", openSplitScreenStudyModal);
+  document.getElementById("btn-debt-tracker")?.addEventListener("click", openDebtTrackerModal);
+
+  // فلتر القراءة الليلية المريح للعين
+  document.getElementById("btn-eye-care")?.addEventListener("click", () => {
+    const overlay = document.getElementById("eye-care-overlay");
+    if (overlay) {
+      const isHidden = overlay.classList.toggle("hidden");
+      showToast(isHidden ? "تم إيقاف فلتر القراءة الليلية" : "تم تفعيل فلتر القراءة الليلية الدافئ لحماية عينيك 👓🌙", "info");
+    }
+  });
+
+  // شاشة التوقف السينمائية بالساعة القلابة (Flip-Clock Screensaver)
+  const screensaver = document.getElementById("flip-screensaver");
+  const ssClock = document.getElementById("screensaver-clock");
+  setInterval(() => {
+    if (ssClock && screensaver && !screensaver.classList.contains("hidden")) {
+      ssClock.textContent = new Date().toLocaleTimeString("en-US", { hour12: false });
+    }
+  }, 1000);
+
+  document.getElementById("btn-screensaver-now")?.addEventListener("click", () => {
+    screensaver?.classList.remove("hidden");
+  });
+
+  screensaver?.addEventListener("click", () => screensaver.classList.add("hidden"));
+  window.addEventListener("keydown", (e) => {
+    if (screensaver && !screensaver.classList.contains("hidden")) {
+      screensaver.classList.add("hidden");
+    }
+  });
+
+  // إطلاق احتفال أليكس عند إتمام أي مهمة أو حفظ جلسة بومودورو
+  document.addEventListener("click", (e) => {
+    if (e.target.closest('[data-action="toggle-task"]') || e.target.closest("#btn-pomo-save-session")) {
+      launchAlexConfetti();
     }
   });
 });
