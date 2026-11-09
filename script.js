@@ -3301,7 +3301,30 @@ function openPomodoroModal() {
           <button type="button" id="btn-apply-custom-pomo" class="pomo-preset-btn active" style="padding:4px 12px;">تحديد</button>
         </div>
       </div>
+<!-- شريط الصوت المباشر على الواجهة الرئيسية (تكتكة / اختيار ملف صوتي من الجهاز / تحكم بالصوت) -->
+      <div class="pomo-direct-audio-bar">
+        <button type="button" id="btn-main-sound-tick" class="pomo-preset-btn ${PomodoroState.soundMode === "tick" ? "active" : ""}">
+          <i class="fa-solid fa-stopwatch"></i> صوت التكتكة
+        </button>
 
+        <button type="button" id="btn-main-sound-custom" class="pomo-preset-btn ${PomodoroState.soundMode === "custom" ? "active" : ""}">
+          <i class="fa-solid fa-music"></i>
+          <span>${PomodoroState.customAudioName ? "🎵 " + escapeHTML(PomodoroState.customAudioName) : "🎵 اختر ملف صوتي من جهازك"}</span>
+        </button>
+
+        <button type="button" id="btn-main-pick-audio" class="pomo-preset-btn" title="استعراض واختيار ملف صوتي من الكمبيوتر" style="padding:6px 12px;">
+          <i class="fa-solid fa-folder-open gold-text"></i> فتح ملف
+        </button>
+
+        <button type="button" id="btn-main-sound-mute" class="pomo-preset-btn ${PomodoroState.soundMode === "mute" ? "active" : ""}">
+          <i class="fa-solid fa-volume-xmark"></i> صامت
+        </button>
+
+        <div class="pomo-vol-wrap" title="مستوى صوت الملف الصوتي">
+          <i class="fa-solid fa-volume-high gold-text"></i>
+          <input type="range" id="pomo-custom-vol" min="5" max="100" value="${Math.round((PomodoroState.customAudio.volume || 0.8) * 100)}" />
+        </div>
+      </div>
       <!-- الساعة السويسرية العملاقة في قلب الشاشة + شجرة الالتزام التفاعلية -->
       <div class="pomo-ring-container" data-dial-skin="${PomodoroState.dialSkin}">
         <div id="pomo-breath-ring" class="pomo-breathing-aura ${PomodoroState.breathingGuide ? "active" : ""}"></div>
@@ -3526,30 +3549,65 @@ document.getElementById("btn-pomo-settings-toggle").onclick = () => {
     });
   };
 
-  const fileInput = document.getElementById("pomo-audio-file-input");
-  document.getElementById("btn-sound-tick").onclick = () => {
+const fileInput = document.getElementById("pomo-audio-file-input");
+
+  const setTickMode = () => {
     PomodoroState.soundMode = "tick";
     if (PomodoroState.customAudio) PomodoroState.customAudio.pause();
     openPomodoroModal();
   };
-  document.getElementById("btn-sound-custom").onclick = () => {
-    if (!PomodoroState.customAudio.src) fileInput.click();
-    else {
+
+  const setCustomAudioMode = () => {
+    if (!PomodoroState.customAudio.src) {
+      fileInput.click();
+    } else {
       PomodoroState.soundMode = "custom";
-      if (PomodoroState.isRunning) PomodoroState.customAudio.play().catch(() => {});
+      if (PomodoroState.isRunning) {
+        PomodoroState.customAudio.play().catch(() => {});
+      } else {
+        showToast("تم تحديد الملف الصوتي! سيبدأ تلقائياً فور ضغطك على (بدء التركيز) 🎵", "info");
+      }
       openPomodoroModal();
     }
   };
+
+  const setMuteMode = () => {
+    PomodoroState.soundMode = "mute";
+    if (PomodoroState.customAudio) PomodoroState.customAudio.pause();
+    openPomodoroModal();
+  };
+
+  document.getElementById("btn-sound-tick").onclick = setTickMode;
+  document.getElementById("btn-main-sound-tick").onclick = setTickMode;
+
+  document.getElementById("btn-sound-custom").onclick = setCustomAudioMode;
+  document.getElementById("btn-main-sound-custom").onclick = setCustomAudioMode;
+
+  document.getElementById("btn-main-pick-audio").onclick = () => fileInput.click();
   document.getElementById("btn-change-audio-file")?.addEventListener("click", () => fileInput.click());
+
+  document.getElementById("btn-sound-mute").onclick = setMuteMode;
+  document.getElementById("btn-main-sound-mute").onclick = setMuteMode;
+
+  document.getElementById("pomo-custom-vol").oninput = (e) => {
+    const v = Number(e.target.value) / 100;
+    if (PomodoroState.customAudio) PomodoroState.customAudio.volume = v;
+  };
+
   fileInput.onchange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (PomodoroState.customAudio) PomodoroState.customAudio.pause();
     PomodoroState.customAudio.src = URL.createObjectURL(file);
-    PomodoroState.customAudio.loop = true;
-    PomodoroState.customAudioName = file.name.length > 14 ? file.name.substring(0, 12) + "..." : file.name;
+    PomodoroState.customAudio.loop = true; // يتكرر تلقائياً طوال مدة الجلسة ويقطع فور انتهائها
+    PomodoroState.customAudioName = file.name.length > 18 ? file.name.substring(0, 15) + "..." : file.name;
     PomodoroState.soundMode = "custom";
-    if (PomodoroState.isRunning) PomodoroState.customAudio.play().catch(() => {});
+    if (!PomodoroState.isRunning) {
+      startPomodoro(); // يبدأ الجلسة ويشغل الملف الصوتي فوراً!
+    } else {
+      PomodoroState.customAudio.play().catch(() => {});
+    }
+    showToast(`تم تشغيل الملف الصوتي: ${PomodoroState.customAudioName} 🎵`, "success");
     openPomodoroModal();
   };
   document.getElementById("btn-sound-mute").onclick = () => {
@@ -4069,26 +4127,64 @@ document.addEventListener("DOMContentLoaded", () => {
    FLYING FRIENDLY ALEX BOT + XP LEVELING + KANBAN + EXAM CRUNCH + DAILY CARD
    ========================================================================== */
 
+// محرك الدوران التلقائي لخلفيات الموقع والمؤقت (كل 20 دقيقة أو حسب اختيار المستخدم)
+let wallpaperRotationTimer = null;
+
+const ALL_WALLPAPER_URLS = [
+  "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1920&q=85",
+  "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1920&q=85",
+  "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1920&q=85",
+  "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1920&q=85",
+  "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1920&q=85",
+  "https://images.unsplash.com/photo-1522383225653-ed111181a951?auto=format&fit=crop&w=1920&q=85",
+  "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=1920&q=85",
+  "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=85",
+  "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1920&q=85",
+  "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1920&q=85",
+  "https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&w=1920&q=85"
+];
+
+function startWallpaperAutoRotation() {
+  if (wallpaperRotationTimer) clearInterval(wallpaperRotationTimer);
+  const mode = localStorage.getItem("MY_LIFE_OS_WP_ROTATE_MODE") || "static"; // "static" | "20" | "10" | "5" | "60"
+  if (mode === "static") return;
+
+  const intervalMins = Number(mode) || 20;
+  wallpaperRotationTimer = setInterval(() => {
+    rotateWallpaperNow(false);
+  }, intervalMins * 60 * 1000);
+}
+
+function rotateWallpaperNow(showNotification = true) {
+  let idx = Number(localStorage.getItem("MY_LIFE_OS_WP_ROTATE_IDX") || 0);
+  idx = (idx + 1) % ALL_WALLPAPER_URLS.length;
+  localStorage.setItem("MY_LIFE_OS_WP_ROTATE_IDX", String(idx));
+  const nextUrl = ALL_WALLPAPER_URLS[idx];
+  localStorage.setItem("MY_LIFE_OS_APP_BG", nextUrl);
+  localStorage.setItem("MY_LIFE_OS_POMO_BG", nextUrl);
+  applySavedWallpapers();
+  if (showNotification) {
+    showToast("تم تبديل خلفية النظام والمؤقت تلقائياً 🔄🖼️", "info");
+  }
+}
+
+// تشغيل فحص التغيير التلقائي عند فتح الموقع
+setTimeout(startWallpaperAutoRotation, 1500);
+
 function openWallpaperStudioModal() {
+  const currentRotateMode = localStorage.getItem("MY_LIFE_OS_WP_ROTATE_MODE") || "static";
+
   const presets = [
-    // ⚔️ رجال غامضة وأجواء فخمة
     { name: "🕵️‍♂️ فارس الظل الغامض", url: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1920&q=85" },
     { name: "👤 وقفة رجل هادئ", url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=1920&q=85" },
     { name: "🧥 هيبة في الغموض", url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1920&q=85" },
-    // 🌸 أنمي ومذاكرة هادئة (محترمة وفخمة)
     { name: "🎧 أنمي تركيز ومذاكرة", url: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1920&q=85" },
     { name: "☕ أجواء أنمي دافئة", url: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=1920&q=85" },
     { name: "🌸 فتاة الأنمي والهدوء", url: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1920&q=85" },
-    // شباب وفخامة وغموض
     { name: "⚔️ المحارب الغامض", url: DEFAULT_WALLPAPERS.shadowWarrior },
-    { name: "🥷 ساموراي الظلام", url: DEFAULT_WALLPAPERS.darkRonin },
     { name: "💻 هاكر النيون", url: DEFAULT_WALLPAPERS.cyberCoder },
-    { name: "🌑 سيد الظلال", url: DEFAULT_WALLPAPERS.nightHood },
-    // بنات ورسوم لطيفة
     { name: "🌺 أزهار الساكورا الوردية", url: DEFAULT_WALLPAPERS.sakuraPink },
-    { name: "🕯️ غرفة دافئة لطيفة", url: DEFAULT_WALLPAPERS.cozyAesthetic },
     { name: "☁️ غيوم وردية هادئة", url: DEFAULT_WALLPAPERS.pastelClouds },
-    // طبيعة ساحرة وهدوء
     { name: "🏔️ جبال الألب السويسرية", url: DEFAULT_WALLPAPERS.swissAlps },
     { name: "🌲 غابة المطر الضبابية", url: DEFAULT_WALLPAPERS.rainyForest },
     { name: "🌌 المجرة الملكية", url: DEFAULT_WALLPAPERS.royalGalaxy },
@@ -4101,9 +4197,29 @@ function openWallpaperStudioModal() {
     </div>
   `).join("");
 
-  openFormModal("🖼️ استوديو الخلفيات (شباب • بنات • طبيعة • صورتك الخاصة)", `
+  openFormModal("🖼️ استوديو الخلفيات والتبديل التلقائي", `
+    <!-- ميزة التبديل التلقائي للخلفية كل 20 دقيقة أو تثبيتها -->
+    <div class="wp-rotator-box">
+      <div>
+        <strong><i class="fa-solid fa-rotate gold-text"></i> نظام دوران الخلفية التلقائي:</strong>
+        <small class="small-muted d-block">اختر تثبيت الخلفية أو تغييرها تلقائياً كل 20 دقيقة لتجديد نشاطك</small>
+      </div>
+      <div class="filters-row">
+        <select id="wp-rotate-mode-select" class="select-sm">
+          <option value="static" ${currentRotateMode === "static" ? "selected" : ""}>📌 خلفية ثابتة (بدون تغيير)</option>
+          <option value="20" ${currentRotateMode === "20" ? "selected" : ""}>🔄 تغيير تلقائي كل 20 دقيقة</option>
+          <option value="10" ${currentRotateMode === "10" ? "selected" : ""}>⚡ تغيير تلقائي كل 10 دقائق</option>
+          <option value="5" ${currentRotateMode === "5" ? "selected" : ""}>🚀 تغيير تلقائي كل 5 دقائق</option>
+          <option value="60" ${currentRotateMode === "60" ? "selected" : ""}>⏳ تغيير تلقائي كل ساعة</option>
+        </select>
+        <button type="button" id="btn-wp-random-now" class="btn btn-xs btn-gold" title="تبديل عشوائي الآن">
+          <i class="fa-solid fa-shuffle"></i> غيّر الآن
+        </button>
+      </div>
+    </div>
+
     <div class="form-group">
-      <label>تطبيق الخلفية على:</label>
+      <label>تطبيق الخلفية المختارة يدوياً على:</label>
       <select id="wp-target-select" class="select-sm" style="width:100%">
         <option value="both">خلفية الموقع + شاشة المؤقت معاً ✨</option>
         <option value="app">خلفية الموقع الرئيسية فقط 🖥️</option>
@@ -4114,16 +4230,35 @@ function openWallpaperStudioModal() {
     <label class="small-muted">اختر من المكتبة المنوعة الجاهزة (اضغط على أي صورة لتفعيلها فوراً):</label>
     <div class="wallpaper-presets-grid">${presetsHtml}</div>
 
-    <div class="form-group mt-2">
-      <label class="btn btn-gold btn-sm btn-block" style="cursor:pointer;">
-        <i class="fa-solid fa-upload"></i> أو اختر صورة خاصة من جهازك الكمبيوتر
+    <div class="config-actions mt-2">
+      <label class="btn btn-gold btn-sm" style="cursor:pointer; flex:1;">
+        <i class="fa-solid fa-upload"></i> اختر صورة خاصة من جهازك
         <input type="file" id="wp-file-upload" accept="image/*" class="hidden" />
       </label>
+      <button type="button" id="btn-back-to-pomo" class="btn btn-outline btn-sm">
+        <i class="fa-solid fa-stopwatch gold-text"></i> العودة لمؤقت التركيز
+      </button>
     </div>
   `, async () => {});
 
   const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
   if (saveBtn) saveBtn.style.display = "none";
+
+  // حفظ وضع الدوران التلقائي (ثابت أو كل 20 دقيقة)
+  document.getElementById("wp-rotate-mode-select").onchange = (e) => {
+    const mode = e.target.value;
+    localStorage.setItem("MY_LIFE_OS_WP_ROTATE_MODE", mode);
+    startWallpaperAutoRotation();
+    showToast(mode === "static" ? "تم تثبيت الخلفية الحالية 📌" : `تم تفعيل تغيير الخلفية تلقائياً كل ${mode} دقيقة 🔄`, "success");
+  };
+
+  document.getElementById("btn-wp-random-now").onclick = () => {
+    rotateWallpaperNow(true);
+  };
+
+  document.getElementById("btn-back-to-pomo").onclick = () => {
+    openPomodoroModal();
+  };
 
   document.querySelectorAll("[data-wp-url]").forEach(card => {
     card.onclick = () => {
@@ -5640,6 +5775,81 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target.closest("#btn-pomo-save-session")) {
       const mins = Math.max(1, Math.round(PomodoroState.duration / 60));
       addTreeToForest(PomodoroState.customTaskName || "جلسة تركيز", mins, "healthy");
+    }
+  });
+});
+/* ==========================================================================
+   3D INTERACTIVE STUDY FLASHCARDS ENGINE (UNIVERSITY REVISION)
+   ========================================================================== */
+function getFlashcardsList() {
+  try {
+    return JSON.parse(localStorage.getItem("MY_LIFE_OS_FLASHCARDS") || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+function openFlashcardsStudioModal() {
+  const cards = getFlashcardsList();
+
+  const cardsHtml = cards.length
+    ? `<div class="flashcards-grid">` + cards.map((c, idx) => `
+        <div class="flashcard-3d" onclick="this.classList.toggle('flipped')">
+          <div class="flashcard-inner">
+            <div class="flashcard-front">
+              <span class="badge badge-gold mb-2">${escapeHTML(c.subject || "مراجعة")}</span>
+              <strong>❓ ${escapeHTML(c.question)}</strong>
+              <small class="small-muted mt-2">(اضغط لقلب الكارت ورؤية الإجابة)</small>
+            </div>
+            <div class="flashcard-back">
+              <strong>✅ الإجابة:</strong>
+              <p class="mt-1">${escapeHTML(c.answer)}</p>
+              <button type="button" class="btn btn-xs btn-danger mt-2" data-del-flashcard="${idx}" onclick="event.stopPropagation();">حذف</button>
+            </div>
+          </div>
+        </div>
+      `).join("") + `</div>`
+    : `<p class="small-muted text-center py-2">لا توجد بطاقات مراجعة بعد. أضف أول سؤال وجواب بالأسفل لتقوية ذاكرتك!</p>`;
+
+  openFormModal("🃏 استوديو بطاقات المراجعة الذكية (3D Flashcards)", `
+    <div class="form-group">
+      <label>اسم المادة</label>
+      <input name="subject" required placeholder="مثال: Logic Design / دوائر كهربائية" />
+    </div>
+    <div class="form-group">
+      <label>السؤال أو القانون (وجه البطاقة)</label>
+      <input name="question" required placeholder="ما هو قانون كيرشوف للتيار KCL؟" />
+    </div>
+    <div class="form-group">
+      <label>الإجابة النموذجية (ظهر البطاقة)</label>
+      <input name="answer" required placeholder="مجموع التيارات الداخلة للعقدة يساوي مجموع التيارات الخارجة منها." />
+    </div>
+    <h4 class="mt-4 gold-text">بطاقاتك المحفوظة (اضغط على أي بطاقة لقلبها 3D):</h4>
+    <div style="max-height:260px; overflow-y:auto;">${cardsHtml}</div>
+  `, async (data) => {
+    const list = getFlashcardsList();
+    list.unshift({
+      subject: data.subject,
+      question: data.question,
+      answer: data.answer
+    });
+    localStorage.setItem("MY_LIFE_OS_FLASHCARDS", JSON.stringify(list));
+    showToast("تمت إضافة بطاقة المراجعة 3D بنجاح! 🃏", "success");
+    openFlashcardsStudioModal();
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("btn-flashcards-studio")?.addEventListener("click", openFlashcardsStudioModal);
+
+  document.addEventListener("click", (e) => {
+    const delFc = e.target.closest("[data-del-flashcard]");
+    if (delFc) {
+      const idx = Number(delFc.dataset.delFlashcard);
+      const list = getFlashcardsList();
+      list.splice(idx, 1);
+      localStorage.setItem("MY_LIFE_OS_FLASHCARDS", JSON.stringify(list));
+      openFlashcardsStudioModal();
     }
   });
 });
