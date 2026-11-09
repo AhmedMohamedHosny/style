@@ -3357,3 +3357,174 @@ body {
   border-color: rgba(16, 185, 129, 0.5) !important;
   box-shadow: 0 0 18px rgba(16, 185, 129, 0.15);
 }
+/* ==========================================================================
+   MEGA 10 FEATURES STYLING: PIN LOCK, POMODORO V4 ORBS, AURA, FOREST & HUD
+   ========================================================================== */
+
+/* 1. شاشة القفل الزجاجية بكود PIN */
+.pin-lock-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: rgba(4, 6, 14, 0.88);
+  backdrop-filter: blur(26px);
+  -webkit-backdrop-filter: blur(26px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.pin-lock-card {
+  width: 100%;
+  max-width: 390px;
+  text-align: center;
+  padding: 34px 26px;
+  border-radius: 24px;
+}
+
+.pin-input-wrap input {
+  text-align: center;
+  font-size: 2rem !important;
+  letter-spacing: 14px;
+  font-weight: 800;
+  color: var(--gold-primary);
+  background: rgba(8, 11, 20, 0.9) !important;
+  border: 1.5px solid var(--gold-primary) !important;
+  border-radius: 14px !important;
+}
+
+/* 4 & 6. كرات الطاقة الذهبية Orbs + تحول الإضاءة الديناميكي في البومودورو */
+.pomo-orbs-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pomo-energy-orb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  transition: all 0.35s ease;
+}
+
+.pomo-energy-orb.lit {
+  background: var(--gold-primary);
+  box-shadow: 0 0 14px var(--gold-primary), 0 0 24px #10b981;
+  transform: scale(1.2);
+}
+
+.pomo-ring-container.aura-stage-mid {
+  box-shadow: 0 0 70px rgba(6, 182, 212, 0.28), inset 0 0 40px rgba(6, 182, 212, 0.14) !important;
+}
+
+.pomo-ring-container.aura-stage-final {
+  box-shadow: 0 0 85px rgba(16, 185, 129, 0.38), inset 0 0 50px rgba(16, 185, 129, 0.2) !important;
+}
+
+.pomo-ring-container.aura-last-two-mins {
+  animation: finalTwoMinsPulse 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes finalTwoMinsPulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.03); }
+}
+
+/* 5 & 9. شجرة الالتزام داخل البومودورو + شريط الاقتباسات + حديقة الأشجار */
+.pomo-tree-badge {
+  font-size: 0.9rem;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 2px 12px;
+  border-radius: 99px;
+  margin-top: 4px;
+}
+
+.pomo-wisdom-ticker {
+  font-size: 0.88rem;
+  color: var(--gold-light);
+  background: rgba(15, 20, 34, 0.72);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  padding: 7px 18px;
+  border-radius: 99px;
+  max-width: 620px;
+  transition: opacity 0.3s ease;
+}
+
+.forest-trees-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+  gap: 8px;
+}
+
+.forest-tree-cell {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 12px;
+  padding: 8px 4px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.forest-tree-cell.withered {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.tree-emoji {
+  font-size: 1.45rem;
+}
+
+/* 7. النافذة العائمة المصغرة الاحترافية (Compact Mini-HUD 200x60) */
+.mini-floating-pomo {
+  width: 215px;
+  padding: 8px 12px !important;
+  border-radius: 16px !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 6px !important;
+}
+
+.mini-hud-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.btn-icon-xs {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+}
+
+.mini-hud-progress-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.mini-hud-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-primary), #10b981);
+  transition: width 0.5s ease;
+}
