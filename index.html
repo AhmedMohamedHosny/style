@@ -25,6 +25,21 @@
 <body>
 
   <!-- Global Toast & Status Notification Bar -->
+  <!-- فلتر القراءة الليلية الدافئ لحماية العين (Night Eye-Care Filter) -->
+  <div id="eye-care-overlay" class="eye-care-overlay hidden"></div>
+
+  <!-- كانفاس شرارات الاحتفال الذهبية الفورية (Alex Confetti Burst) -->
+  <canvas id="confetti-canvas" class="confetti-canvas"></canvas>
+
+  <!-- شاشة التوقف السينمائية بالساعة القلابة (Flip-Clock Screensaver) -->
+  <div id="flip-screensaver" class="flip-screensaver hidden">
+    <div class="screensaver-content">
+      <div class="pomo-logo-orb"><img src="logo.png" alt="Logo" onerror="this.style.display='none'" /></div>
+      <span class="badge badge-gold mt-2">MY LIFE OS • STANDBY MODE</span>
+      <div class="flip-clock-giant" id="screensaver-clock">00:00:00</div>
+      <p id="screensaver-quote" class="gold-text">حرك الماوس أو اضغط أي زر للعودة فوراً</p>
+    </div>
+  </div>
    <!-- شاشة حجب الهواتف (PC / Laptop Only Guard - English) -->
   <div id="desktop-only-guard" class="desktop-only-guard">
     <div class="desktop-guard-card">
@@ -233,13 +248,23 @@
           <button id="btn-mobile-menu" class="btn-icon mobile-only" aria-label="Menu">
             <i class="fa-solid fa-bars"></i>
           </button>
-          <div>
+<div>
             <h1 id="current-view-title">لوحة التحكم</h1>
             <p id="live-datetime" class="datetime-text">...</p>
           </div>
+          <!-- كبسولة رادار أقرب امتحان في الشريط العلوي -->
+          <span id="topbar-exam-pill" class="badge badge-gold" style="margin-inline-start:10px;">
+            <i class="fa-solid fa-satellite-dish"></i> لا توجد امتحانات عاجلة
+          </span>
         </div>
 
         <div class="topbar-end">
+          <button id="btn-eye-care" class="btn-icon" title="فلتر القراءة الليلية المريح للعين (Eye-Care)">
+            <i class="fa-solid fa-glasses"></i>
+          </button>
+          <button id="btn-screensaver-now" class="btn-icon" title="تشغيل شاشة التوقف السينمائية (Flip-Clock)">
+            <i class="fa-solid fa-tv"></i>
+          </button>
           <button id="btn-quick-search" class="btn-icon" title="بحث شامل">
             <i class="fa-solid fa-magnifying-glass"></i>
           </button>
@@ -540,6 +565,8 @@
             <button id="btn-add-subject" class="btn btn-gold btn-sm"><i class="fa-solid fa-book-medical"></i> مادة جديدة</button>
             <button id="btn-add-lecture" class="btn btn-outline btn-sm"><i class="fa-solid fa-file-circle-plus"></i> محاضرة / واجب</button>
             <button id="btn-gpa-simulator" class="btn btn-outline btn-sm"><i class="fa-solid fa-calculator gold-text"></i> حاسبة GPA والامتياز</button>
+  <button id="btn-weekly-timetable" class="btn btn-outline btn-sm"><i class="fa-solid fa-calendar-week gold-text"></i> الجدول الأسبوعي البصري</button>
+            <button id="btn-split-study" class="btn btn-outline btn-sm"><i class="fa-solid fa-columns gold-text"></i> المذاكرة المنقسمة (PDF + ملخص)</button>
 <button id="btn-flashcards-studio" class="btn btn-outline btn-sm"><i class="fa-solid fa-clone gold-text"></i> بطاقات مراجعة 3D</button>
             <button id="btn-exam-crunch-mode" class="btn btn-danger btn-sm"><i class="fa-solid fa-fire"></i> طوارئ ليلة الامتحان</button>
             <button id="btn-feynman-ai" class="btn btn-outline btn-sm"><i class="fa-solid fa-brain gold-text"></i> محاكي فاينمان AI</button>
@@ -735,6 +762,18 @@
         <div class="section-toolbar">
           <div class="filters-row">
             <input type="search" id="project-search" class="input-sm" placeholder="ابحث في المشاريع والتقنيات..." />
+            <button type="button" id="btn-live-sandbox" class="btn btn-gold btn-sm">
+              <i class="fa-solid fa-laptop-code"></i> محرر الأكواد الحي (Sandbox)
+            </button>
+            <button type="button" id="btn-logic-converter" class="btn btn-outline btn-sm">
+              <i class="fa-solid fa-microchip gold-text"></i> محول Logic & Binary
+            </button>
+            <button type="button" id="btn-mindmap-canvas" class="btn btn-outline btn-sm">
+              <i class="fa-solid fa-diagram-project gold-text"></i> الخرائط الذهنية
+            </button>
+            <button type="button" id="btn-api-tester" class="btn btn-outline btn-sm">
+              <i class="fa-solid fa-satellite gold-text"></i> فاحص API السريع
+            </button>
             <button type="button" id="btn-open-snippets" class="btn btn-outline btn-sm">
               <i class="fa-solid fa-code gold-text"></i> خزنة الأكواد (Snippets)
             </button>
@@ -802,6 +841,7 @@
             </select>
           </div>
 <div class="filters-row">
+  <button id="btn-debt-tracker" class="btn btn-outline btn-sm"><i class="fa-solid fa-handshake-angle gold-text"></i> الديون والمصاريف المشتركة</button>
             <button id="btn-add-subscription" class="btn btn-outline btn-sm"><i class="fa-solid fa-calendar-check gold-text"></i> اشتراك / قسط شهري</button>
             <button id="btn-add-saving-goal" class="btn btn-outline btn-sm"><i class="fa-solid fa-piggy-bank gold-text"></i> هدف ادخار (الحصالة)</button>
             <button id="btn-set-budget" class="btn btn-outline btn-sm"><i class="fa-solid fa-bullseye"></i> تحديد الميزانية</button>
@@ -1329,6 +1369,12 @@
           <circle cx="48" cy="49" r="2.4" fill="#ffffff" />
           <circle cx="76" cy="49" r="2.4" fill="#ffffff" />
         </g>
+        <!-- Cool Sunglasses (Shown automatically during Pomodoro Focus) -->
+        <g id="alex-sunglasses" class="hidden">
+          <rect x="34" y="44" width="22" height="14" rx="3" fill="#05060d" stroke="#d4af37" stroke-width="2.5" />
+          <rect x="64" y="44" width="22" height="14" rx="3" fill="#05060d" stroke="#d4af37" stroke-width="2.5" />
+          <line x1="56" y1="49" x2="64" y2="49" stroke="#d4af37" stroke-width="2.5" />
+        </g>
         <!-- Warm Friendly Blush & Smile -->
         <circle cx="38" cy="62" r="4" fill="rgba(244, 63, 94, 0.45)" />
         <circle cx="82" cy="62" r="4" fill="rgba(244, 63, 94, 0.45)" />
@@ -1359,7 +1405,14 @@
           </button>
         </div>
       </div>
-
+<!-- تحديات أليكس اليومية (Daily Quests +100 XP) -->
+      <div id="alex-daily-quests-bar" class="alex-quests-bar">
+        <div class="flex-between">
+          <strong>🎯 تحديات أليكس اليومية (+100 XP)</strong>
+          <small id="alex-quests-progress" class="gold-text">0 / 3</small>
+        </div>
+        <div id="alex-quests-list" class="alex-quests-list mt-1"></div>
+      </div>
       <!-- أزرار دردشة ودية ونفسية وسريعة -->
       <div class="alex-quick-chips" id="alex-quick-chips">
         <button type="button" class="alex-chip" data-alex-friendly="tired">😮‍💨 حاسس إني تعبان ومفصول</button>
