@@ -286,11 +286,15 @@ function injectOSProVisualStyles() {
   document.head.appendChild(st);
 }
 
-/* ============================================================================
-   1. UI/UX UPGRADE: 4 THEMES, COLLAPSIBLE SIDEBAR & QUICK CAPTURE (ALT+N)
-   ============================================================================ */
+let topbarScreenRecStream = null;
+let topbarScreenRecorder = null;
+let topbarScreenChunks = [];
+let topbarRadioPlaying = false;
+
 function initThemeAndSidebarSystem() {
   injectOSProVisualStyles();
+  injectSuperTopbarStyles();
+
   const savedTheme = localStorage.getItem("MY_LIFE_OS_THEME_V6") || "midnight-gold";
   applyOSTheme(savedTheme, false);
 
@@ -325,6 +329,47 @@ function initThemeAndSidebarSystem() {
     topbarEnd.prepend(qcBtn);
   }
 
+  // حقن شريط الأدوات الخارق في المساحة الفارغة بالشريط العلوي
+  if (topbarEnd && !document.getElementById("os-super-topbar-dock")) {
+    const dock = document.createElement("div");
+    dock.id = "os-super-topbar-dock";
+    dock.className = "os-super-topbar-dock";
+
+    const gymProf = OSProStore.get("gym_profile_v4", { waterCups: 6 });
+
+    dock.innerHTML = `
+      <button type="button" id="btn-top-cairo-radio" class="super-dock-pill" title="تشغيل/إيقاف إذاعة القرآن الكريم من القاهرة في الخلفية مباشرة">
+        <i class="fa-solid fa-radio gold-text"></i>
+        <span>إذاعة القاهرة</span>
+      </button>
+
+      <button type="button" id="btn-top-whiteboard" class="btn-icon gold-glow" title="السبورة الهندسية الذكية للرسم والتخطيط الحر (Whiteboard)">
+        <i class="fa-solid fa-chalkboard-user"></i>
+      </button>
+
+      <button type="button" id="btn-top-sci-calc" class="btn-icon" title="الآلة الحاسبة العلمية والبرمجية السريعة">
+        <i class="fa-solid fa-calculator"></i>
+      </button>
+
+      <button type="button" id="btn-top-screen-rec" class="btn-icon" title="تسجيل الشاشة فيديو بضغطة واحدة (Screen Recorder)">
+        <i class="fa-solid fa-video"></i>
+      </button>
+
+      <button type="button" id="btn-top-water-quick" class="super-dock-pill" title="اضغط لتسجيل شرب كوب مياه جديد فوراً">
+        <span>💧</span>
+        <strong id="top-water-count-lbl">${gymProf.waterCups || 6}/10</strong>
+      </button>
+
+      <button type="button" id="btn-top-telemetry" class="super-dock-pill" title="رادار حالة الجهاز والبطارية وسرعة الاتصال">
+        <i class="fa-solid fa-microchip gold-text"></i>
+        <span id="top-battery-lbl">⚡ 100%</span>
+      </button>
+    `;
+
+    topbarEnd.prepend(dock);
+    bindSuperTopbarDockEvents();
+  }
+
   const themeBtn = document.getElementById("btn-theme-toggle");
   if (themeBtn) {
     themeBtn.title = "اختيار الثيم (Midnight Gold / Pure Light / Pure Black / Forest)";
@@ -336,6 +381,349 @@ function initThemeAndSidebarSystem() {
       e.preventDefault();
       openQuickCaptureModal();
     }
+  });
+}
+
+function injectSuperTopbarStyles() {
+  if (document.getElementById("super-topbar-dock-styles")) return;
+  const st = document.createElement("style");
+  st.id = "super-topbar-dock-styles";
+  st.textContent = `
+    .os-super-topbar-dock {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 10px;
+      border-radius: 99px;
+      background: rgba(15, 22, 38, 0.55);
+      border: 1px solid rgba(212, 167, 44, 0.28);
+      margin-inline-end: 6px;
+    }
+    html[data-theme="pure-light"] .os-super-topbar-dock,
+    html[data-theme="light"] .os-super-topbar-dock {
+      background: #f1f5f9;
+      border-color: rgba(15, 23, 42, 0.14);
+    }
+    .super-dock-pill {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-primary);
+      padding: 5px 11px;
+      border-radius: 99px;
+      font-family: inherit;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    html[data-theme="pure-light"] .super-dock-pill,
+    html[data-theme="light"] .super-dock-pill {
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.12);
+      color: #0f172a;
+    }
+    .super-dock-pill:hover {
+      border-color: var(--gold-primary);
+      transform: translateY(-1px);
+    }
+    .super-dock-pill.live-active {
+      background: rgba(25, 184, 137, 0.18) !important;
+      border-color: #19B889 !important;
+      color: #19B889 !important;
+      box-shadow: 0 0 15px rgba(25, 184, 137, 0.3);
+    }
+    .btn-icon.rec-active {
+      background: rgba(239, 68, 68, 0.22) !important;
+      border-color: #ef4444 !important;
+      color: #ef4444 !important;
+      animation: blinkDot 1s infinite;
+    }
+    /* إصلاح وضوح نصوص البانر الترحيبي في الثيم النهاري الفاتح */
+    html[data-theme="pure-light"] .welcome-banner,
+    html[data-theme="light"] .welcome-banner {
+      color: #f8fafc !important;
+    }
+    html[data-theme="pure-light"] .welcome-banner .briefing-content,
+    html[data-theme="light"] .welcome-banner .briefing-content {
+      color: #e2e8f0 !important;
+    }
+    .whiteboard-canvas-box {
+      width: 100%;
+      height: 410px;
+      background: #0b101e;
+      border: 2px solid var(--gold-primary);
+      border-radius: 16px;
+      cursor: crosshair;
+      touch-action: none;
+    }
+    .calc-grid-buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .calc-btn {
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(17, 24, 39, 0.85);
+      color: #fff;
+      font-family: 'Inter', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .calc-btn:hover {
+      border-color: var(--gold-primary);
+      background: rgba(212, 167, 44, 0.2);
+    }
+  `;
+  document.head.appendChild(st);
+}
+
+function bindSuperTopbarDockEvents() {
+  // 1. تشغيل وإيقاف إذاعة القرآن الكريم من القاهرة مباشرة من الشريط العلوي
+  const radioBtn = document.getElementById("btn-top-cairo-radio");
+  if (radioBtn) {
+    radioBtn.onclick = () => {
+      const player = document.getElementById("quran-audio-player");
+      if (!player) return;
+      if (!topbarRadioPlaying || player.paused) {
+        document.getElementById("btn-cairo-radio-quick")?.click();
+        topbarRadioPlaying = true;
+        radioBtn.classList.add("live-active");
+        radioBtn.innerHTML = `<span class="live-dot"></span> <span>إذاعة القاهرة (شغالة)</span>`;
+      } else {
+        player.pause();
+        topbarRadioPlaying = false;
+        radioBtn.classList.remove("live-active");
+        radioBtn.innerHTML = `<i class="fa-solid fa-radio gold-text"></i> <span>إذاعة القاهرة</span>`;
+        toast("تم إيقاف البث المباشر مؤقتاً 📻", "info");
+      }
+    };
+  }
+
+  // 2. السبورة الهندسية الذكية (Interactive Whiteboard)
+  document.getElementById("btn-top-whiteboard")?.addEventListener("click", openSmartWhiteboardModal);
+
+  // 3. الآلة الحاسبة العلمية والبرمجية السريعة
+  document.getElementById("btn-top-sci-calc")?.addEventListener("click", openScientificCalcModal);
+
+  // 4. مسجل الشاشة الفوري (Screen Video Recorder)
+  const recBtn = document.getElementById("btn-top-screen-rec");
+  if (recBtn) {
+    recBtn.onclick = async () => {
+      if (topbarScreenRecorder && topbarScreenRecorder.state === "recording") {
+        topbarScreenRecorder.stop();
+        topbarScreenRecStream?.getTracks().forEach(t => t.stop());
+        recBtn.classList.remove("rec-active");
+        return;
+      }
+      try {
+        topbarScreenRecStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        topbarScreenRecorder = new MediaRecorder(topbarScreenRecStream);
+        topbarScreenChunks = [];
+        topbarScreenRecorder.ondataavailable = e => {
+          if (e.data.size > 0) topbarScreenChunks.push(e.data);
+        };
+        topbarScreenRecorder.onstop = () => {
+          const blob = new Blob(topbarScreenChunks, { type: "video/webm" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = `my-life-os-screen-record-${today()}.webm`;
+          a.click();
+          recBtn.classList.remove("rec-active");
+          toast("تم حفظ وتحميل تسجيل الشاشة بنجاح! 🎥✅");
+        };
+        topbarScreenRecorder.start();
+        recBtn.classList.add("rec-active");
+        toast("🔴 بدأ تسجيل الشاشة! اضغط على أيقونة الكاميرا مرة أخرى للإيقاف والحفظ", "info");
+      } catch (err) {
+        toast("تم إلغاء مشاركة الشاشة", "info");
+      }
+    };
+  }
+
+  // 5. عداد المياه السريع بضغطة واحدة
+  document.getElementById("btn-top-water-quick")?.addEventListener("click", () => {
+    const prof = OSProStore.get("gym_profile_v4", { waterCups: 6 });
+    prof.waterCups = ((Number(prof.waterCups) || 0) % 12) + 1;
+    OSProStore.set("gym_profile_v4", prof);
+    const lbl = document.getElementById("top-water-count-lbl");
+    if (lbl) lbl.textContent = `${prof.waterCups}/10`;
+    if (document.getElementById("view-health")?.classList.contains("active")) {
+      renderHealthView();
+    }
+    toast(`بالهنا والشفا! شربت ${prof.waterCups} أكواب مياه اليوم 💧`);
+  });
+
+  // 6. رادار حالة الجهاز والبطارية (Live System Telemetry)
+  if ("getBattery" in navigator) {
+    navigator.getBattery().then(bat => {
+      const updateBat = () => {
+        const pct = Math.round(bat.level * 100);
+        const lbl = document.getElementById("top-battery-lbl");
+        if (lbl) lbl.textContent = `${bat.charging ? "⚡" : "🔋"} ${pct}%`;
+      };
+      updateBat();
+      bat.addEventListener("levelchange", updateBat);
+      bat.addEventListener("chargingchange", updateBat);
+    }).catch(() => {});
+  }
+
+  document.getElementById("btn-top-telemetry")?.addEventListener("click", () => {
+    const mem = performance.memory ? `${Math.round(performance.memory.usedJSHeapSize / 1048576)} MB` : "أداء مثالي (خفيف)";
+    const cores = navigator.hardwareConcurrency || 8;
+    B().openFormModal("⚡ رادار أداء النظام والجهاز الحي (System Telemetry)", `
+      <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);">
+        <div class="subject-progress-box text-center">
+          <small class="small-muted">أنوية المعالج المنطقية (CPU Cores)</small>
+          <h3 class="gold-text mt-1">${cores} Cores</h3>
+        </div>
+        <div class="subject-progress-box text-center">
+          <small class="small-muted">استهلاك ذاكرة النظام (RAM Heap)</small>
+          <h3 style="color:#19B889;" class="mt-1">${mem}</h3>
+        </div>
+        <div class="subject-progress-box text-center">
+          <small class="small-muted">حالة الاتصال السحابي (Firebase)</small>
+          <h3 style="color:#21C5C5;" class="mt-1">${navigator.onLine ? "متصل لحظياً 🟢" : "أوفلاين 🔴"}</h3>
+        </div>
+        <div class="subject-progress-box text-center">
+          <small class="small-muted">حالة بطارية الجهاز</small>
+          <h3 class="gold-text mt-1">${document.getElementById("top-battery-lbl")?.textContent || "100%"}</h3>
+        </div>
+      </div>
+    `, async () => {});
+    const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+    if (saveBtn) saveBtn.style.display = "none";
+  });
+}
+
+// نافذة السبورة الهندسية التفاعلية (Smart Whiteboard)
+function openSmartWhiteboardModal() {
+  B().openFormModal("🎨 السبورة الهندسية الذكية للرسم والشرح الحر (Smart Whiteboard)", `
+    <div class="flex-between mb-2" style="flex-wrap:wrap; gap:8px;">
+      <div class="filters-row">
+        <label class="small-muted">لون القلم:</label>
+        <input type="color" id="wb-color" value="#D4A72C" style="width:42px; height:32px; padding:2px; cursor:pointer;" />
+        <label class="small-muted">السمك:</label>
+        <input type="range" id="wb-size" min="2" max="18" value="4" style="width:90px;" />
+        <button type="button" id="btn-wb-eraser" class="btn btn-xs btn-outline"><i class="fa-solid fa-eraser"></i> ممحاة</button>
+      </div>
+      <div class="filters-row">
+        <button type="button" id="btn-wb-clear" class="btn btn-xs btn-danger"><i class="fa-solid fa-trash"></i> مسح السبورة</button>
+        <button type="button" id="btn-wb-download" class="btn btn-xs btn-gold"><i class="fa-solid fa-download"></i> حفظ كصورة PNG</button>
+      </div>
+    </div>
+    <canvas id="smart-whiteboard-canvas" class="whiteboard-canvas-box"></canvas>
+  `, async () => {});
+
+  document.querySelector("#universal-modal .modal-card")?.classList.add("wide-lab-modal");
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  const canvas = document.getElementById("smart-whiteboard-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  canvas.width = canvas.clientWidth || 860;
+  canvas.height = 410;
+
+  ctx.fillStyle = "#0b101e";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  let drawing = false;
+  let isEraser = false;
+
+  const getPos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    return { x: clientX - r.left, y: clientY - r.top };
+  };
+
+  canvas.onmousedown = (e) => {
+    drawing = true;
+    const { x, y } = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+  canvas.onmousemove = (e) => {
+    if (!drawing) return;
+    const { x, y } = getPos(e);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = Number(document.getElementById("wb-size")?.value || 4);
+    ctx.strokeStyle = isEraser ? "#0b101e" : (document.getElementById("wb-color")?.value || "#D4A72C");
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+  window.addEventListener("mouseup", () => { drawing = false; });
+
+  document.getElementById("btn-wb-eraser").onclick = (e) => {
+    isEraser = !isEraser;
+    e.currentTarget.classList.toggle("btn-gold", isEraser);
+  };
+  document.getElementById("btn-wb-clear").onclick = () => {
+    ctx.fillStyle = "#0b101e";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  };
+  document.getElementById("btn-wb-download").onclick = () => {
+    const a = document.createElement("a");
+    a.download = `whiteboard-sketch-${today()}.png`;
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+    toast("تم تحميل رسمة السبورة كصورة PNG! 🎨");
+  };
+}
+
+// نافذة الآلة الحاسبة العلمية والبرمجية السريعة
+function openScientificCalcModal() {
+  B().openFormModal("🧮 الآلة الحاسبة الهندسية والبرمجية السريعة", `
+    <input type="text" id="sci-calc-screen" dir="ltr" class="wizard-input-giant" placeholder="0" style="text-align:right; font-family:monospace;" />
+    <div class="flex-between mt-1 small-muted" dir="ltr">
+      <span id="sci-calc-hex">HEX: 0</span>
+      <span id="sci-calc-bin">BIN: 0</span>
+    </div>
+    <div class="calc-grid-buttons" dir="ltr">
+      ${["7","8","9","/","4","5","6","*","1","2","3","-","0",".","=","+","Math.sqrt(","Math.pow(","(",")"].map(k => `
+        <button type="button" class="calc-btn" data-calc-key="${k}">${k === "Math.sqrt(" ? "√" : k === "Math.pow(" ? "x^y" : k}</button>
+      `).join("")}
+      <button type="button" class="calc-btn" style="grid-column:span 4; background:rgba(239,68,68,0.25);" data-calc-key="C">مسح (Clear)</button>
+    </div>
+  `, async () => {});
+
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  const screen = document.getElementById("sci-calc-screen");
+  const evalCalc = () => {
+    try {
+      const res = Function(`"use strict"; return (${screen.value})`)();
+      screen.value = String(Number(res.toFixed(6)));
+      const intVal = Math.floor(Number(res)) || 0;
+      document.getElementById("sci-calc-hex").textContent = "HEX: " + intVal.toString(16).toUpperCase();
+      document.getElementById("sci-calc-bin").textContent = "BIN: " + intVal.toString(2);
+    } catch (e) {
+      toast("معادلة غير صحيحة", "error");
+    }
+  };
+
+  document.querySelectorAll("[data-calc-key]").forEach(btn => {
+    btn.onclick = () => {
+      const k = btn.dataset.calcKey;
+      if (k === "C") {
+        screen.value = "";
+      } else if (k === "=") {
+        evalCalc();
+      } else {
+        screen.value += k;
+      }
+    };
   });
 }
 
