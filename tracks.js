@@ -1351,9 +1351,27 @@ function bindCareerTracksEvents(track) {
   });
 }
 
-// تهيئة التبويب فور تحميل النظام
-document.addEventListener("DOMContentLoaded", () => {
-  setTimeout(() => {
-    injectTracksTabIntoSidebar();
-  }, 450);
-});
+// تشغيل فوري وربط الزرار المباشر في الـ Sidebar والرئيسية
+function initCareerTracksSystem() {
+  injectTracksStyles();
+  
+  // تشغيل عند الضغط على أي زر يحمل مسار career-tracks
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest('[data-view="career-tracks"], [data-goto="career-tracks"], #nav-btn-career-tracks');
+    if (btn) {
+      if (B().switchView) B().switchView("career-tracks");
+      setTimeout(renderCareerTracksEncyclopedia, 50);
+    }
+  });
+
+  // تجهيز الصفحة أول مرة
+  renderCareerTracksEncyclopedia();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initCareerTracksSystem);
+} else {
+  initCareerTracksSystem();
+}
+
+window.renderCareerTracksEncyclopedia = renderCareerTracksEncyclopedia;
