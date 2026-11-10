@@ -727,48 +727,327 @@ function openScientificCalcModal() {
   });
 }
 
+/* ============================================================================
+   10 PRESET THEMES + CUSTOM THEME BUILDER ENGINE (COLORS, HEADINGS, TEXT & BG)
+   ============================================================================ */
+const OS_10_THEMES_DB = {
+  "midnight-gold": {
+    name: "1. Midnight Gold (الملكي الافتراضي)",
+    tag: "Default Luxury",
+    bgPrimary: "#070912",
+    bgSecondary: "#0e1322",
+    bgCard: "#141b2d",
+    headingColor: "#D4A72C",
+    textPrimary: "#F8FAFC",
+    textSecondary: "#94A3B8",
+    accentEmerald: "#19B889",
+    wallpaperOpacity: 0.85
+  },
+  "pure-light": {
+    name: "2. Pure Light (النهاري الساطع)",
+    tag: "Clean Daylight",
+    bgPrimary: "#F1F5F9",
+    bgSecondary: "#FFFFFF",
+    bgCard: "#FFFFFF",
+    headingColor: "#B45309",
+    textPrimary: "#0F172A",
+    textSecondary: "#475569",
+    accentEmerald: "#059669",
+    wallpaperOpacity: 0.04
+  },
+  "pure-black": {
+    name: "3. OLED Pure Black (الأسود النقي)",
+    tag: "OLED Ultra Contrast",
+    bgPrimary: "#000000",
+    bgSecondary: "#060606",
+    bgCard: "#0C0C0C",
+    headingColor: "#F59E0B",
+    textPrimary: "#FFFFFF",
+    textSecondary: "#A1A1AA",
+    accentEmerald: "#10B981",
+    wallpaperOpacity: 0.05
+  },
+  "forest": {
+    name: "4. Emerald Forest (غابة الزمرد)",
+    tag: "Nature Calm",
+    bgPrimary: "#05130E",
+    bgSecondary: "#091E17",
+    bgCard: "#0E2920",
+    headingColor: "#34D399",
+    textPrimary: "#ECFDF5",
+    textSecondary: "#A7F3D0",
+    accentEmerald: "#10B981",
+    wallpaperOpacity: 0.25
+  },
+  "cyberpunk": {
+    name: "5. Cyberpunk Neon (سايبر بانك نيون)",
+    tag: "Sci-Fi Hacker",
+    bgPrimary: "#090414",
+    bgSecondary: "#120826",
+    bgCard: "#1A0E36",
+    headingColor: "#00F0FF",
+    textPrimary: "#F0F9FF",
+    textSecondary: "#C4B5FD",
+    accentEmerald: "#FF007F",
+    wallpaperOpacity: 0.35
+  },
+  "vscode-dark": {
+    name: "6. VS Code Studio (بيئة المبرمجين)",
+    tag: "Developer IDE",
+    bgPrimary: "#181818",
+    bgSecondary: "#1F1F1F",
+    bgCard: "#252526",
+    headingColor: "#38BDF8",
+    textPrimary: "#E2E8F0",
+    textSecondary: "#94A3B8",
+    accentEmerald: "#4EC9B0",
+    wallpaperOpacity: 0.08
+  },
+  "nordic-ocean": {
+    name: "7. Nordic Ocean (المحيط القطبي)",
+    tag: "Deep Focus Blue",
+    bgPrimary: "#081021",
+    bgSecondary: "#0E1930",
+    bgCard: "#152342",
+    headingColor: "#38BDF8",
+    textPrimary: "#F0F9FF",
+    textSecondary: "#93C5FD",
+    accentEmerald: "#2DD4BF",
+    wallpaperOpacity: 0.3
+  },
+  "crimson-samurai": {
+    name: "8. Crimson Samurai (الساموراي القرمزي)",
+    tag: "High Energy Red",
+    bgPrimary: "#120508",
+    bgSecondary: "#1C080D",
+    bgCard: "#280D14",
+    headingColor: "#FB7185",
+    textPrimary: "#FFF1F2",
+    textSecondary: "#FDA4AF",
+    accentEmerald: "#F43F5E",
+    wallpaperOpacity: 0.25
+  },
+  "royal-amethyst": {
+    name: "9. Royal Amethyst (الأرجواني الملكي)",
+    tag: "Velvet Purple",
+    bgPrimary: "#0C0517",
+    bgSecondary: "#140926",
+    bgCard: "#1E1038",
+    headingColor: "#C084FC",
+    textPrimary: "#FAF5FF",
+    textSecondary: "#D8B4FE",
+    accentEmerald: "#A855F7",
+    wallpaperOpacity: 0.3
+  },
+  "warm-espresso": {
+    name: "10. Warm Espresso (قهوة القراءة الدافئة)",
+    tag: "Eye-Comfort Sepia",
+    bgPrimary: "#140F0B",
+    bgSecondary: "#1F1712",
+    bgCard: "#2B2019",
+    headingColor: "#FBBF24",
+    textPrimary: "#FEF3C7",
+    textSecondary: "#D6D3D1",
+    accentEmerald: "#D97706",
+    wallpaperOpacity: 0.15
+  }
+};
+
+function getCustomThemeConfig() {
+  return OSProStore.get("custom_theme_config", {
+    name: "🎨 ثيمي الشخصي المخصص",
+    bgPrimary: "#0B1120",
+    bgSecondary: "#111827",
+    bgCard: "#1E293B",
+    headingColor: "#38BDF8",
+    textPrimary: "#F8FAFC",
+    textSecondary: "#CBD5E1",
+    accentEmerald: "#10B981",
+    wallpaperOpacity: 0.25
+  });
+}
+
 function applyOSTheme(themeId, notify = true) {
+  const isCustom = themeId === "custom";
+  const cfg = isCustom
+    ? getCustomThemeConfig()
+    : (OS_10_THEMES_DB[themeId] || OS_10_THEMES_DB["midnight-gold"]);
+
   document.documentElement.setAttribute("data-theme", themeId);
   localStorage.setItem("MY_LIFE_OS_THEME_V6", themeId);
-  if (notify) toast(`تم تفعيل مظهر: ${themeId.toUpperCase()} ✨`);
+
+  let styleEl = document.getElementById("os-dynamic-theme-engine");
+  if (!styleEl) {
+    styleEl = document.createElement("style");
+    styleEl.id = "os-dynamic-theme-engine";
+    document.head.appendChild(styleEl);
+  }
+
+  styleEl.textContent = `
+    :root, html[data-theme="${themeId}"] {
+      --bg-primary: ${cfg.bgPrimary} !important;
+      --bg-secondary: ${cfg.bgSecondary} !important;
+      --bg-card: ${cfg.bgCard} !important;
+      --gold-primary: ${cfg.headingColor} !important;
+      --emerald-primary: ${cfg.accentEmerald || "#10B981"} !important;
+      --text-primary: ${cfg.textPrimary} !important;
+      --text-secondary: ${cfg.textSecondary} !important;
+      --border-color: ${cfg.headingColor}44 !important;
+    }
+    body {
+      background-color: ${cfg.bgPrimary} !important;
+      color: ${cfg.textPrimary} !important;
+    }
+    .custom-app-wallpaper {
+      opacity: ${cfg.wallpaperOpacity !== undefined ? cfg.wallpaperOpacity : 0.3} !important;
+    }
+    .sidebar, .topbar {
+      background: ${cfg.bgSecondary}ee !important;
+      color: ${cfg.textPrimary} !important;
+      border-color: ${cfg.headingColor}33 !important;
+    }
+    .card, .item-card, .kpi-card, .os-mini-widget, .modal-card, .role-specialist-card, .visual-cover-card, .exercise-pro-card {
+      background: ${cfg.bgCard}f2 !important;
+      color: ${cfg.textPrimary} !important;
+      border-color: ${cfg.headingColor}38 !important;
+    }
+    h1, h2, h3, h4, .gold-text, .card-header h3, .nav-item.active {
+      color: ${cfg.headingColor} !important;
+    }
+    p, span:not(.badge), label, li, td, .briefing-content {
+      color: ${cfg.textPrimary};
+    }
+    .small-muted, small, .datetime-text, .kpi-label {
+      color: ${cfg.textSecondary} !important;
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, ${cfg.headingColor}, ${cfg.accentEmerald || cfg.headingColor}) !important;
+      color: #05070e !important;
+    }
+    input, select, textarea {
+      background: ${cfg.bgSecondary} !important;
+      color: ${cfg.textPrimary} !important;
+      border-color: ${cfg.headingColor}40 !important;
+    }
+  `;
+
+  if (notify) toast(`تم تفعيل: ${cfg.name} ✨`);
 }
 
 function openThemeSelectorModal() {
   const cur = localStorage.getItem("MY_LIFE_OS_THEME_V6") || "midnight-gold";
-  B().openFormModal("🎨 نظام الثيمات والمظهر الاحترافي (4 Themes)", `
-    <p class="small-muted mb-2">اختر لوحة الألوان المريحة لعينيك أثناء الدراسة والعمل:</p>
-    <div class="theme-cards-grid">
-      <div class="theme-preview-card t-midnight ${cur === "midnight-gold" ? "active" : ""}" data-pick-theme="midnight-gold">
-        <span class="badge badge-gold">Default</span>
-        <strong>Midnight Gold</strong>
-        <small>الكحلي الليلي والذهبي الهادئ</small>
+  const customCfg = getCustomThemeConfig();
+
+  const presetsHtml = Object.entries(OS_10_THEMES_DB).map(([id, t]) => `
+    <div class="theme-preview-card ${cur === id ? "active" : ""}" data-pick-theme="${id}"
+         style="background:${t.bgCard}; color:${t.textPrimary}; border:2px solid ${cur === id ? t.headingColor : "rgba(255,255,255,0.12)"};">
+      <div class="flex-between">
+        <span class="badge" style="background:${t.headingColor}25; color:${t.headingColor};">${esc(t.tag)}</span>
+        <span style="width:18px; height:18px; border-radius:50%; background:${t.headingColor}; display:inline-block; border:2px solid #fff;"></span>
       </div>
-      <div class="theme-preview-card t-light ${cur === "pure-light" ? "active" : ""}" data-pick-theme="pure-light">
-        <span class="badge badge-emerald">Light</span>
-        <strong>Pure Light</strong>
-        <small>الأبيض والرمادي النهاري</small>
+      <strong style="color:${t.headingColor}; font-size:0.9rem; margin-top:6px;">${esc(t.name)}</strong>
+      <small style="color:${t.textSecondary}; font-size:0.74rem;">خلفية ${t.bgPrimary} • نص ${t.textPrimary}</small>
+    </div>
+  `).join("");
+
+  B().openFormModal("🎨 استوديو الثيمات الـ 10 + صانع الثيم الشخصي (Custom Theme Studio)", `
+    <p class="small-muted mb-2">اختر من بين 10 ثيمات احترافية جاهزة، أو انزل للأسفل واصنع ثيمك الخاص بألوانك المفضلة:</p>
+
+    <div class="theme-cards-grid" style="grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); max-height:290px; overflow-y:auto; padding:4px;">
+      ${presetsHtml}
+    </div>
+
+    <hr class="divider" />
+
+    <!-- صانع الثيم الشخصي المخصص بالكامل -->
+    <div class="subject-progress-box" style="border:1.5px solid var(--gold-primary);">
+      <div class="flex-between mb-2">
+        <h4 class="gold-text"><i class="fa-solid fa-wand-magic-sparkles"></i> صانع الثيم الشخصي (اختر لون الكلمات والعناوين والخلفية بنفسك)</h4>
+        <span class="badge badge-emerald">${cur === "custom" ? "مفعل حالياً ✅" : "تخصيص حر"}</span>
       </div>
-      <div class="theme-preview-card t-black ${cur === "pure-black" ? "active" : ""}" data-pick-theme="pure-black">
-        <span class="badge badge-warning">OLED Dark</span>
-        <strong>Pure Black</strong>
-        <small>الأسود النقي عالي التباين</small>
+
+      <div class="dashboard-grid" style="grid-template-columns:repeat(auto-fit, minmax(145px, 1fr)); gap:10px;">
+        <div class="form-group">
+          <label>🎨 لون العناوين والأزرار</label>
+          <input type="color" id="cust-th-heading" value="${customCfg.headingColor}" style="height:42px; cursor:pointer;" />
+        </div>
+        <div class="form-group">
+          <label>✍️ لون الكلمات والنصوص</label>
+          <input type="color" id="cust-th-text" value="${customCfg.textPrimary}" style="height:42px; cursor:pointer;" />
+        </div>
+        <div class="form-group">
+          <label>💬 لون النصوص الفرعية</label>
+          <input type="color" id="cust-th-muted" value="${customCfg.textSecondary}" style="height:42px; cursor:pointer;" />
+        </div>
+        <div class="form-group">
+          <label>🖥️ لون خلفية الموقع</label>
+          <input type="color" id="cust-th-bg" value="${customCfg.bgPrimary}" style="height:42px; cursor:pointer;" />
+        </div>
+        <div class="form-group">
+          <label>🗂️ لون الكروت والبطاقات</label>
+          <input type="color" id="cust-th-card" value="${customCfg.bgCard}" style="height:42px; cursor:pointer;" />
+        </div>
+        <div class="form-group">
+          <label>🧭 لون القائمة الجانبية</label>
+          <input type="color" id="cust-th-side" value="${customCfg.bgSecondary}" style="height:42px; cursor:pointer;" />
+        </div>
+        <div class="form-group">
+          <label>✨ اللون الثانوي المساعد</label>
+          <input type="color" id="cust-th-emerald" value="${customCfg.accentEmerald}" style="height:42px; cursor:pointer;" />
+        </div>
+        <div class="form-group">
+          <label>🖼️ وضوح صورة الخلفية (${Math.round((customCfg.wallpaperOpacity ?? 0.25) * 100)}%)</label>
+          <input type="range" id="cust-th-wp" min="0" max="100" value="${Math.round((customCfg.wallpaperOpacity ?? 0.25) * 100)}" style="margin-top:10px;" />
+        </div>
       </div>
-      <div class="theme-preview-card t-forest ${cur === "forest" ? "active" : ""}" data-pick-theme="forest">
-        <span class="badge badge-emerald">Nature</span>
-        <strong>Forest</strong>
-        <small>الأخضر الداكن الهادئ</small>
+
+      <div class="filters-row mt-2">
+        <button type="button" id="btn-apply-custom-theme" class="btn btn-gold btn-sm btn-block">
+          <i class="fa-solid fa-palette"></i> حفظ وتفعيل ثيمي الشخصي الآن 🎨
+        </button>
       </div>
     </div>
   `, async () => {});
 
+  document.querySelector("#universal-modal .modal-card")?.classList.add("wide-lab-modal");
   const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
   if (saveBtn) saveBtn.style.display = "none";
 
+  // اختيار أي ثيم من الـ 10 الجاهزين بضغطة واحدة
   document.querySelectorAll("[data-pick-theme]").forEach(card => {
     card.onclick = () => {
       applyOSTheme(card.dataset.pickTheme, true);
-      document.getElementById("universal-modal")?.classList.add("hidden");
+      openThemeSelectorModal();
     };
+  });
+
+  // معاينة حية وتطبيق فوري للثيم الشخصي
+  const readAndApplyCustom = (closeAfter = false) => {
+    const newCustom = {
+      name: "🎨 ثيمي الشخصي المخصص",
+      headingColor: document.getElementById("cust-th-heading")?.value || "#38BDF8",
+      textPrimary: document.getElementById("cust-th-text")?.value || "#F8FAFC",
+      textSecondary: document.getElementById("cust-th-muted")?.value || "#CBD5E1",
+      bgPrimary: document.getElementById("cust-th-bg")?.value || "#0B1120",
+      bgCard: document.getElementById("cust-th-card")?.value || "#1E293B",
+      bgSecondary: document.getElementById("cust-th-side")?.value || "#111827",
+      accentEmerald: document.getElementById("cust-th-emerald")?.value || "#10B981",
+      wallpaperOpacity: Number(document.getElementById("cust-th-wp")?.value || 25) / 100
+    };
+    OSProStore.set("custom_theme_config", newCustom);
+    applyOSTheme("custom", closeAfter);
+    if (closeAfter) {
+      document.getElementById("universal-modal")?.classList.add("hidden");
+    }
+  };
+
+  // معاينة لحظية بمجرد تحريك أي لون!
+  ["cust-th-heading", "cust-th-text", "cust-th-muted", "cust-th-bg", "cust-th-card", "cust-th-side", "cust-th-emerald", "cust-th-wp"].forEach(id => {
+    document.getElementById(id)?.addEventListener("input", () => readAndApplyCustom(false));
+  });
+
+  document.getElementById("btn-apply-custom-theme")?.addEventListener("click", () => {
+    readAndApplyCustom(true);
   });
 }
 
