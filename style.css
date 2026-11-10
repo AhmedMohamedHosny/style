@@ -3779,239 +3779,300 @@ body {
   color: var(--gold-primary);
 }
 /* ==========================================================================
-   DAWN OF LEGENDS (3000 BC) — FULLSCREEN IMMERSIVE ENGINE & NO-ALEX MODE
+   MY LIFE OS PRO — DESIGN SYSTEM, 4 THEMES, 14-CH MIXER & 9 MODULES STYLING
    ========================================================================== */
 
-/* إخفاء أليكس والسبحة والمسودة والقوائم تماماً عند فتح اللعبة بملء الشاشة */
-body.ancient-game-fullscreen #alex-mascot-Root,
-body.ancient-game-fullscreen #floating-tasbeeh-widget,
-body.ancient-game-fullscreen #btn-toggle-scratchpad,
-body.ancient-game-fullscreen #scratchpad-drawer,
-body.ancient-game-fullscreen .sidebar,
-body.ancient-game-fullscreen .topbar,
-body.ancient-game-fullscreen .app-footer {
+body {
+  font-family: 'Alexandria', 'Cairo', 'Inter', sans-serif !important;
+}
+
+/* 1. نظام الثيمات الأربعة (Midnight Gold, Pure Light, Pure Black, Forest) */
+html[data-theme="midnight-gold"],
+html[data-theme="dark"] {
+  --bg-primary: #090D19;
+  --bg-secondary: #111827;
+  --bg-card: #151E31;
+  --border-color: rgba(212, 167, 44, 0.22);
+  --gold-primary: #D4A72C;
+  --emerald-primary: #19B889;
+  --warning-primary: #F59E0B;
+  --danger-primary: #EF4444;
+}
+
+html[data-theme="light"],
+html[data-theme="pure-light"] {
+  --bg-primary: #F8FAFC !important;
+  --bg-secondary: #FFFFFF !important;
+  --bg-card: #FFFFFF !important;
+  --bg-card-hover: #F1F5F9 !important;
+  --border-color: rgba(15, 23, 42, 0.12) !important;
+  --border-subtle: rgba(15, 23, 42, 0.08) !important;
+  --gold-primary: #B45309 !important;
+  --emerald-primary: #059669 !important;
+  --text-primary: #0F172A !important;
+  --text-secondary: #475569 !important;
+  --text-muted: #64748B !important;
+}
+html[data-theme="light"] body,
+html[data-theme="pure-light"] body {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+}
+html[data-theme="light"] .custom-app-wallpaper,
+html[data-theme="pure-light"] .custom-app-wallpaper {
+  opacity: 0.04 !important;
+}
+html[data-theme="light"] .sidebar,
+html[data-theme="pure-light"] .sidebar,
+html[data-theme="light"] .topbar,
+html[data-theme="pure-light"] .topbar {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #0F172A !important;
+}
+html[data-theme="light"] .card,
+html[data-theme="pure-light"] .card,
+html[data-theme="light"] .item-card,
+html[data-theme="pure-light"] .item-card,
+html[data-theme="light"] .kpi-card,
+html[data-theme="pure-light"] .kpi-card,
+html[data-theme="light"] .os-mini-widget,
+html[data-theme="pure-light"] .os-mini-widget {
+  background: #FFFFFF !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06) !important;
+}
+
+html[data-theme="pure-black"] {
+  --bg-primary: #000000 !important;
+  --bg-secondary: #050505 !important;
+  --bg-card: #0A0A0A !important;
+  --border-color: rgba(255, 255, 255, 0.15) !important;
+  --border-subtle: rgba(255, 255, 255, 0.09) !important;
+  --gold-primary: #F59E0B !important;
+}
+html[data-theme="pure-black"] body,
+html[data-theme="pure-black"] .sidebar,
+html[data-theme="pure-black"] .topbar {
+  background: #000000 !important;
+}
+html[data-theme="pure-black"] .custom-app-wallpaper {
+  opacity: 0.05 !important;
+}
+html[data-theme="pure-black"] .card,
+html[data-theme="pure-black"] .item-card,
+html[data-theme="pure-black"] .kpi-card,
+html[data-theme="pure-black"] .os-mini-widget {
+  background: #090909 !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+}
+
+html[data-theme="forest"] {
+  --bg-primary: #071510 !important;
+  --bg-secondary: #0B2019 !important;
+  --bg-card: #102B22 !important;
+  --border-color: rgba(52, 211, 153, 0.25) !important;
+  --gold-primary: #34D399 !important;
+  --emerald-primary: #10B981 !important;
+}
+html[data-theme="forest"] body {
+  background-color: #071510 !important;
+}
+html[data-theme="forest"] .sidebar,
+html[data-theme="forest"] .topbar {
+  background: rgba(9, 25, 19, 0.94) !important;
+}
+html[data-theme="forest"] .card,
+html[data-theme="forest"] .item-card,
+html[data-theme="forest"] .kpi-card,
+html[data-theme="forest"] .os-mini-widget {
+  background: linear-gradient(160deg, rgba(16, 43, 34, 0.88), rgba(8, 23, 18, 0.94)) !important;
+  border: 1px solid rgba(52, 211, 153, 0.24) !important;
+}
+
+/* 2. تصغير وإخفاء الـ Sidebar (Collapsible Sidebar) */
+.app-shell.sidebar-collapsed {
+  grid-template-columns: 76px 1fr !important;
+}
+.app-shell.sidebar-collapsed .sidebar .brand-box > div:not(.brand-icon),
+.app-shell.sidebar-collapsed .sidebar .xp-level-box,
+.app-shell.sidebar-collapsed .sidebar .nav-item span,
+.app-shell.sidebar-collapsed .sidebar .user-mini-info,
+.app-shell.sidebar-collapsed .sidebar .nav-group-label {
   display: none !important;
 }
-
-/* جعل قسم اللعبة يملأ الشاشة بالكامل 100% فوق كل شيء */
-#view-ancient-game.active {
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  z-index: 999990 !important;
-  background: radial-gradient(circle at 50% 20%, #141829 0%, #05070e 100%) !important;
-  overflow-y: auto !important;
-  padding: 18px 26px !important;
-  display: block !important;
+.app-shell.sidebar-collapsed .sidebar .nav-item {
+  justify-content: center !important;
+  padding: 12px 0 !important;
+}
+.app-shell.sidebar-collapsed .sidebar .sidebar-footer {
+  flex-direction: column;
+  gap: 10px;
 }
 
-.bc-game-shell {
-  max-width: 1440px;
-  margin: 0 auto;
+.nav-group-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--gold-primary);
+  padding: 12px 12px 4px;
+  margin-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+  letter-spacing: 0.4px;
+  opacity: 0.85;
+}
+
+/* 3. كروت اختيار الثيمات الـ 4 في الإعدادات والـ Modal */
+.theme-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 10px;
+}
+.theme-preview-card {
+  padding: 18px 16px;
+  border-radius: 14px;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.12);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 4px;
+  transition: var(--transition);
 }
-
-/* شاشة العالم الحي التفاعلي (Canvas Viewport) */
-.bc-world-stage {
-  position: relative;
-  width: 100%;
-  height: 440px;
-  border-radius: 22px;
-  overflow: hidden;
-  border: 2px solid rgba(212, 175, 55, 0.5);
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(212, 175, 55, 0.18);
-  background: #05070e;
-}
-
-#bc-world-canvas {
-  width: 100%;
-  height: 100%;
-  display: block;
-  cursor: pointer;
-}
-
-/* الشريط الزجاجي العلوي فوق شاشة اللعبة */
-.bc-world-hud-top {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  right: 14px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  pointer-events: none;
-}
-
-.bc-hud-pill {
-  pointer-events: auto;
-  background: rgba(10, 14, 26, 0.85);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(212, 175, 55, 0.45);
-  padding: 7px 14px;
-  border-radius: 99px;
-  font-family: inherit;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #fff;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.65);
-  transition: all 0.2s ease;
-}
-
-.bc-hud-pill:hover {
+.theme-preview-card:hover,
+.theme-preview-card.active {
   border-color: var(--gold-primary);
   transform: translateY(-2px);
 }
+.theme-preview-card.t-midnight { background: #0f1424; color: #D4A72C; }
+.theme-preview-card.t-light { background: #f8fafc; color: #0f172a; border-color: #cbd5e1; }
+.theme-preview-card.t-black { background: #000000; color: #ffffff; }
+.theme-preview-card.t-forest { background: #0d261e; color: #6ee7b7; }
 
-/* شريط السجل التاريخي للوادي (بدلاً من أليكس) */
-.bc-chronicle-bar {
-  position: absolute;
-  bottom: 14px;
-  left: 14px;
-  right: 14px;
-  background: linear-gradient(90deg, rgba(12, 16, 30, 0.92), rgba(20, 26, 46, 0.88));
-  border: 1px solid var(--gold-primary);
-  border-radius: 16px;
-  padding: 10px 18px;
+/* 4. ميكسر الأصوات المحيطية ذو الـ 14 قناة (14-Channel Ambient Sound Studio) */
+.ambient-14-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+  max-height: 390px;
+  overflow-y: auto;
+  padding: 6px 4px;
+}
+.amb-ch-card {
+  background: rgba(15, 20, 34, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 12px 14px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
   gap: 12px;
-  backdrop-filter: blur(14px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.75);
-}
-
-/* شبكة الموارد الأربعة */
-.bc-resources-bar {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.bc-res-card {
-  background: linear-gradient(145deg, rgba(16, 20, 36, 0.92), rgba(9, 12, 22, 0.96));
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  border-radius: 16px;
-  padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-/* بطاقة الشخصية وتطور الملابس والأزياء */
-.bc-main-grid {
-  display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 18px;
-}
-
-@media (max-width: 1100px) {
-  .bc-main-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.bc-avatar-stage {
-  background: radial-gradient(circle at 50% 35%, rgba(212, 175, 55, 0.16), rgba(8, 11, 20, 0.95));
-  border: 1px solid rgba(212, 175, 55, 0.35);
-  border-radius: 18px;
-  padding: 18px;
-  text-align: center;
-  position: relative;
-}
-
-.bc-avatar-svg-wrap {
-  width: 170px;
-  height: 210px;
-  margin: 0 auto 10px;
-  filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.8));
-}
-
-.bc-outfits-row {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-
-.bc-outfit-chip {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: var(--text-secondary);
-  padding: 5px 10px;
-  border-radius: 8px;
-  font-family: inherit;
-  font-size: 0.75rem;
-  cursor: pointer;
   transition: var(--transition);
 }
-
-.bc-outfit-chip.unlocked {
-  border-color: rgba(212, 175, 55, 0.45);
-  color: var(--gold-light);
+.amb-ch-card.playing {
+  border-color: var(--emerald-primary);
+  background: rgba(25, 184, 137, 0.1);
+  box-shadow: 0 0 18px rgba(25, 184, 137, 0.15);
 }
-
-.bc-outfit-chip.active {
-  background: var(--gold-primary);
+.amb-ch-icon {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  color: var(--gold-primary);
+}
+.amb-ch-card.playing .amb-ch-icon {
+  background: var(--emerald-primary);
   color: #05070e;
-  font-weight: 800;
 }
-
-.bc-outfit-chip.locked {
-  opacity: 0.4;
-  cursor: not-allowed;
+.amb-ch-info {
+  flex: 1;
 }
-
-/* أزرار القرارات المصيرية والألغاز الهندسية */
-.bc-choice-btn {
-  width: 100%;
-  text-align: start;
-  background: rgba(18, 24, 42, 0.88);
-  border: 1px solid rgba(212, 175, 55, 0.32);
-  color: #f8fafc;
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-family: inherit;
-  font-size: 0.92rem;
+.amb-ch-info input[type="range"] {
+  height: 5px !important;
+  padding: 0 !important;
+  margin-top: 6px;
+  accent-color: var(--emerald-primary);
   cursor: pointer;
-  margin-bottom: 10px;
+}
+
+/* 5. خطة الجلسات الذكية في استوديو التركيز (Smart Session Planner V6) */
+.session-plan-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: start;
+  max-height: 220px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+.session-step-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  transition: all 0.22s ease;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(15, 20, 32, 0.85);
+  border-right: 4px solid var(--gold-primary);
+}
+.session-step-row.break-step {
+  border-right-color: var(--emerald-primary);
+}
+.session-step-row.completed-step {
+  opacity: 0.55;
+  text-decoration: line-through;
 }
 
-.bc-choice-btn:hover {
-  background: rgba(212, 175, 55, 0.18);
-  border-color: var(--gold-primary);
-  transform: translateX(-4px);
-}
-
-.bc-puzzles-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.bc-puzzle-card {
-  background: rgba(14, 19, 34, 0.92);
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  border-radius: 14px;
-  padding: 14px;
+/* 6. التايم لاين ومخطط جانت وشبكة المعرفة (Timeline, Gantt & Knowledge Graph) */
+.time-intel-bar {
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 10px;
+  height: 28px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  margin: 12px 0;
+}
+.time-segment {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #05070e;
+  transition: width 0.4s ease;
+}
+.knowledge-graph-canvas {
+  width: 100%;
+  height: 340px;
+  background: radial-gradient(circle at center, #111827 0%, #07090e 100%);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  cursor: grab;
+}
+.habit-month-dots {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.habit-day-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.68rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.habit-day-dot.done {
+  background: var(--emerald-primary);
+  color: #05070e;
+  font-weight: 800;
+  border-color: var(--emerald-primary);
 }

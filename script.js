@@ -6298,3 +6298,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+/* ==========================================================================
+   MY LIFE OS — OFFICIAL BRIDGE FOR OS-PRO EXPANSION & SYNERGY ENGINE
+   ========================================================================== */
+window.MyLifeOSBridge = {
+  getAppState: () => AppState,
+  getPomodoroState: () => PomodoroState,
+  createRecord,
+  updateRecord,
+  deleteRecord,
+  switchView,
+  openFormModal,
+  showToast,
+  escapeHTML,
+  todayISO,
+  askAI: askGeminiOrFallbackAI,
+  getAudioContext,
+  renderAllViews,
+  openPomodoroModal,
+  startPomodoro,
+  pausePomodoro,
+  resetPomodoro,
+  setCustomPomodoroTime,
+  updatePomodoroDisplays
+};
