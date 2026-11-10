@@ -1547,7 +1547,7 @@ async function handleAIChatSubmit(userPrompt) {
    ============================================================================ */
 function openFormModal(title, fieldsHtml, onSubmitCallback) {
   const modal = document.getElementById("universal-modal");
-  modal.querySelector(".modal-card")?.classList.remove("pomo-fullscreen-active");
+  modal.querySelector(".modal-card")?.classList.remove("pomo-fullscreen-active", "wide-lab-modal", "pomo-pure-cinema");
   const form = document.getElementById("universal-modal-form");
   document.getElementById("modal-title").textContent = title;
   form.innerHTML = fieldsHtml + `
@@ -5778,8 +5778,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.addEventListener("click", (e) => {
-    if (e.target.closest("#btn-pomo-mixer-open")) {
-      openFourChannelMixerModal();
+if (e.target.closest("#btn-pomo-mixer-open")) {
+      if (window.open14ChannelAmbientMixerModal) {
+        window.open14ChannelAmbientMixerModal(true);
+      } else {
+        openFourChannelMixerModal();
+      }
     }
     if (e.target.closest("#btn-pomo-mini-hud")) {
       if (!PomodoroState.isRunning) startPomodoro();
