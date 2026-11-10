@@ -3716,10 +3716,31 @@ body {
   text-decoration: line-through;
 }
 
-/* 4. مختبر الأكواد الحي والمذاكرة المنقسمة والجدول الأسبوعي */
-.modal-card.wide-lab-modal {
+/* 4. مختبر الأكواد الحي + ضمان ملء شاشة المؤقت 100% بدون أي حدود */
+.modal-card.wide-lab-modal:not(.pomo-fullscreen-active) {
   max-width: 960px !important;
   width: 95vw !important;
+}
+
+.modal-overlay:has(.pomo-fullscreen-active) {
+  padding: 0 !important;
+}
+
+.modal-card.pomo-fullscreen-active {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  padding: 24px 40px !important;
+}
+
+.modal-card.pomo-fullscreen-active .pomodoro-card {
+  max-width: 1320px !important;
+  width: 100% !important;
 }
 
 .split-workspace-grid {
