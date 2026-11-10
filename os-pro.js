@@ -406,64 +406,127 @@ function openSmartFocusPlannerAndAnalytics() {
 }
 
 /* ============================================================================
-   3. 14-CHANNEL AMBIENT SOUND STUDIO & MIXER (WITH PRESETS & SLEEP TIMER)
+   3. 14-CHANNEL AMBIENT SOUND STUDIO & MIXER (HIGH-GAIN NORMALIZED ENGINE)
    ============================================================================ */
 const AMBIENT_14_CHANNELS = [
-  { id: "rain", name: "Rain • مطر هادئ", icon: "fa-cloud-rain", freq: 900, type: "lowpass", mod: 0.02 },
-  { id: "heavy_rain", name: "Heavy Rain • مطر غزير", icon: "fa-cloud-showers-heavy", freq: 1350, type: "lowpass", mod: 0.04 },
-  { id: "thunder", name: "Thunderstorm • رعد وعواصف", icon: "fa-cloud-bolt", freq: 180, type: "lowpass", mod: 0.09 },
-  { id: "ocean", name: "Ocean Waves • أمواج المحيط", icon: "fa-water", freq: 380, type: "bandpass", mod: 0.03 },
-  { id: "forest", name: "Forest • نسيم الغابة", icon: "fa-tree", freq: 620, type: "bandpass", mod: 0.025 },
-  { id: "birds", name: "Birds • عصافير الصباح", icon: "fa-dove", freq: 2400, type: "bandpass", mod: 0.015 },
-  { id: "fireplace", name: "Fireplace • نار المدفأة", icon: "fa-fire", freq: 290, type: "lowpass", mod: 0.08 },
-  { id: "coffee", name: "Coffee Shop • مقهى هادئ", icon: "fa-mug-hot", freq: 540, type: "bandpass", mod: 0.035 },
-  { id: "library", name: "Library • هدوء المكتبة", icon: "fa-book-open", freq: 320, type: "lowpass", mod: 0.012 },
-  { id: "white", name: "White Noise • ضوضاء بيضاء", icon: "fa-wave-square", freq: 1800, type: "lowpass", mod: 0.05 },
-  { id: "pink", name: "Pink Noise • ضوضاء وردية", icon: "fa-sliders", freq: 850, type: "lowpass", mod: 0.03 },
-  { id: "brown", name: "Brown Noise • تركيز عميق", icon: "fa-brain", freq: 240, type: "lowpass", mod: 0.06 },
-  { id: "fan", name: "Fan Sound • مروحة هادئة", icon: "fa-fan", freq: 210, type: "bandpass", mod: 0.04 },
-  { id: "crickets", name: "Night Crickets • هدوء الليل", icon: "fa-moon", freq: 3100, type: "bandpass", mod: 0.02 }
+  { id: "rain", name: "Rain • مطر هادئ", icon: "fa-cloud-rain", freq: 1100, type: "lowpass", q: 0.7, mode: "rain" },
+  { id: "heavy_rain", name: "Heavy Rain • مطر غزير", icon: "fa-cloud-showers-heavy", freq: 1650, type: "lowpass", q: 0.9, mode: "heavy_rain" },
+  { id: "thunder", name: "Thunderstorm • رعد وعواصف", icon: "fa-cloud-bolt", freq: 140, type: "lowpass", q: 1.4, mode: "thunder" },
+  { id: "ocean", name: "Ocean Waves • أمواج المحيط", icon: "fa-water", freq: 420, type: "lowpass", q: 1.1, mode: "ocean" },
+  { id: "forest", name: "Forest • نسيم الغابة", icon: "fa-tree", freq: 780, type: "bandpass", q: 0.8, mode: "pink" },
+  { id: "birds", name: "Birds • عصافير الصباح", icon: "fa-dove", freq: 2200, type: "bandpass", q: 2.2, mode: "birds" },
+  { id: "fireplace", name: "Fireplace • نار المدفأة", icon: "fa-fire", freq: 380, type: "lowpass", q: 0.8, mode: "fire" },
+  { id: "coffee", name: "Coffee Shop • مقهى هادئ", icon: "fa-mug-hot", freq: 650, type: "bandpass", q: 0.6, mode: "coffee" },
+  { id: "library", name: "Library • هدوء المكتبة", icon: "fa-book-open", freq: 340, type: "lowpass", q: 0.5, mode: "brown" },
+  { id: "white", name: "White Noise • ضوضاء بيضاء", icon: "fa-wave-square", freq: 2800, type: "lowpass", q: 0.5, mode: "white" },
+  { id: "pink", name: "Pink Noise • ضوضاء وردية", icon: "fa-sliders", freq: 1200, type: "lowpass", q: 0.6, mode: "pink" },
+  { id: "brown", name: "Brown Noise • تركيز عميق", icon: "fa-brain", freq: 290, type: "lowpass", q: 0.7, mode: "brown" },
+  { id: "fan", name: "Fan Sound • مروحة هادئة", icon: "fa-fan", freq: 240, type: "lowpass", q: 1.5, mode: "fan" },
+  { id: "crickets", name: "Night Crickets • هدوء الليل", icon: "fa-moon", freq: 3400, type: "bandpass", q: 3.0, mode: "crickets" }
 ];
 
 const Mixer14Engine = {
   volumes: {},
   nodes: {},
+  masterBoost: 1.6, // مضاعف قوة الصوت الافتراضي (عالي وواضح)
   sleepTimerId: null
 };
 
-function setChannel14Volume(chId, pct) {
-  const vol = Math.max(0, Math.min(100, Number(pct) || 0)) / 100;
-  Mixer14Engine.volumes[chId] = Math.round(vol * 100);
+// توليد Buffer صوتي مُعالج ومُكبّر لأقصى درجة نقاء (Peak Normalized to 0.95)
+function buildNormalizedSoundBuffer(ctx, mode) {
+  const durationSec = 4;
+  const bufSize = ctx.sampleRate * durationSec;
+  const buffer = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
 
-  if (vol === 0) {
-    if (Mixer14Engine.nodes[chId]) {
-      try {
-        const n = Mixer14Engine.nodes[chId];
-        n.gain.gain.linearRampToValueAtTime(0.0001, n.ctx.currentTime + 0.35); // Fade Out ناعم
-        setTimeout(() => { try { n.source.stop(); n.source.disconnect(); } catch (e) {} }, 380);
-      } catch (e) {}
+  let b0 = 0, b1 = 0, b2 = 0, lastOut = 0;
+  let maxPeak = 0.001;
+
+  for (let i = 0; i < bufSize; i++) {
+    const t = i / ctx.sampleRate;
+    const white = Math.random() * 2 - 1;
+    let sample = white;
+
+    if (mode === "white") {
+      sample = white;
+    } else if (mode === "pink" || mode === "rain" || mode === "coffee") {
+      b0 = 0.99765 * b0 + white * 0.0990460;
+      b1 = 0.96300 * b1 + white * 0.2965164;
+      b2 = 0.57000 * b2 + white * 1.0526913;
+      sample = b0 + b1 + b2 + white * 0.1848;
+      if (mode === "rain" && Math.random() < 0.003) sample += (Math.random() - 0.5) * 2.5;
+    } else if (mode === "heavy_rain") {
+      b0 = 0.98 * b0 + white * 0.25;
+      sample = b0 + white * 0.35;
+    } else if (mode === "brown" || mode === "fan") {
+      lastOut = (lastOut + 0.04 * white) / 1.04;
+      sample = lastOut;
+      if (mode === "fan") sample += Math.sin(2 * Math.PI * 65 * t) * 0.08;
+    } else if (mode === "ocean") {
+      lastOut = (lastOut + 0.03 * white) / 1.03;
+      const waveEnv = 0.35 + 0.65 * Math.pow(Math.sin(Math.PI * t / 2), 2);
+      sample = lastOut * waveEnv;
+    } else if (mode === "thunder") {
+      lastOut = (lastOut + 0.05 * white) / 1.05;
+      const rumbleEnv = 0.25 + 0.75 * Math.abs(Math.sin(2 * Math.PI * 0.35 * t));
+      sample = lastOut * rumbleEnv;
+    } else if (mode === "fire") {
+      lastOut = (lastOut + 0.04 * white) / 1.04;
+      sample = lastOut;
+      if (Math.random() < 0.004) sample += (Math.random() * 2 - 1) * 1.8; // فرقعة حطب حقيقية
+    } else if (mode === "birds") {
+      const chirpEnv = Math.sin(2 * Math.PI * 3.5 * t) > 0.65 ? 1 : 0.05;
+      sample = Math.sin(2 * Math.PI * (2200 + 600 * Math.sin(2 * Math.PI * 12 * t)) * t) * chirpEnv + white * 0.05;
+    } else if (mode === "crickets") {
+      const pulse = Math.sin(2 * Math.PI * 18 * t) > 0 ? 1 : 0.1;
+      sample = Math.sin(2 * Math.PI * 3600 * t) * pulse + white * 0.04;
+    }
+
+    data[i] = sample;
+    const abs = Math.abs(sample);
+    if (abs > maxPeak) maxPeak = abs;
+  }
+
+  // تكبير وتطبيع الصوت (Normalization) ليكون قوياً وواضحاً جداً
+  const normFactor = 0.92 / maxPeak;
+  for (let i = 0; i < bufSize; i++) {
+    data[i] *= normFactor;
+  }
+
+  return buffer;
+}
+
+function setChannel14Volume(chId, pct) {
+  const numPct = Math.max(0, Math.min(100, Number(pct) || 0));
+  const vol = numPct / 100;
+  Mixer14Engine.volumes[chId] = numPct;
+
+  const ctx = B().getAudioContext?.();
+  if (!ctx) return;
+  if (ctx.state === "suspended") {
+    ctx.resume().catch(() => {});
+  }
+
+  if (numPct === 0) {
+    const existing = Mixer14Engine.nodes[chId];
+    if (existing) {
       delete Mixer14Engine.nodes[chId];
+      try {
+        existing.gain.gain.cancelScheduledValues(ctx.currentTime);
+        existing.gain.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.08);
+        setTimeout(() => {
+          try { existing.source.stop(); existing.source.disconnect(); } catch (e) {}
+        }, 280);
+      } catch (e) {}
     }
     return;
   }
 
-  const ctx = B().getAudioContext?.();
-  if (!ctx) return;
   const meta = AMBIENT_14_CHANNELS.find(c => c.id === chId) || AMBIENT_14_CHANNELS[0];
+  const targetGain = vol * Mixer14Engine.masterBoost;
 
   if (!Mixer14Engine.nodes[chId]) {
-    const bufSize = ctx.sampleRate * 2;
-    const buffer = ctx.createBuffer(1, bufSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    let last = 0;
-    for (let i = 0; i < bufSize; i++) {
-      const white = Math.random() * 2 - 1;
-      data[i] = (last + meta.mod * white) / (1 + meta.mod);
-      last = data[i];
-      if ((chId === "fireplace" || chId === "thunder") && Math.random() < 0.0018) {
-        data[i] = 0.75;
-      }
-    }
+    const buffer = buildNormalizedSoundBuffer(ctx, meta.mode);
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
@@ -471,32 +534,35 @@ function setChannel14Volume(chId, pct) {
     const filter = ctx.createBiquadFilter();
     filter.type = meta.type;
     filter.frequency.value = meta.freq;
+    filter.Q.value = meta.q || 0.7;
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.001, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(vol * 0.35, ctx.currentTime + 0.45); // Fade In ناعم
+    gain.gain.setValueAtTime(0.01, ctx.currentTime);
+    gain.gain.setTargetAtTime(targetGain, ctx.currentTime, 0.12);
 
     source.connect(filter);
     filter.connect(gain);
     gain.connect(ctx.destination);
-    source.start();
+    source.start(0);
     Mixer14Engine.nodes[chId] = { source, gain, ctx };
   } else {
     const n = Mixer14Engine.nodes[chId];
-    n.gain.gain.linearRampToValueAtTime(vol * 0.35, n.ctx.currentTime + 0.2);
+    n.gain.gain.cancelScheduledValues(ctx.currentTime);
+    n.gain.gain.setTargetAtTime(targetGain, ctx.currentTime, 0.06);
   }
 }
 
 function stopAll14Channels() {
   AMBIENT_14_CHANNELS.forEach(c => setChannel14Volume(c.id, 0));
-  toast("تم إيقاف جميع القنوات الصوتية بهدوء (Fade Out) 🔇", "info");
+  toast("تم إيقاف جميع القنوات الصوتية 🔇", "info");
 }
 
-function open14ChannelAmbientMixerModal() {
+function open14ChannelAmbientMixerModal(fromPomodoro = false) {
   const savedPresets = OSProStore.get("ambient_presets", [
-    { name: "🌧️ ليلة شتوية للمذاكرة", mix: { rain: 70, thunder: 20, fireplace: 35 } },
-    { name: "☕ مقهى القراءة الصباحي", mix: { coffee: 45, rain: 30, birds: 20 } },
-    { name: "🧠 عزل صوتي عميق للبرمجة", mix: { brown: 60, fan: 25, library: 30 } }
+    { name: "🌧️ ليلة شتوية للمذاكرة", mix: { rain: 85, thunder: 45, fireplace: 60 } },
+    { name: "☕ مقهى القراءة الصباحي", mix: { coffee: 75, rain: 50, birds: 40 } },
+    { name: "🧠 عزل صوتي عميق للبرمجة", mix: { brown: 85, fan: 55, library: 50 } },
+    { name: "🌊 شاطئ المحيط والغابة", mix: { ocean: 80, forest: 60, birds: 35 } }
   ]);
 
   const channelsHtml = AMBIENT_14_CHANNELS.map(ch => {
@@ -519,13 +585,19 @@ function open14ChannelAmbientMixerModal() {
     <button type="button" class="chip" data-load-preset="${idx}">${esc(pr.name)}</button>
   `).join("");
 
-  B().openFormModal("🎧 استوديو وميكسر الأصوات المحيطية (14-Channel Ambient Mixer)", `
-    <div class="flex-between" style="flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+  B().openFormModal("🎧 استوديو وميكسر الأصوات المحيطية (14-Channel High-Gain Mixer)", `
+    <div class="flex-between" style="flex-wrap:wrap; gap:10px; margin-bottom:12px;">
       <div class="ai-suggestions">${presetsHtml}</div>
       <div class="filters-row">
-        <button type="button" id="btn-save-amb-preset" class="btn btn-xs btn-gold"><i class="fa-solid fa-bookmark"></i> حفظ المزيج الحالي</button>
+        <div class="pomo-vol-wrap" title="مكبر الصوت الرئيسي (Master Boost)">
+          <i class="fa-solid fa-volume-high gold-text"></i>
+          <small>قوة الصوت:</small>
+          <input type="range" id="amb-master-boost" min="50" max="300" value="${Math.round(Mixer14Engine.masterBoost * 100)}" />
+        </div>
+        <button type="button" id="btn-save-amb-preset" class="btn btn-xs btn-gold"><i class="fa-solid fa-bookmark"></i> حفظ المزيج</button>
         <button type="button" id="btn-amb-sleep-timer" class="btn btn-xs btn-outline"><i class="fa-regular fa-clock"></i> مؤقت إيقاف</button>
         <button type="button" id="btn-stop-all-amb" class="btn btn-xs btn-danger">إيقاف الكل</button>
+        ${fromPomodoro ? `<button type="button" id="btn-back-to-pomo-from-mix" class="btn btn-xs btn-gold"><i class="fa-solid fa-stopwatch"></i> العودة للمؤقت</button>` : ""}
       </div>
     </div>
     <div class="ambient-14-grid">${channelsHtml}</div>
@@ -534,6 +606,17 @@ function open14ChannelAmbientMixerModal() {
   document.querySelector("#universal-modal .modal-card")?.classList.add("wide-lab-modal");
   const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
   if (saveBtn) saveBtn.style.display = "none";
+
+  document.getElementById("btn-back-to-pomo-from-mix")?.addEventListener("click", () => {
+    B().openPomodoroModal?.();
+  });
+
+  document.getElementById("amb-master-boost").oninput = (e) => {
+    Mixer14Engine.masterBoost = Number(e.target.value) / 100;
+    Object.entries(Mixer14Engine.volumes).forEach(([id, v]) => {
+      if (v > 0) setChannel14Volume(id, v);
+    });
+  };
 
   document.querySelectorAll("[data-ch14]").forEach(slider => {
     slider.oninput = (e) => {
@@ -548,10 +631,18 @@ function open14ChannelAmbientMixerModal() {
   document.querySelectorAll("[data-load-preset]").forEach(btn => {
     btn.onclick = () => {
       const pr = savedPresets[Number(btn.dataset.loadPreset)];
-      if (!pr) return;
-      AMBIENT_14_CHANNELS.forEach(c => setChannel14Volume(c.id, pr.mix[c.id] || 0));
-      toast(`تم تشغيل مزيج: ${pr.name} 🎵`);
-      open14ChannelAmbientMixerModal();
+      if (!pr || !pr.mix) return;
+      AMBIENT_14_CHANNELS.forEach(c => {
+        const targetVal = Number(pr.mix[c.id]) || 0;
+        setChannel14Volume(c.id, targetVal);
+        const valEl = document.getElementById(`amb-val-${c.id}`);
+        const cardEl = document.getElementById(`amb-card-${c.id}`);
+        const sliderEl = document.querySelector(`[data-ch14="${c.id}"]`);
+        if (valEl) valEl.textContent = `${targetVal}%`;
+        if (cardEl) cardEl.classList.toggle("playing", targetVal > 0);
+        if (sliderEl) sliderEl.value = targetVal;
+      });
+      toast(`تم تشغيل مزيج: ${pr.name} 🎵🔊`);
     };
   });
 
@@ -561,7 +652,7 @@ function open14ChannelAmbientMixerModal() {
     savedPresets.push({ name, mix: { ...Mixer14Engine.volumes } });
     OSProStore.set("ambient_presets", savedPresets);
     toast("تم حفظ المزيج الصوتي بنجاح!");
-    open14ChannelAmbientMixerModal();
+    open14ChannelAmbientMixerModal(fromPomodoro);
   };
 
   document.getElementById("btn-amb-sleep-timer").onclick = () => {
@@ -574,9 +665,10 @@ function open14ChannelAmbientMixerModal() {
 
   document.getElementById("btn-stop-all-amb").onclick = () => {
     stopAll14Channels();
-    open14ChannelAmbientMixerModal();
+    open14ChannelAmbientMixerModal(fromPomodoro);
   };
 }
+window.open14ChannelAmbientMixerModal = open14ChannelAmbientMixerModal;
 
 /* ============================================================================
    4. INJECT THE 9 NEW MODULES INTO SIDEBAR & WORKSPACE + SYSTEM SYNERGY
