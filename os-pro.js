@@ -1,23 +1,19 @@
 /**
  * ============================================================================
- * MY LIFE OS — PRO EXPANSION ENGINE (os-pro.js)
- * 1. System Synergy Engine (Auto Exam->Calendar, Focus->Project/Study, Habit->XP)
- * 2. 9 New Complete Modules:
- *    - A. Life Goals & Vision Board + AI Goal Coach
- *    - B. Habits & Routines (Morning/Evening, Streaks, Bad Habits, 30-Day Grid)
- *    - C. Health & Fitness (Water, Weight, Gym, Sleep, Steps, Calories)
- *    - D. Time Intelligence (24h Timeline, Categories, Weekly Comparison)
- *    - E. Life Experiences & Bucket List (Travel, Books, Movies, Memories)
- *    - F. Second Brain & Interactive Knowledge Graph (Backlinks, Note->Task, AI)
- *    - G. Learning Center (Courses, Books, Spaced Repetition, Course->Calendar)
- *    - H. People & Contacts CRM (Mentors, Birthdays, Meeting Notes)
- *    - I. Advanced Project Management (Gantt Chart, Milestones, Dependencies)
- *    - J. Daily Journal, Weekly Review, Life Timeline & Automation Center
- * 3. MY LIFE FOCUS STUDIO V6 (Timestamp Persistence, 6 Modes, Smart Session Plan,
- *    Focus Analytics & Focus AI Coach)
- * 4. 14-Channel Ambient Sound Mixer (Presets, Fade In/Out, Sleep Timer)
- * 5. UI/UX Polish: 4 Themes (Midnight Gold, Pure Light, Pure Black, Forest),
- *    Collapsible Sidebar & Quick Capture (Alt+N)
+ * MY LIFE OS — ULTRA PRO EXPANSION ENGINE V3 (os-pro.js)
+ * Complete Visual & 3D Interactive Overhaul for all 9 Life OS Modules:
+ * 1. HEALTH & GYM STUDIO 3D: Gender-based Onboarding (Male/Female), Body Stats,
+ *    Target Weight, Macro/Calorie Engine, 3D Muscle Map, Real Photo Exercise Cards,
+ *    Built-in Rest Timer, & Custom Meal Plan.
+ * 2. VISION BOARD & LIFE GOALS: Photo-backed 3D Vision Cards, Milestones & AI Coach.
+ * 3. HABITS & ROUTINES STUDIO: Morning/Evening Visual Decks, Detox Shield & 30-Day Matrix.
+ * 4. TIME INTELLIGENCE 24H: Visual Day Breakdown, Efficiency Score & Chronotype.
+ * 5. SECOND BRAIN (PARA + 3D GRAPH): Interactive Node Canvas & Knowledge Cards.
+ * 6. LEARNING CENTER 3D SHELF: Visual Bookshelf, Reading Speed Calculator & Course->Cal.
+ * 7. LIFE EXPERIENCES & BUCKET LIST: Photo Destination Cards & Memory Passport.
+ * 8. VIP CONTACTS CRM: Relationship Health Radar & Meeting Vault.
+ * 9. DAILY JOURNAL, LIFE TIMELINE & AUTOMATION CENTER: Mood Studio & Smart Rules.
+ * + Preserves 4 Themes, Collapsible Sidebar, Quick Capture, Timestamp Focus V6 & 14-Ch Mixer!
  * ============================================================================
  */
 
@@ -42,8 +38,13 @@ function B() {
 }
 
 function esc(str) {
-  if (B().escapeHTML) return B().escapeHTML(str);
-  return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function toast(msg, type = "success") {
@@ -55,9 +56,241 @@ function today() {
 }
 
 /* ============================================================================
+   0. AUTO-INJECT SCOPED CSS FOR 3D GYM STUDIO & VISUAL PRO MODULES
+   ============================================================================ */
+function injectOSProVisualStyles() {
+  if (document.getElementById("os-pro-v3-visual-styles")) return;
+  const st = document.createElement("style");
+  st.id = "os-pro-v3-visual-styles";
+  st.textContent = `
+    .pro-hero-banner {
+      position: relative;
+      border-radius: 22px;
+      overflow: hidden;
+      padding: 26px 28px;
+      margin-bottom: 22px;
+      border: 1px solid rgba(212, 167, 44, 0.42);
+      background-size: cover;
+      background-position: center;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75);
+    }
+    .pro-hero-overlay {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 18px;
+    }
+    .gym-gender-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .gender-select-card {
+      background: rgba(15, 22, 38, 0.9);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: all 0.25s ease;
+    }
+    .gender-select-card.active {
+      border-color: var(--gold-primary);
+      background: linear-gradient(135deg, rgba(212, 167, 44, 0.22), rgba(16, 185, 129, 0.1));
+      box-shadow: 0 0 25px rgba(212, 167, 44, 0.25);
+    }
+    .gender-select-card img {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--gold-primary);
+    }
+
+    /* بطاقات التمارين المصورة + 3D Badge */
+    .gym-layout-split {
+      display: grid;
+      grid-template-columns: 330px 1fr;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    @media (max-width: 1100px) {
+      .gym-layout-split {
+        grid-template-columns: 1fr;
+      }
+    }
+    .muscle-3d-stage {
+      background: radial-gradient(circle at 50% 35%, rgba(33, 197, 197, 0.16), rgba(9, 13, 25, 0.96));
+      border: 1px solid rgba(212, 167, 44, 0.35);
+      border-radius: 20px;
+      padding: 18px;
+      text-align: center;
+      position: sticky;
+      top: 88px;
+    }
+    .muscle-svg-interactive {
+      width: 100%;
+      max-width: 240px;
+      height: 330px;
+      margin: 10px auto;
+      filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.85));
+    }
+    .muscle-zone {
+      fill: rgba(148, 163, 184, 0.28);
+      stroke: rgba(212, 167, 44, 0.55);
+      stroke-width: 1.5;
+      cursor: pointer;
+      transition: all 0.22s ease;
+    }
+    .muscle-zone:hover,
+    .muscle-zone.active {
+      fill: #19B889;
+      stroke: #ffffff;
+      filter: drop-shadow(0 0 12px #19B889);
+    }
+
+    .exercise-photo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    .exercise-pro-card {
+      background: linear-gradient(165deg, rgba(18, 25, 42, 0.95), rgba(10, 14, 24, 0.98));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.6);
+    }
+    .exercise-pro-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--gold-primary);
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8), 0 0 22px rgba(212, 167, 44, 0.18);
+    }
+    .exercise-img-box {
+      position: relative;
+      height: 185px;
+      width: 100%;
+      overflow: hidden;
+      background: #070a12;
+    }
+    .exercise-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.45s ease;
+    }
+    .exercise-pro-card:hover .exercise-img-box img {
+      transform: scale(1.07);
+    }
+    .exercise-3d-tag {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(9, 13, 25, 0.88);
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-primary);
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      backdrop-filter: blur(8px);
+    }
+    .exercise-sets-pill {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: linear-gradient(135deg, #19B889, #059669);
+      color: #05070e;
+      padding: 4px 12px;
+      border-radius: 99px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      font-family: 'Inter', sans-serif;
+    }
+    .exercise-body {
+      padding: 15px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+    .exercise-steps-box {
+      background: rgba(255, 255, 255, 0.03);
+      border-right: 3px solid var(--gold-primary);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    /* كروت Vision Board والسفر والكتب المصورة */
+    .visual-cover-card {
+      background: linear-gradient(165deg, rgba(18, 25, 42, 0.94), rgba(10, 14, 24, 0.98));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.25s ease;
+    }
+    .visual-cover-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--gold-primary);
+    }
+    .visual-cover-img {
+      height: 155px;
+      width: 100%;
+      background-size: cover;
+      background-position: center;
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      padding: 10px 12px;
+    }
+    .visual-cover-img::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(9, 13, 25, 0.95), transparent 70%);
+    }
+    .visual-cover-img > * {
+      position: relative;
+      z-index: 2;
+    }
+    .visual-cover-body {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+    .macro-ring-box {
+      background: rgba(15, 22, 38, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 12px 14px;
+      text-align: center;
+    }
+  `;
+  document.head.appendChild(st);
+}
+
+/* ============================================================================
    1. UI/UX UPGRADE: 4 THEMES, COLLAPSIBLE SIDEBAR & QUICK CAPTURE (ALT+N)
    ============================================================================ */
 function initThemeAndSidebarSystem() {
+  injectOSProVisualStyles();
   const savedTheme = localStorage.getItem("MY_LIFE_OS_THEME_V6") || "midnight-gold";
   applyOSTheme(savedTheme, false);
 
@@ -66,7 +299,6 @@ function initThemeAndSidebarSystem() {
     document.getElementById("app-shell")?.classList.add("sidebar-collapsed");
   }
 
-  // إضافة زر تصغير القائمة الجانبية + زر التسجيل الفوري Quick Capture في الشريط العلوي
   const topbarStart = document.querySelector(".topbar-start");
   if (topbarStart && !document.getElementById("btn-collapse-sidebar")) {
     const collapseBtn = document.createElement("button");
@@ -93,7 +325,6 @@ function initThemeAndSidebarSystem() {
     topbarEnd.prepend(qcBtn);
   }
 
-  // تطوير زر تغيير الثيم ليدعم الـ 4 ثيمات الاحترافية
   const themeBtn = document.getElementById("btn-theme-toggle");
   if (themeBtn) {
     themeBtn.title = "اختيار الثيم (Midnight Gold / Pure Light / Pure Black / Forest)";
@@ -119,7 +350,7 @@ function openThemeSelectorModal() {
   B().openFormModal("🎨 نظام الثيمات والمظهر الاحترافي (4 Themes)", `
     <p class="small-muted mb-2">اختر لوحة الألوان المريحة لعينيك أثناء الدراسة والعمل:</p>
     <div class="theme-cards-grid">
-      <div class="theme-preview-card t-midnight ${cur === "midnight-gold" ? "active" : ""}" data- pick-theme="midnight-gold">
+      <div class="theme-preview-card t-midnight ${cur === "midnight-gold" ? "active" : ""}" data-pick-theme="midnight-gold">
         <span class="badge badge-gold">Default</span>
         <strong>Midnight Gold</strong>
         <small>الكحلي الليلي والذهبي الهادئ</small>
@@ -199,15 +430,23 @@ function openQuickCaptureModal() {
         date: today()
       });
     } else if (data.captureType === "goal") {
-      const goals = OSProStore.get("goals", []);
-      goals.unshift({ id: Date.now().toString(), title: data.title, level: "أهداف شهرية", deadline: today(), milestones: [data.extra || "الخطوة الأولى"], doneMilestones: [] });
-      OSProStore.set("goals", goals);
+      const goals = OSProStore.get("goals_v3", []);
+      goals.unshift({
+        id: Date.now().toString(),
+        title: data.title,
+        level: "أهداف شهرية",
+        deadline: today(),
+        img: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=800&q=80",
+        milestones: [data.extra || "الخطوة الأولى"],
+        doneMilestones: []
+      });
+      OSProStore.set("goals_v3", goals);
       renderGoalsView();
-      toast("تم حفظ الهدف في قسم الأهداف 🎯");
+      toast("تم حفظ الهدف في Vision Board 🎯");
     } else if (data.captureType === "journal") {
-      const journals = OSProStore.get("journals", []);
-      journals.unshift({ id: Date.now().toString(), date: today(), mood: "😊 متفائل", title: data.title, content: data.extra || data.title });
-      OSProStore.set("journals", journals);
+      const journals = OSProStore.get("journals_v3", []);
+      journals.unshift({ id: Date.now().toString(), date: today(), mood: "😊 متفائل", energy: 85, title: data.title, content: data.extra || data.title });
+      OSProStore.set("journals_v3", journals);
       renderJournalView();
       toast("تم حفظ التدوينة في يومياتك 📔");
     }
@@ -218,7 +457,6 @@ function openQuickCaptureModal() {
    2. TIMESTAMP-PERSISTENT FOCUS STUDIO V6 + 6 MODES + SESSION PLANNER
    ============================================================================ */
 function initTimestampFocusPersistence() {
-  // استرجاع الوقت الحقيقي بالـ Timestamps لو عمل المستخدم Refresh للصفحة
   const savedTarget = Number(localStorage.getItem("MY_LIFE_OS_POMO_TARGET_TS") || 0);
   const wasRunning = localStorage.getItem("MY_LIFE_OS_POMO_WAS_RUNNING") === "1";
 
@@ -234,7 +472,6 @@ function initTimestampFocusPersistence() {
     }
   }
 
-  // مراقبة وتحديث الـ Timestamp كل ثانية أثناء عمل المؤقت
   setInterval(() => {
     const pState = B().getPomodoroState?.();
     if (!pState) return;
@@ -248,7 +485,6 @@ function initTimestampFocusPersistence() {
   }, 1000);
 }
 
-// فتح مخطط الجلسات الذكي + تحليلات التركيز + Focus AI Coach
 function openSmartFocusPlannerAndAnalytics() {
   const plan = OSProStore.get("focus_plan", [
     { title: "الجلسة الأولى — تركيز عميق", mins: 50, type: "work", done: false },
@@ -267,9 +503,8 @@ function openSmartFocusPlannerAndAnalytics() {
   const totalBreakPlan = plan.filter(p => p.type === "break").reduce((s, p) => s + p.mins, 0);
 
   B().openFormModal("🚀 استوديو تخطيط الجلسات الذكي وتحليلات التركيز (Focus Studio V6)", `
-    <!-- أوضاع التركيز الستة السريعة -->
     <div class="form-group">
-      <label class="gold-text"><i class="fa-solid fa-Sliders"></i> 1. الأوضاع الستة للتركيز (6 Focus Modes & Presets):</label>
+      <label class="gold-text"><i class="fa-solid fa-sliders"></i> 1. الأوضاع الستة للتركيز (6 Focus Modes & Presets):</label>
       <div class="filters-row mt-1">
         <button type="button" class="btn btn-xs btn-outline" data-v6-mode="25">Pomodoro (25/5)</button>
         <button type="button" class="btn btn-xs btn-outline" data-v6-mode="50">Deep Work (50د)</button>
@@ -279,7 +514,6 @@ function openSmartFocusPlannerAndAnalytics() {
       </div>
     </div>
 
-    <!-- خطة الجلسات المتسلسلة -->
     <div class="subject-progress-box">
       <div class="flex-between">
         <strong class="gold-text">📋 2. خطة الجلسات الذكية المتسلسلة</strong>
@@ -304,7 +538,6 @@ function openSmartFocusPlannerAndAnalytics() {
       </div>
     </div>
 
-    <!-- تحليلات التركيز (Focus Analytics) -->
     <div class="kpi-grid mt-2" style="grid-template-columns:repeat(3,1fr); margin-bottom:10px;">
       <div class="subject-progress-box text-center">
         <small class="small-muted">تركيز اليوم</small>
@@ -323,7 +556,6 @@ function openSmartFocusPlannerAndAnalytics() {
       </div>
     </div>
 
-    <!-- مدرب التركيز بالذكاء الاصطناعي (Focus AI Coach) -->
     <div class="subject-progress-box">
       <strong class="gold-text"><i class="fa-solid fa-wand-magic-sparkles"></i> 3. مدرب التركيز الذكي (Focus AI Coach):</strong>
       <div class="input-action-row mt-1">
@@ -428,11 +660,10 @@ const AMBIENT_14_CHANNELS = [
 const Mixer14Engine = {
   volumes: {},
   nodes: {},
-  masterBoost: 1.6, // مضاعف قوة الصوت الافتراضي (عالي وواضح)
+  masterBoost: 1.6,
   sleepTimerId: null
 };
 
-// توليد Buffer صوتي مُعالج ومُكبّر لأقصى درجة نقاء (Peak Normalized to 0.95)
 function buildNormalizedSoundBuffer(ctx, mode) {
   const durationSec = 4;
   const bufSize = ctx.sampleRate * durationSec;
@@ -473,7 +704,7 @@ function buildNormalizedSoundBuffer(ctx, mode) {
     } else if (mode === "fire") {
       lastOut = (lastOut + 0.04 * white) / 1.04;
       sample = lastOut;
-      if (Math.random() < 0.004) sample += (Math.random() * 2 - 1) * 1.8; // فرقعة حطب حقيقية
+      if (Math.random() < 0.004) sample += (Math.random() * 2 - 1) * 1.8;
     } else if (mode === "birds") {
       const chirpEnv = Math.sin(2 * Math.PI * 3.5 * t) > 0.65 ? 1 : 0.05;
       sample = Math.sin(2 * Math.PI * (2200 + 600 * Math.sin(2 * Math.PI * 12 * t)) * t) * chirpEnv + white * 0.05;
@@ -487,7 +718,6 @@ function buildNormalizedSoundBuffer(ctx, mode) {
     if (abs > maxPeak) maxPeak = abs;
   }
 
-  // تكبير وتطبيع الصوت (Normalization) ليكون قوياً وواضحاً جداً
   const normFactor = 0.92 / maxPeak;
   for (let i = 0; i < bufSize; i++) {
     data[i] *= normFactor;
@@ -671,17 +901,17 @@ function open14ChannelAmbientMixerModal(fromPomodoro = false) {
 window.open14ChannelAmbientMixerModal = open14ChannelAmbientMixerModal;
 
 /* ============================================================================
-   4. INJECT THE 9 NEW MODULES INTO SIDEBAR & WORKSPACE + SYSTEM SYNERGY
+   4. INJECT THE 9 PRO MODULES INTO SIDEBAR & WORKSPACE
    ============================================================================ */
 const NEW_PRO_MODULES = [
   { id: "goals", icon: "fa-bullseye", label: "الأهداف و Vision Board" },
   { id: "habits", icon: "fa-fire-flame-curved", label: "العادات والروتين اليومي" },
-  { id: "health", icon: "fa-heart-pulse", label: "الصحة واللياقة والجيم" },
+  { id: "health", icon: "fa-dumbbell", label: "الصحة واللياقة والجيم 3D" },
   { id: "time-intel", icon: "fa-chart-gantt", label: "ذكاء وإدارة الوقت" },
   { id: "second-brain", icon: "fa-network-wired", label: "العقل الثاني (Second Brain)" },
-  { id: "learning-center", icon: "fa-book-open-reader", label: "مركز القراءة والتعلم" },
-  { id: "experiences", icon: "fa-compass", label: "السفر والتجارب والأحلام" },
-  { id: "contacts", icon: "fa-address-book", label: "العلاقات والتواصل" },
+  { id: "learning-center", icon: "fa-book-open-reader", label: "مركز القراءة والتعلم 3D" },
+  { id: "experiences", icon: "fa-earth-americas", label: "السفر والتجارب والأحلام" },
+  { id: "contacts", icon: "fa-address-book", label: "العلاقات والتواصل VIP" },
   { id: "journal", icon: "fa-book-journal-whills", label: "اليوميات والأتمتة" }
 ];
 
@@ -691,38 +921,41 @@ function injectProModulesIntoDOM() {
   const footer = document.querySelector(".app-footer");
   if (!nav || !main) return;
 
-  // إزالة أي بقايا لتبويب اللعبة القديم إن وجد
   nav.querySelector('[data-view="ancient-game"]')?.remove();
   document.getElementById("view-ancient-game")?.remove();
 
-  // إضافة فاصل أنيق في القائمة الجانبية ثم الأقسام الـ 9 الجديدة
-  const divider = document.createElement("div");
-  divider.className = "nav-group-label";
-  divider.textContent = "منظومة الحياة المتقدمة (PRO OS)";
-  nav.appendChild(divider);
+  if (!nav.querySelector(".nav-group-label")) {
+    const divider = document.createElement("div");
+    divider.className = "nav-group-label";
+    divider.textContent = "منظومة الحياة المتقدمة (PRO OS)";
+    nav.appendChild(divider);
+  }
 
   NEW_PRO_MODULES.forEach(mod => {
-    const btn = document.createElement("button");
-    btn.className = "nav-item";
-    btn.dataset.view = mod.id;
-    btn.innerHTML = `<i class="fa-solid ${mod.icon} gold-text"></i> <span>${mod.label}</span>`;
+    let btn = nav.querySelector(`[data-view="${mod.id}"]`);
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.className = "nav-item";
+      btn.dataset.view = mod.id;
+      btn.innerHTML = `<i class="fa-solid ${mod.icon} gold-text"></i> <span>${mod.label}</span>`;
+      nav.appendChild(btn);
+    }
     btn.onclick = () => {
       B().switchView?.(mod.id);
       renderProModuleById(mod.id);
     };
-    nav.appendChild(btn);
 
-    const sec = document.createElement("section");
-    sec.id = `view-${mod.id}`;
-    sec.className = "view-section";
-    main.insertBefore(sec, footer);
+    if (!document.getElementById(`view-${mod.id}`)) {
+      const sec = document.createElement("section");
+      sec.id = `view-${mod.id}`;
+      sec.className = "view-section";
+      main.insertBefore(sec, footer);
+    }
   });
 
-  // ربط زر السماعة في الشريط العلوي وداخل المؤقت بالميكسر ذي الـ 14 قناة
   const ambBtn = document.getElementById("btn-topbar-ambient");
   if (ambBtn) ambBtn.onclick = open14ChannelAmbientMixerModal;
 
-  // إضافة زر مخطط الجلسات الذكي وتحليلات التركيز في الشريط العلوي بجانب ساعة البومودورو
   const pomoBtn = document.getElementById("btn-topbar-pomo");
   if (pomoBtn && !document.getElementById("btn-topbar-focus-analytics")) {
     const planBtn = document.createElement("button");
@@ -734,7 +967,6 @@ function injectProModulesIntoDOM() {
     pomoBtn.insertAdjacentElement("afterend", planBtn);
   }
 
-  // ترقية قسم المشاريع الحالي (إضافة Gantt Chart + Milestones + الأرشيف)
   upgradeExistingProjectsToolbar();
 }
 
@@ -750,24 +982,636 @@ function renderProModuleById(id) {
   if (id === "journal") renderJournalView();
 }
 
-/* --- MODULE A: LIFE GOALS & VISION BOARD + AI GOAL COACH --- */
+/* ============================================================================
+   MODULE C (FLAGSHIP): PRO GYM, BODY TRANSFORMATION & 3D MUSCLE STUDIO
+   ============================================================================ */
+const GYM_EXERCISES_DB = {
+  chest: [
+    {
+      id: "ex_bench",
+      name: "Barbell / Dumbbell Bench Press • ضغط الصدر بالبار أو الدمبل",
+      muscleLabel: "3D Anatomy: Pectoralis Major (الصدر الأوسط)",
+      sets: "4 Sets × 10-12 Reps",
+      cals: "140 kcal",
+      maleImg: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=900&q=80",
+      femaleImg: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=80",
+      tips: "ثبّت لوحي الكتف في البنش، انزل بالبار ببطء حتى يلامس منتصف الصدر، وادفع للأعلى مع الزفير دون قفل الكوع بالكامل."
+    },
+    {
+      id: "ex_incline",
+      name: "Incline Dumbbell Press • تجميع دمبل عالي للصدر العلوي",
+      muscleLabel: "3D Anatomy: Upper Chest & Front Delts (الصدر العلوي)",
+      sets: "4 Sets × 10 Reps",
+      cals: "125 kcal",
+      maleImg: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=900&q=80",
+      femaleImg: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?auto=format&fit=crop&w=900&q=80",
+      tips: "اضبط زاوية البنش على 30 درجة لتركيز الحمل على الصدر العلوي وتجنب إجهاد الكتف الأمامي."
+    },
+    {
+      id: "ex_fly",
+      name: "Cable Crossover / Pec Deck Fly • تفتيح صدر بالكابل أو الجهاز",
+      muscleLabel: "3D Anatomy: Inner Chest Fibers (تحديد وتفصيل الصدر)",
+      sets: "3 Sets × 15 Reps",
+      cals: "95 kcal",
+      maleImg: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=900&q=80",
+      femaleImg: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?auto=format&fit=crop&w=900&q=80",
+      tips: "حافظ على انحناء خفيف في الكوع واعصر عضلة الصدر في المنتصف لمدة ثانية كاملة."
+    }
+  ],
+  back: [
+    {
+      id: "ex_lat",
+      name: "Lat Pulldown / Pull-Ups • سحب عالي واسع أو عقلة للمجنص",
+      muscleLabel: "3D Anatomy: Latissimus Dorsi (عضلات المجنص V-Taper)",
+      sets: "4 Sets × 10-12 Reps",
+      cals: "150 kcal",
+      maleImg: "https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=900&q=80",
+      femaleImg: "https://images.unsplash.com/photo-1548690312-e3b507d8c110?auto=format&fit=crop&w=900&q=80",
+      tips: "اسحب البار بكوعك لأسفل باتجاه أعلى الصدر مع إرجاع الكتف للخلف وعدم المرجحة بالظهر."
+    },
+    {
+      id: "ex_row",
+      name: "Seated Cable Row / Barbell Row • سحب أرضي أو طرمبة للظهر",
+      muscleLabel: "3D Anatomy: Rhomboids & Mid-Back (سمك وكثافة الظهر)",
+      sets: "4 Sets × 10 Reps",
+      cals: "145 kcal",
+      maleImg: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=900&q=80",
+      femaleImg: "https://images.unsplash.com/photo-1550345332-09e3ac987658?auto=format&fit=crop&w=900&q=80",
+      tips: "اجعل ظهرك مستقيماً تماماً واسحب القبضة نحو السرة مع ضم لوحي الكتف بقوة في نهاية الحركة."
+    }
+  ],
+  shoulders: [
+    {
+      id: "ex_ohp",
+      name: "Seated Dumbbell Overhead Press • ضغط أكتاف بالدمبل",
+      muscleLabel: "3D Anatomy: Anterior & Medial Deltoid (الكتف الأمامي والجانبي)",
+      sets: "4 Sets × 10 Reps",
+      cals: "120 kcal",
+      maleImg: "https://images.unsplash.com/photo-1532029837206-abbe2b7620e3?auto=format&fit=crop&w=900&q=80",
+      femaleImg: "https://images.unsplash.com/photo-1579758629938-03607ccdbaba?auto=format&fit=crop&w=900&q=80",
+      tips: "اجعل الكوع للأمام قليلاً بزاوية 45 درجة لحماية مفصل الكتف وادفع الدمبل للأعلى بتحكم."
+    },
+    {
+      id: "ex_lat_raise",
+      name: "Lateral Raises • رفرفة جانبي بالدمبل لتعريض الكتف",
+      muscleLabel: "3D Anatomy: Lateral Deltoid (الكتف الجانبي 3D)",
+      sets: "4 Sets × 15 Reps",
+      cals: "95 kcal",
+      maleImg: "https://images.unsplash.com/photo-1584466977773-e625c37cdd50?auto=format&fit=crop&w=900&q=80",
+      femaleImg: "https://images.unsplash.com/photo-1518310383802-640c2de311b2?auto=format&fit=crop&w=900&q=80",
+      tips: "ارفع بوزن متوسط حتى مستوى الكتف مع قيادة الحركة بالكوع وليس المعصم."
+    }
+  ],
+  arms: [
+    {
+      id: "ex_bicep",
+      name: "EZ-Bar / Dumbbell Bicep Curls • تبادل بايسبس بالدمبل أو البار الزجزاج",
+      muscleLabel: "3D Anatomy: Biceps Brachii (البايسبس والرأس الطويل)",
+      sets: "3 Sets × 12 Reps",
+      cals: "90 kcal",
+      maleImg: "https://images.unsplash.com/photo-1581009137042-c552e485697a?auto=format&fit=crop&w=900&q=80",
+      femaleImg: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=900&q=80",
+      tips: "ثبّت كوعك بجانب جسمك تماماً واعصر عضلة الباي في الأعلى مع نزول بطيء في 3 ثوانٍ."
+    },
+    {
+      id: "ex_tricep",
+      name: "Tricep Rope Pushdown • مسطرة أو حبل ترايسبس بالكابل",
+      muscleLabel: "3D Anatomy: Triceps Lateral & Long Head (الترايسبس)",
+      sets: "4 Sets × 12-15 Reps",
+      cals: "95 kcal",
+      maleImg: "https://images.unsplash.com/photo-1590487988256-9ed24133863e?auto=format&fit=crop&w=900&q=80",
+      femaleImg: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=80",
+      tips: "افتح الحبل في أسفل الحركة للخارج مع تثبيت الكوع تماماً لتشغيل الرأس الجانبي للترايسبس."
+    }
+  ],
+  legs: [
+    {
+      id: "ex_squat",
+      name: "Barbell Squat / Leg Press • سكوات أو دفع أرجل لتقوية السفلي",
+      muscleLabel: "3D Anatomy: Quadriceps & Glutes (الأفخاذ الأمامية والأرداف)",
+      sets: "4 Sets × 10-12 Reps",
+      cals: "190 kcal",
+      maleImg: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?auto=format&fit=crop&w=900&q=80",
+      femaleImg: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?auto=format&fit=crop&w=900&q=80",
+      tips: "حافظ على استقامة الظهر، وادفع الأرض بكعب القدم مع جعل الركبة في نفس اتجاه مشط القدم."
+    },
+    {
+      id: "ex_rdl",
+      name: "Romanian Deadlift & Hip Thrust • رفعة رومانية للخلفي والأرداف",
+      muscleLabel: "3D Anatomy: Hamstrings & Gluteus Maximus (الخلفي والأرداف)",
+      sets: "4 Sets × 12 Reps",
+      cals: "175 kcal",
+      maleImg: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=900&q=80",
+      femaleImg: "https://images.unsplash.com/photo-1548690312-e3b507d8c110?auto=format&fit=crop&w=900&q=80",
+      tips: "ارجع بالحوض للخلف مع ثنية بسيطة في الركبة حتى تشعر بشد كامل في العضلة الخلفية."
+    }
+  ],
+  core: [
+    {
+      id: "ex_abs",
+      name: "Hanging Leg Raises & Plank • رفع الأرجل للبطن وبلانك للـ Core",
+      muscleLabel: "3D Anatomy: Rectus Abdominis & Obliques (عضلات البطن Six-Pack)",
+      sets: "4 Sets × 15 Reps + 60s Plank",
+      cals: "110 kcal",
+      maleImg: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=900&q=80",
+      femaleImg: "https://images.unsplash.com/photo-1518310383802-640c2de311b2?auto=format&fit=crop&w=900&q=80",
+      tips: "لف الحوض للأعلى عند رفع الأرجل لتشغيل عضلات البطن السفلية بدلاً من مفصل الفخذ."
+    }
+  ]
+};
+
+let activeMuscleGroup = "chest";
+let activeRestTimerInterval = null;
+
+function calculatePhysiologyMetrics(profile) {
+  const w = Number(profile.currentWeight) || 75;
+  const tw = Number(profile.targetWeight) || 70;
+  const h = Number(profile.height) || 175;
+  const age = Number(profile.age) || 22;
+  const isMale = profile.gender !== "female";
+  const days = Number(profile.daysPerWeek) || 4;
+
+  const heightM = h / 100;
+  const bmi = +(w / (heightM * heightM)).toFixed(1);
+  const bmiStatus = bmi < 18.5 ? "نحافة (يحتاج زيادة)" : bmi < 25 ? "وزن مثالي وصحي ✅" : bmi < 30 ? "زيادة وزن خفيفة" : "سمنة (يحتاج تنشيف)";
+
+  // معادلة Mifflin-St Jeor العلمية الدقيقة للذكور والإناث
+  const bmr = isMale
+    ? Math.round(10 * w + 6.25 * h - 5 * age + 5)
+    : Math.round(10 * w + 6.25 * h - 5 * age - 161);
+
+  const activityMultiplier = days >= 5 ? 1.65 : days >= 3 ? 1.5 : 1.375;
+  const tdee = Math.round(bmr * activityMultiplier);
+
+  let targetCalories = tdee;
+  if (profile.goal === "bulk" || tw > w) targetCalories = tdee + 400;
+  else if (profile.goal === "cut" || tw < w) targetCalories = Math.max(1350, tdee - 450);
+
+  const proteinG = Math.round(w * (profile.goal === "bulk" ? 2.1 : 2.0));
+  const fatsG = Math.round((targetCalories * 0.25) / 9);
+  const carbsG = Math.max(80, Math.round((targetCalories - (proteinG * 4 + fatsG * 9)) / 4));
+  const waterLiters = +(w * 0.038).toFixed(1);
+  const weightDiff = +(tw - w).toFixed(1);
+
+  return { bmi, bmiStatus, bmr, tdee, targetCalories, proteinG, carbsG, fatsG, waterLiters, weightDiff };
+}
+
+function build3DMuscleSVG(selectedMuscle, isMale) {
+  return `
+    <svg viewBox="0 0 220 340" class="muscle-svg-interactive" xmlns="http://www.w3.org/2000/svg">
+      <!-- هالة إضاءة ثلاثية الأبعاد -->
+      <ellipse cx="110" cy="318" rx="68" ry="12" fill="rgba(25, 184, 137, 0.22)" />
+      <!-- الرأس والرقبة -->
+      <circle cx="110" cy="34" r="19" fill="#1e293b" stroke="#D4A72C" stroke-width="2" />
+      <rect x="102" y="53" width="16" height="12" rx="4" fill="#334155" />
+
+      <!-- الأكتاف (Shoulders 3D) -->
+      <g class="muscle-zone ${selectedMuscle === "shoulders" ? "active" : ""}" data-muscle-pick="shoulders">
+        <ellipse cx="64" cy="78" rx="16" ry="14" />
+        <ellipse cx="156" cy="78" rx="16" ry="14" />
+      </g>
+
+      <!-- الصدر (Chest 3D) -->
+      <g class="muscle-zone ${selectedMuscle === "chest" ? "active" : ""}" data-muscle-pick="chest">
+        <path d="M78 66 L109 66 L109 102 L80 98 Z" />
+        <path d="M111 66 L142 66 L140 98 L111 102 Z" />
+      </g>
+
+      <!-- المجنص والظهر الجانبي (Back Lats V-Taper 3D) -->
+      <g class="muscle-zone ${selectedMuscle === "back" ? "active" : ""}" data-muscle-pick="back">
+        <path d="M76 96 L84 148 L70 128 Z" />
+        <path d="M144 96 L136 148 L150 128 Z" />
+      </g>
+
+      <!-- الذراعين باي وتراي (Arms 3D) -->
+      <g class="muscle-zone ${selectedMuscle === "arms" ? "active" : ""}" data-muscle-pick="arms">
+        <rect x="46" y="92" width="16" height="58" rx="8" />
+        <rect x="158" y="92" width="16" height="58" rx="8" />
+      </g>
+
+      <!-- عضلات البطن (Core & Six-Pack 3D) -->
+      <g class="muscle-zone ${selectedMuscle === "core" ? "active" : ""}" data-muscle-pick="core">
+        <rect x="86" y="104" width="22" height="16" rx="4" />
+        <rect x="112" y="104" width="22" height="16" rx="4" />
+        <rect x="87" y="123" width="21" height="16" rx="4" />
+        <rect x="112" y="123" width="21" height="16" rx="4" />
+        <rect x="89" y="142" width="19" height="16" rx="4" />
+        <rect x="112" y="142" width="19" height="16" rx="4" />
+      </g>
+
+      <!-- عضلات الأرجل والأرداف (Legs & Glutes 3D) -->
+      <g class="muscle-zone ${selectedMuscle === "legs" ? "active" : ""}" data-muscle-pick="legs">
+        <path d="M82 164 L107 164 L103 245 L80 245 Z" />
+        <path d="M113 164 L138 164 L140 245 L117 245 Z" />
+        <rect x="82" y="250" width="19" height="55" rx="8" />
+        <rect x="119" y="250" width="19" height="55" rx="8" />
+      </g>
+    </svg>
+  `;
+}
+
+function renderHealthView() {
+  const sec = document.getElementById("view-health");
+  if (!sec) return;
+
+  const profile = OSProStore.get("gym_profile_v3", {
+    isConfigured: false,
+    name: B().getAppState?.()?.user?.displayName || "أحمد محمد حسني",
+    gender: "male", // "male" | "female"
+    age: 21,
+    height: 178,
+    currentWeight: 74,
+    targetWeight: 82,
+    goal: "bulk", // "bulk" | "cut" | "recomp"
+    level: "متوسط",
+    place: "الجيم الكامل 🏋️‍♂️",
+    daysPerWeek: 4,
+    waterCups: 6,
+    sleepHours: 7.5,
+    steps: 7500,
+    completedExercisesToday: []
+  });
+
+  // إذا لم يقم المستخدم بإعداد بيانات جسمه وطموحه بعد، نعرض له شاشة الإعداد الرياضي المصورة الفخمة أولاً
+  if (!profile.isConfigured) {
+    sec.innerHTML = `
+      <div class="card" style="max-width:860px; margin:0 auto; border-color:var(--gold-primary);">
+        <div class="text-center mb-2">
+          <span class="badge badge-gold">STEP 1 • SMART BODY & GYM ONBOARDING</span>
+          <h2 class="mt-1">🏋️‍♂️ إعداد ملفك الرياضي وطموحك الجسدي (3D Gym Studio)</h2>
+          <p class="small-muted">أدخل بياناتك الحقيقية وطموحك ليقوم النظام ببناء برنامجك التدريبي المصور وجدول تغذيتك وسعراتك تلقائياً:</p>
+        </div>
+
+        <form id="gym-onboarding-form">
+          <label class="small-muted d-block mb-1">1. اختر النوع (لحساب معدلات الحرق والبرنامج المناسب):</label>
+          <div class="gym-gender-switch">
+            <div class="gender-select-card ${profile.gender === "male" ? "active" : ""}" data-pick-gender="male">
+              <img src="https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=300&q=80" alt="Male Athlete" />
+              <div>
+                <strong class="gold-text">ذكر (Male Athlete 🚹)</strong>
+                <small class="small-muted d-block">برامج الضخامة العضلية، القوة، والتنشيف الرياضي</small>
+              </div>
+            </div>
+            <div class="gender-select-card ${profile.gender === "female" ? "active" : ""}" data-pick-gender="female">
+              <img src="https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=300&q=80" alt="Female Athlete" />
+              <div>
+                <strong class="gold-text">أنثى (Female Athlete 🚺)</strong>
+                <small class="small-muted d-block">برامج نحت القوام، اللياقة، وتقوية العضلات والـ Core</small>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" name="gender" id="gym-inp-gender" value="${esc(profile.gender)}" />
+
+          <div class="dashboard-grid" style="grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+            <div class="form-group">
+              <label>الاسم الرياضي</label>
+              <input type="text" name="name" value="${esc(profile.name)}" required />
+            </div>
+            <div class="form-group">
+              <label>العمر (بالسنوات)</label>
+              <input type="number" name="age" min="12" max="80" value="${profile.age}" required />
+            </div>
+            <div class="form-group">
+              <label>الطول (بالسنتيمتر cm)</label>
+              <input type="number" name="height" min="120" max="230" value="${profile.height}" required />
+            </div>
+            <div class="form-group">
+              <label>وزنك الحالي (كجم kg)</label>
+              <input type="number" step="0.5" name="currentWeight" value="${profile.currentWeight}" required />
+            </div>
+            <div class="form-group">
+              <label class="gold-text">🎯 طموحك توصل لكام كيلو؟ (kg)</label>
+              <input type="number" step="0.5" name="targetWeight" value="${profile.targetWeight}" required />
+            </div>
+            <div class="form-group">
+              <label>هدفك الأساسي</label>
+              <select name="goal">
+                <option value="bulk" ${profile.goal === "bulk" ? "selected" : ""}>💪 تضخيم وبناء عضل صافي (Bulking)</option>
+                <option value="cut" ${profile.goal === "cut" ? "selected" : ""}>🔥 تنشيف وحرق دهون ونحت (Cutting)</option>
+                <option value="recomp" ${profile.goal === "recomp" ? "selected" : ""}>⚡ إعادة تشكيل الجسم ولياقة شاملة (Recomp)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>مكان التمرين المفضل</label>
+              <select name="place">
+                <option value="الجيم الكامل 🏋️‍♂️">الجيم الكامل (أجهزة وأوزان حرة) 🏋️‍♂️</option>
+                <option value="المنزل بالدمبل 🏠">في المنزل (دمبل ووزن الجسم) 🏠</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>عدد أيام التمرين أسبوعياً</label>
+              <select name="daysPerWeek">
+                <option value="3">3 أيام (Push / Pull / Legs)</option>
+                <option value="4" selected>4 أيام (Upper / Lower Split)</option>
+                <option value="5">5 أيام (Pro Split)</option>
+                <option value="6">6 أيام (PPL × 2 مكثف)</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-gold btn-block btn-luxury-shine mt-2">
+            <i class="fa-solid fa-dumbbell"></i> إنشاء برنامجي التدريبي المصور وملف تغذيتي الآن 🚀
+          </button>
+        </form>
+      </div>
+    `;
+
+    sec.querySelectorAll("[data-pick-gender]").forEach(card => {
+      card.onclick = () => {
+        sec.querySelectorAll("[data-pick-gender]").forEach(c => c.classList.remove("active"));
+        card.classList.add("active");
+        document.getElementById("gym-inp-gender").value = card.dataset.pickGender;
+      };
+    });
+
+    sec.querySelector("#gym-onboarding-form").onsubmit = (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const data = Object.fromEntries(fd.entries());
+      Object.assign(profile, {
+        ...data,
+        isConfigured: true,
+        age: Number(data.age),
+        height: Number(data.height),
+        currentWeight: Number(data.currentWeight),
+        targetWeight: Number(data.targetWeight),
+        daysPerWeek: Number(data.daysPerWeek)
+      });
+      OSProStore.set("gym_profile_v3", profile);
+      toast(`أهلاً بك يا كابتن ${profile.name}! تم توليد برنامجك المصور وحساب سعراتك بنجاح 💪🔥`);
+      renderHealthView();
+    };
+    return;
+  }
+
+  // الحسابات الرياضية والغذائية بناءً على بيانات المستخدم
+  const isMale = profile.gender !== "female";
+  const m = calculatePhysiologyMetrics(profile);
+  const heroBg = isMale
+    ? "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1600&q=80"
+    : "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1600&q=80";
+
+  const exercisesList = GYM_EXERCISES_DB[activeMuscleGroup] || GYM_EXERCISES_DB.chest;
+  const muscleNamesAr = {
+    chest: "عضلات الصدر (Chest 3D)",
+    back: "عضلات الظهر والمجنص (Back & Lats 3D)",
+    shoulders: "عضلات الأكتاف (Shoulders 3D)",
+    arms: "عضلات الباي والتراي (Arms 3D)",
+    legs: "عضلات الأرجل والأرداف (Legs & Glutes 3D)",
+    core: "عضلات البطن والجذع (Abs & Core 3D)"
+  };
+
+  sec.innerHTML = `
+    <!-- 1. الهيرو بانر الرياضي المصور (يعرض بيانات البطل والفرق للوصول للوزن الطموح) -->
+    <div class="pro-hero-banner" style="background-image: linear-gradient(90deg, rgba(9,13,25,0.95) 0%, rgba(9,13,25,0.72) 55%, rgba(9,13,25,0.92) 100%), url('${heroBg}');">
+      <div class="pro-hero-overlay">
+        <div>
+          <div class="filters-row mb-1">
+            <span class="badge badge-gold">${isMale ? "🚹 برنامج رجالي محترف" : "🚺 برنامج نسائي محترف"}</span>
+            <span class="badge badge-emerald">${esc(profile.place)} • ${profile.daysPerWeek} أيام/أسبوع</span>
+            <span class="badge badge-warning">BMI: ${m.bmi} (${m.bmiStatus})</span>
+          </div>
+          <h2>كابتن <span class="gold-text">${esc(profile.name)}</span> — رحلة الوصول إلى <span class="gold-text">${profile.targetWeight} kg</span></h2>
+          <p class="small-muted mt-1">
+            الوزن الحالي: <strong>${profile.currentWeight} kg</strong> &bull;
+            الطول: <strong>${profile.height} cm</strong> &bull;
+            العمر: <strong>${profile.age} سنة</strong> &bull;
+            الفرق عن طموحك: <strong class="gold-text">${m.weightDiff > 0 ? `+${m.weightDiff} كجم زيادة عضلية مطلوبة` : m.weightDiff < 0 ? `${m.weightDiff} كجم نزول دهون مطلوب` : "وصلت لوزنك المثالي! 🎯"}</strong>
+          </p>
+        </div>
+        <div class="filters-row">
+          <button type="button" id="btn-gym-water-plus" class="btn btn-gold btn-sm">💧 + كوب مية (${profile.waterCups}/10)</button>
+          <button type="button" id="btn-gym-edit-profile" class="btn btn-outline btn-sm"><i class="fa-solid fa-Sliders gold-text"></i> تعديل بياناتي وطموحي</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. شريط السعرات والماكروز اليومية المحسوبة أوتوماتيكياً لجسمك -->
+    <div class="kpi-grid">
+      <div class="macro-ring-box">
+        <small class="small-muted">🔥 السعرات اليومية للوصول لطموحك</small>
+        <h3 class="gold-text mt-1">${m.targetCalories.toLocaleString()} kcal</h3>
+        <small class="small-note">معدل الحرق الأساسي TDEE: ${m.tdee} kcal</small>
+      </div>
+      <div class="macro-ring-box">
+        <small class="small-muted">🥩 البروتين اليومي لبناء العضل</small>
+        <h3 style="color:#19B889;" class="mt-1">${m.proteinG} جرام</h3>
+        <small class="small-muted">${Math.round(m.proteinG * 4)} سعر حراري</small>
+      </div>
+      <div class="macro-ring-box">
+        <small class="small-muted">🍚 الكربوهيدرات للطاقة والتمرين</small>
+        <h3 style="color:#21C5C5;" class="mt-1">${m.carbsG} جرام</h3>
+        <small class="small-muted">${Math.round(m.carbsG * 4)} سعر حراري</small>
+      </div>
+      <div class="macro-ring-box">
+        <small class="small-muted">🥑 الدهون الصحية والمياه</small>
+        <h3 style="color:#F59E0B;" class="mt-1">${m.fatsG}g دهون • ${m.waterLiters}L مية</h3>
+        <small class="small-muted">النوم: ${profile.sleepHours} س • الخطوات: ${profile.steps}</small>
+      </div>
+    </div>
+
+    <!-- 3. منطقة المجسم العضلي التفاعلي 3D + بطاقات التمارين المصورة -->
+    <div class="gym-layout-split">
+      <!-- المجسم التشريحي ثلاثي الأبعاد لاختيار العضلة -->
+      <div class="muscle-3d-stage">
+        <span class="badge badge-gold">3D INTERACTIVE MUSCLE MAP</span>
+        <h4 class="mt-1">${muscleNamesAr[activeMuscleGroup]}</h4>
+        <small class="small-muted d-block">اضغط على أي عضلة في المجسم أو من الأزرار لعرض تمارينها المصورة:</small>
+
+        ${build3DMuscleSVG(activeMuscleGroup, isMale)}
+
+        <div class="cert-pill-row" style="justify-content:center;">
+          ${Object.keys(muscleNamesAr).map(k => `
+            <button type="button" class="btn btn-xs ${activeMuscleGroup === k ? "btn-gold" : "btn-outline"}" data-muscle-pick="${k}">
+              ${k === "chest" ? "الصدر" : k === "back" ? "الظهر" : k === "shoulders" ? "الأكتاف" : k === "arms" ? "الذراعين" : k === "legs" ? "الأرجل" : "البطن"}
+            </button>
+          `).join("")}
+        </div>
+
+        <hr class="divider" />
+        <div class="flex-between">
+          <span>⏱️ مؤقت الراحة بين المجموعات:</span>
+          <strong id="gym-rest-timer-lbl" class="gold-text">00:60</strong>
+        </div>
+        <button type="button" id="btn-start-rest-60" class="btn btn-outline btn-xs btn-block mt-1">
+          <i class="fa-solid fa-stopwatch gold-text"></i> ابدأ راحة 60 ثانية بين الجولات
+        </button>
+      </div>
+
+      <!-- بطاقات التمارين بالصور الرياضية الحقيقية + جدول الوجبات -->
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fa-solid fa-dumbbell gold-text"></i> تمارين ${muscleNamesAr[activeMuscleGroup]} (بالصور الحقيقية والأداء الصحيح)</h3>
+            <span class="badge badge-emerald">أنجزت اليوم: ${(profile.completedExercisesToday || []).length} تمارين</span>
+          </div>
+
+          <div class="exercise-photo-grid">
+            ${exercisesList.map(ex => {
+              const imgUrl = isMale ? ex.maleImg : ex.femaleImg;
+              const isDone = (profile.completedExercisesToday || []).includes(ex.id);
+              return `
+                <div class="exercise-pro-card">
+                  <div class="exercise-img-box">
+                    <img src="${imgUrl}" alt="${esc(ex.name)}" loading="lazy" />
+                    <span class="exercise-3d-tag"><i class="fa-solid fa-cube"></i> ${esc(ex.muscleLabel)}</span>
+                    <span class="exercise-sets-pill">${esc(ex.sets)}</span>
+                  </div>
+                  <div class="exercise-body">
+                    <div class="flex-between">
+                      <h4>${esc(ex.name)}</h4>
+                      <span class="badge badge-gold">🔥 ${esc(ex.cals)}</span>
+                    </div>
+                    <div class="exercise-steps-box">
+                      <strong class="gold-text d-block">📐 الأداء الهندسي الصحيح:</strong>
+                      ${esc(ex.tips)}
+                    </div>
+                    <button type="button" class="btn btn-sm ${isDone ? "btn-gold" : "btn-outline"} btn-block mt-1" data-toggle-ex-done="${ex.id}">
+                      <i class="fa-solid ${isDone ? "fa-circle-check" : "fa-check"}"></i>
+                      ${isDone ? "تم إنجاز هذا التمرين اليوم ✅" : "سجّل التمرين كمكتمل اليوم"}
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        </div>
+
+        <!-- جدول التغذية والوجبات المولّد حسب سعراتك وهدفك -->
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fa-solid fa-utensils gold-text"></i> البرنامج الغذائي المحسوب لهدفك (${m.targetCalories} kcal • ${m.proteinG}g بروتين)</h3>
+            <button type="button" id="btn-ai-custom-diet" class="btn btn-xs btn-gold"><i class="fa-solid fa-wand-magic-sparkles"></i> اطلب بدائل وجبات بالـ AI</button>
+          </div>
+          <div class="items-grid">
+            <div class="item-card">
+              <span class="badge badge-gold">☀️ الوجبة الأولى (الإفطار)</span>
+              <h4 class="mt-1">شوفان بالحليب + 4 بيضات مسلوقة + ثمرة موز</h4>
+              <small class="small-note">~${Math.round(m.targetCalories * 0.28)} kcal • ${Math.round(m.proteinG * 0.3)}g Protein</small>
+            </div>
+            <div class="item-card">
+              <span class="badge badge-emerald">⚡ الوجبة الثانية (قبل/بعد التمرين)</span>
+              <h4 class="mt-1">250 جرام صدور دجاج مشوية أو لحم/سمك + أرز بسمتي + سلطة خضراء</h4>
+              <small class="small-note">~${Math.round(m.targetCalories * 0.42)} kcal • ${Math.round(m.proteinG * 0.45)}g Protein</small>
+            </div>
+            <div class="item-card">
+              <span class="badge badge-warning">🌙 الوجبة الثالثة (العشاء والاستشفاء)</span>
+              <h4 class="mt-1">جبن قريش أو زبادي يوناني + مكسرات صحية + بطاطا أو توست بني</h4>
+              <small class="small-note">~${Math.round(m.targetCalories * 0.30)} kcal • ${Math.round(m.proteinG * 0.25)}g Protein</small>
+            </div>
+          </div>
+          <div id="gym-ai-diet-box" class="subject-progress-box mt-2 hidden" style="white-space:pre-line;"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // ربط أحداث مجسم العضلات 3D والأزرار
+  sec.querySelectorAll("[data-muscle-pick]").forEach(el => {
+    el.onclick = () => {
+      activeMuscleGroup = el.dataset.musclePick;
+      renderHealthView();
+    };
+  });
+
+  sec.querySelector("#btn-gym-edit-profile").onclick = () => {
+    profile.isConfigured = false;
+    OSProStore.set("gym_profile_v3", profile);
+    renderHealthView();
+  };
+
+  sec.querySelector("#btn-gym-water-plus").onclick = () => {
+    profile.waterCups = (Number(profile.waterCups) || 0) + 1;
+    OSProStore.set("gym_profile_v3", profile);
+    renderHealthView();
+    toast("عاش يا بطل! تم تسجيل كوب مياه جديد 💧");
+  };
+
+  sec.querySelectorAll("[data-toggle-ex-done]").forEach(btn => {
+    btn.onclick = () => {
+      const exId = btn.dataset.toggleExDone;
+      profile.completedExercisesToday = profile.completedExercisesToday || [];
+      if (profile.completedExercisesToday.includes(exId)) {
+        profile.completedExercisesToday = profile.completedExercisesToday.filter(x => x !== exId);
+      } else {
+        profile.completedExercisesToday.push(exId);
+        toast("وحش الجيم! تم تسجيل التمرين كمكتمل اليوم 💪🔥");
+      }
+      OSProStore.set("gym_profile_v3", profile);
+      renderHealthView();
+    };
+  });
+
+  sec.querySelector("#btn-start-rest-60").onclick = () => {
+    if (activeRestTimerInterval) clearInterval(activeRestTimerInterval);
+    let secs = 60;
+    const lbl = document.getElementById("gym-rest-timer-lbl");
+    toast("بدأ مؤقت الراحة بين الجولات (60 ثانية) ⏱️", "info");
+    activeRestTimerInterval = setInterval(() => {
+      secs--;
+      if (lbl) lbl.textContent = `00:${String(Math.max(0, secs)).padStart(2, "0")}`;
+      if (secs <= 0) {
+        clearInterval(activeRestTimerInterval);
+        toast("انتهت الراحة! ادخل الجولة التالية بقوة 🔥💪");
+      }
+    }, 1000);
+  };
+
+  sec.querySelector("#btn-ai-custom-diet").onclick = async () => {
+    const out = document.getElementById("gym-ai-diet-box");
+    out.classList.remove("hidden");
+    out.textContent = "⏳ جاري إعداد جدول وجبات مصري اقتصادي محسوب السعرات والماكروز...";
+    const reply = await B().askAI?.(`أنا ${isMale ? "شاب" : "فتاة"} عمري ${profile.age} سنة، طولي ${profile.height} سم، وزني الحالي ${profile.currentWeight} كجم وطموحي الوصول إلى ${profile.targetWeight} كجم. احتياجي اليومي ${m.targetCalories} سعر حراري و ${m.proteinG} جرام بروتين. اكتب لي 3 بدائل وجبات مصرية اقتصادية وعملية محسوبة بالجرامات.`);
+    out.textContent = reply;
+  };
+}
+
+/* ============================================================================
+   MODULE A: 3D VISION BOARD & LIFE GOALS STUDIO
+   ============================================================================ */
 function renderGoalsView() {
   const sec = document.getElementById("view-goals");
   if (!sec) return;
-  const goals = OSProStore.get("goals", [
-    { id: "g1", title: "إتقان هندسة البرمجيات Full-Stack", level: "أهداف سنوية", deadline: "2026-12-31", milestones: ["إتقان JavaScript & React", "بناء 3 مشاريع Firebase", "نشر البورتفوليو النهائي"], doneMilestones: [0, 1] },
-    { id: "g2", title: "الامتياز الأكاديمي في مواد الترم", level: "أهداف ربع سنوية", deadline: "2026-06-15", milestones: ["إنهاء الـ 29 بنداً لكل مادة", "حل جميع الشيتات", "مراجعة بطاقات 3D"], doneMilestones: [0] }
+
+  const goals = OSProStore.get("goals_v3", [
+    {
+      id: "g1",
+      title: "إتقان هندسة البرمجيات والأمن السيبراني Full-Stack",
+      level: "أهداف سنوية",
+      deadline: "2026-12-31",
+      img: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=900&q=80",
+      milestones: ["إتقان JavaScript & React", "بناء 3 مشاريع Firebase", "نشر البورتفوليو النهائي"],
+      doneMilestones: [0, 1]
+    },
+    {
+      id: "g2",
+      title: "الامتياز الأكاديمي والتفوق في مواد الهندسة",
+      level: "أهداف ربع سنوية",
+      deadline: "2026-06-15",
+      img: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=900&q=80",
+      milestones: ["إنهاء الـ 29 بنداً لكل مادة", "حل جميع الشيتات", "مراجعة بطاقات 3D"],
+      doneMilestones: [0]
+    },
+    {
+      id: "g3",
+      title: "الوصول لأفضل فورمة رياضية وصحية في الجيم",
+      level: "أهداف شهرية",
+      deadline: "2026-05-01",
+      img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=900&q=80",
+      milestones: ["الالتزام بـ 4 أيام تمرين أسبوعياً", "تحقيق هدف البروتين اليومي", "شرب 3 لتر مياه"],
+      doneMilestones: [0]
+    }
   ]);
 
   sec.innerHTML = `
     <div class="section-toolbar">
       <div>
-        <h3><i class="fa-solid fa-bullseye gold-text"></i> إدارة الأهداف والحياة (Life Goals & Vision Board)</h3>
-        <small class="small-muted">أهداف سنوية • ربع سنوية • شهرية • أسبوعية • يومية مع مراحل الإنجاز</small>
+        <h3><i class="fa-solid fa-bullseye gold-text"></i> لوحة الرؤية البصرية والأهداف (3D Vision Board & Life Goals)</h3>
+        <small class="small-muted">صمم مستقبلك بالصور الملهمة وقسّم كل حلم إلى محطات قابلة للتحقيق</small>
       </div>
       <div class="filters-row">
-        <button type="button" id="btn-ai-goal-coach" class="btn btn-outline btn-sm"><i class="fa-solid fa-wand-magic-sparkles gold-text"></i> AI Goal Coach (تحويل هدف لخطة)</button>
-        <button type="button" id="btn-add-life-goal" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> هدف جديد</button>
+        <button type="button" id="btn-ai-goal-coach" class="btn btn-outline btn-sm"><i class="fa-solid fa-wand-magic-sparkles gold-text"></i> AI Goal Coach</button>
+        <button type="button" id="btn-add-life-goal" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> إضافة هدف في Vision Board</button>
       </div>
     </div>
 
@@ -777,32 +1621,34 @@ function renderGoalsView() {
         const doneM = (g.doneMilestones || []).length;
         const pct = Math.round((doneM / totalM) * 100);
         return `
-          <div class="item-card">
-            <div>
-              <div class="flex-between">
+          <div class="visual-cover-card">
+            <div class="visual-cover-img" style="background-image:url('${esc(g.img || "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=800&q=80")}');">
+              <div class="flex-between" style="width:100%;">
                 <span class="badge badge-gold">${esc(g.level)}</span>
-                <small class="small-muted">الموعد: ${esc(g.deadline || "-")}</small>
+                <span class="badge badge-emerald">${pct}% مكتمل</span>
               </div>
-              <h4 class="mt-2">${esc(g.title)}</h4>
-              <div class="subject-progress-box">
-                <div class="flex-between"><small>نسبة الإنجاز الفعلي</small><strong class="gold-text">${pct}%</strong></div>
-                <div class="progress-bar-track"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+            </div>
+            <div class="visual-cover-body">
+              <div>
+                <h4>${esc(g.title)}</h4>
+                <small class="small-muted">📅 الموعد المستهدف: ${esc(g.deadline || "-")}</small>
+                <div class="progress-bar-track mt-1"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
               </div>
-              <div class="mt-2">
+              <div>
                 ${(g.milestones || []).map((m, mIdx) => {
                   const isDone = (g.doneMilestones || []).includes(mIdx);
                   return `
-                    <label class="check-pill ${isDone ? "completed" : ""} mb-1" style="display:flex; margin-bottom:6px;">
+                    <label class="check-pill ${isDone ? "completed" : ""}" style="display:flex; margin-bottom:6px;">
                       <input type="checkbox" data-goal-idx="${gIdx}" data-mile-idx="${mIdx}" ${isDone ? "checked" : ""} />
                       <span>${esc(m)}</span>
                     </label>
                   `;
                 }).join("")}
               </div>
-            </div>
-            <div class="flex-between mt-2">
-              <button type="button" class="btn btn-xs btn-outline" data-goal-to-task="${gIdx}"><i class="fa-solid fa-link gold-text"></i> ربط بالمهام</button>
-              <button type="button" class="btn btn-xs btn-danger" data-del-goal-pro="${gIdx}"><i class="fa-solid fa-trash"></i></button>
+              <div class="flex-between mt-2">
+                <button type="button" class="btn btn-xs btn-outline" data-goal-to-task="${gIdx}"><i class="fa-solid fa-link gold-text"></i> ربط بالمهام</button>
+                <button type="button" class="btn btn-xs btn-danger" data-del-goal-pro="${gIdx}"><i class="fa-solid fa-trash"></i></button>
+              </div>
             </div>
           </div>
         `;
@@ -811,62 +1657,63 @@ function renderGoalsView() {
   `;
 
   sec.querySelector("#btn-add-life-goal").onclick = () => {
-    B().openFormModal("🎯 إنشاء هدف جديد ومراحله (Milestones)", `
-      <div class="form-group"><label>عنوان الهدف</label><input name="title" required placeholder="مثال: إتقان البرمجة / إنهاء 3 مشاريع..." /></div>
+    B().openFormModal("🎯 إضافة هدف جديد في Vision Board", `
+      <div class="form-group"><label>عنوان الهدف أو الطموح</label><input name="title" required placeholder="مثال: إتقان الأمن السيبراني / شراء لابتوب جديد..." /></div>
       <div class="form-group"><label>المستوى الزمني</label>
         <select name="level">
           <option value="أهداف سنوية">أهداف سنوية</option>
           <option value="أهداف ربع سنوية">أهداف ربع سنوية</option>
           <option value="أهداف شهرية">أهداف شهرية</option>
           <option value="أهداف أسبوعية">أهداف أسبوعية</option>
-          <option value="أهداف يومية">أهداف يومية</option>
+        </select>
+      </div>
+      <div class="form-group"><label>صورة ملهمة للهدف (أو اختر ثيم جاهز)</label>
+        <select name="img">
+          <option value="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=900&q=80">💻 هندسة البرمجيات والكود</option>
+          <option value="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=900&q=80">🎓 التفوق الجامعي والأكاديمي</option>
+          <option value="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=900&q=80">🏋️‍♂️ اللياقة البدنية والجيم</option>
+          <option value="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=900&q=80">💰 الحرية المالية والادخار</option>
         </select>
       </div>
       <div class="form-group"><label>الموعد النهائي</label><input type="date" name="deadline" value="${today()}" required /></div>
-      <div class="form-group"><label>المراحل (Milestones — افصل بينها بفاصلة)</label><input name="milestones" required placeholder="المرحلة الأولى, المرحلة الثانية, التطبيق النهائي" /></div>
+      <div class="form-group"><label>المحطات المرحلية (افصل بينها بفاصلة)</label><input name="milestones" required placeholder="المرحلة الأولى, المرحلة الثانية, المشروع النهائي" /></div>
     `, async (data) => {
       goals.unshift({
         id: Date.now().toString(),
         title: data.title,
         level: data.level,
+        img: data.img,
         deadline: data.deadline,
         milestones: data.milestones.split(",").map(s => s.trim()).filter(Boolean),
         doneMilestones: []
       });
-      OSProStore.set("goals", goals);
+      OSProStore.set("goals_v3", goals);
       renderGoalsView();
-      toast("تمت إضافة الهدف ومراحله بنجاح 🎯");
+      toast("تمت إضافة الهدف في لوحة الرؤية البصرية 🎯");
     });
   };
 
   sec.querySelector("#btn-ai-goal-coach").onclick = () => {
-    B().openFormModal("🤖 AI Goal Coach — مدرب الأهداف الذكي", `
+    B().openFormModal("🤖 AI Goal Coach — تحويل حلمك لخطة عمل", `
       <div class="form-group">
-        <label>اكتب هدفك الكبير والمدة المتاحة (مثال: عايز أتعلم Full Stack خلال 6 شهور):</label>
-        <input name="prompt" required placeholder="عايز أتعلم Full Stack خلال 6 شهور..." />
+        <label>اكتب هدفك والمدة المتاحة:</label>
+        <input name="prompt" required placeholder="مثال: عايز أتقن سايبر سيكيوريتي خلال 4 شهور..." />
       </div>
     `, async (data) => {
-      toast("جاري تقسيم الهدف بواسطة AI Goal Coach وربطه بمهامك... 🤖", "info");
+      toast("جاري تقسيم الهدف بواسطة الذكاء الاصطناعي... 🤖", "info");
       const reply = await B().askAI?.(`قسّم هذا الهدف إلى 4 مراحل عملية واضحة (Milestones) في سطور قصيرة: "${data.prompt}"`);
       const lines = reply.split("\n").map(l => l.replace(/^[-*0-9.)]+\s*/, "").trim()).filter(Boolean).slice(0, 4);
-      const milestones = lines.length ? lines : ["أساسيات المجال", "التطبيق العملي الأول", "مشروع متكامل", "المراجعة والإطلاق"];
+      const milestones = lines.length ? lines : ["التأسيس القوي", "التطبيق العملي", "مشروع متكامل", "الاحتراف"];
       goals.unshift({
         id: Date.now().toString(),
         title: data.prompt,
         level: "أهداف ربع سنوية",
+        img: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=900&q=80",
         deadline: today(),
         milestones,
         doneMilestones: []
       });
-      OSProStore.set("goals", goals);
-      await B().createRecord("tasks", {
-        title: `الخطوة الأولى لهدف: ${data.prompt}`,
-        description: milestones.join(" ➔ "),
-        dueDate: today(),
-        priority: "High",
-        status: "Pending",
-        category: "الأهداف"
-      });
+      OSProStore.set("goals_v3", goals);
       renderGoalsView();
     });
   };
@@ -882,7 +1729,7 @@ function renderGoalsView() {
       } else {
         g.doneMilestones = g.doneMilestones.filter(x => x !== mIdx);
       }
-      OSProStore.set("goals", goals);
+      OSProStore.set("goals_v3", goals);
       renderGoalsView();
     };
   });
@@ -905,20 +1752,23 @@ function renderGoalsView() {
   sec.querySelectorAll("[data-del-goal-pro]").forEach(btn => {
     btn.onclick = () => {
       goals.splice(Number(btn.dataset.delGoalPro), 1);
-      OSProStore.set("goals", goals);
+      OSProStore.set("goals_v3", goals);
       renderGoalsView();
     };
   });
 }
 
-/* --- MODULE B: HABITS & ROUTINES (STREAKS, MORNING/EVENING, QUIT BAD HABITS) --- */
+/* ============================================================================
+   MODULE B: HABITS, MORNING/EVENING ROUTINES & DOPAMINE DETOX STUDIO
+   ============================================================================ */
 function renderHabitsView() {
   const sec = document.getElementById("view-habits");
   if (!sec) return;
-  const habits = OSProStore.get("habits", [
-    { id: "h1", title: "قراءة 20 صفحة يومياً", routine: "روتين المساء", type: "build", streak: 5, history: [1, 2, 3, 4, 5] },
-    { id: "h2", title: "مذاكرة وتدريب برمجي ساعتين", routine: "روتين الصباح", type: "build", streak: 8, history: [1, 2, 3, 4, 5, 6, 7, 8] },
-    { id: "h3", title: "ترك السهر وتصفح الموبايل العشوائي", routine: "عادات للتخلص منها", type: "quit", streak: 4, history: [1, 2, 3, 4] }
+  const habits = OSProStore.get("habits_v3", [
+    { id: "h1", title: "صلاة الفجر في وقتها وأذكار الصباح", routine: "☀️ روتين الصباح", type: "build", streak: 12, history: [1,2,3,4,5,6,7,8,9,10,11,12] },
+    { id: "h2", title: "جلسة برمجة ومذاكرة عميقة (90 دقيقة)", routine: "☀️ روتين الصباح", type: "build", streak: 8, history: [1,2,3,4,5,6,7,8] },
+    { id: "h3", title: "قراءة 20 صفحة وتخطيط الغد", routine: "🌙 روتين المساء", type: "build", streak: 6, history: [1,2,3,4,5,6] },
+    { id: "h4", title: "ترك السهر وتصفح الـ Reels العشوائي (Detox)", routine: "🛡️ درع التعافي", type: "quit", streak: 9, history: [1,2,3,4,5,6,7,8,9] }
   ]);
 
   const currentDayNum = new Date().getDate();
@@ -926,24 +1776,27 @@ function renderHabitsView() {
   sec.innerHTML = `
     <div class="section-toolbar">
       <div>
-        <h3><i class="fa-solid fa-fire-flame-curved gold-text"></i> نظام العادات والروتين المتكامل (Habits & Routines)</h3>
-        <small class="small-muted">روتين الصباح والمساء • سلاسل الالتزام (Streaks) • تتبع العادات المراد التخلص منها</small>
+        <h3><i class="fa-solid fa-fire-flame-curved gold-text"></i> استوديو العادات، روتين الصباح والمساء، ودرع الدوبامين</h3>
+        <small class="small-muted">اضبط إيقاع يومك وتابع سلاسل الاستمرارية (Streaks) على مدار 30 يوماً</small>
       </div>
-      <button type="button" id="btn-add-habit-pro" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> إضافة عادة أو روتين</button>
+      <button type="button" id="btn-add-habit-pro" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> إضافة عادة أو روتين جديد</button>
     </div>
 
     <div class="items-grid">
       ${habits.map((h, hIdx) => {
         const pct = Math.min(100, Math.round(((h.history || []).length / 30) * 100));
         return `
-          <div class="item-card">
+          <div class="item-card" style="${h.type === "quit" ? "border-color:rgba(239,68,68,0.4)!important;" : ""}">
             <div>
               <div class="flex-between">
                 <span class="badge ${h.type === "quit" ? "badge-danger" : "badge-emerald"}">${esc(h.routine)}</span>
                 <span class="badge badge-gold">🔥 Streak: ${h.streak || 0} يوم</span>
               </div>
               <h4 class="mt-2">${esc(h.title)}</h4>
-              <small class="small-muted">نسبة التزام الشهر: ${pct}% (اضغط على أيام الشهر لتسجيل الإتمام)</small>
+              <div class="subject-progress-box">
+                <div class="flex-between"><small>التزام الشهر (30 يوماً)</small><strong class="gold-text">${pct}%</strong></div>
+                <div class="progress-bar-track"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+              </div>
               <div class="habit-month-dots">
                 ${Array.from({ length: 15 }, (_, i) => {
                   const d = i + 1;
@@ -953,7 +1806,7 @@ function renderHabitsView() {
               </div>
             </div>
             <div class="flex-between mt-2">
-              <button type="button" class="btn btn-xs btn-gold" data-hab-today="${hIdx}"><i class="fa-solid fa-check"></i> أتممتها اليوم (+Streak)</button>
+              <button type="button" class="btn btn-xs btn-gold" data-hab-today="${hIdx}"><i class="fa-solid fa-check-double"></i> أتممتها اليوم (+1 Streak)</button>
               <button type="button" class="btn btn-xs btn-danger" data-del-hab="${hIdx}"><i class="fa-solid fa-trash"></i></button>
             </div>
           </div>
@@ -963,14 +1816,14 @@ function renderHabitsView() {
   `;
 
   sec.querySelector("#btn-add-habit-pro").onclick = () => {
-    B().openFormModal("🔥 إضافة عادة جديدة أو روتين يومي", `
+    B().openFormModal("🔥 إضافة عادة جديدة أو درع تعافٍ", `
       <div class="form-group"><label>اسم العادة</label><input name="title" required placeholder="مثال: قراءة 20 صفحة / تمرين صباحي / ترك السكر..." /></div>
-      <div class="form-group"><label>التصنيف والوقت</label>
+      <div class="form-group"><label>الفترة أو النوع</label>
         <select name="routine">
-          <option value="روتين الصباح">☀️ روتين الصباح</option>
-          <option value="روتين المساء">🌙 روتين المساء</option>
-          <option value="عادة يومية">⚡ عادة يومية</option>
-          <option value="عادات للتخلص منها">🚫 عادة سلبية أريد التخلص منها</option>
+          <option value="☀️ روتين الصباح">☀️ روتين الصباح</option>
+          <option value="🌙 روتين المساء">🌙 روتين المساء</option>
+          <option value="⚡ عادة يومية">⚡ عادة يومية</option>
+          <option value="🛡️ درع التعافي">🛡️ عادة سلبية أريد التخلص منها (Detox)</option>
         </select>
       </div>
     `, async (data) => {
@@ -978,11 +1831,11 @@ function renderHabitsView() {
         id: Date.now().toString(),
         title: data.title,
         routine: data.routine,
-        type: data.routine.includes("للتخلص") ? "quit" : "build",
+        type: data.routine.includes("التعافي") ? "quit" : "build",
         streak: 1,
         history: [currentDayNum]
       });
-      OSProStore.set("habits", habits);
+      OSProStore.set("habits_v3", habits);
       renderHabitsView();
       toast("تمت إضافة العادة بنجاح 🔥");
     });
@@ -997,7 +1850,7 @@ function renderHabitsView() {
       if (h.history.includes(d)) h.history = h.history.filter(x => x !== d);
       else h.history.push(d);
       h.streak = h.history.length;
-      OSProStore.set("habits", habits);
+      OSProStore.set("habits_v3", habits);
       renderHabitsView();
     };
   });
@@ -1009,132 +1862,24 @@ function renderHabitsView() {
       h.streak = (Number(h.streak) || 0) + 1;
       h.history = h.history || [];
       if (!h.history.includes(currentDayNum)) h.history.push(currentDayNum);
-      OSProStore.set("habits", habits);
+      OSProStore.set("habits_v3", habits);
       renderHabitsView();
-      toast(`عاش يا بطل! استمرارية "${h.title}" وصلت إلى ${h.streak} يوم 🔥`);
+      toast(`عاش يا بطل! سلسلة التزام "${h.title}" وصلت إلى ${h.streak} يوم 🔥`);
     };
   });
 
   sec.querySelectorAll("[data-del-hab]").forEach(btn => {
     btn.onclick = () => {
       habits.splice(Number(btn.dataset.delHab), 1);
-      OSProStore.set("habits", habits);
+      OSProStore.set("habits_v3", habits);
       renderHabitsView();
     };
   });
 }
 
-/* --- MODULE C: HEALTH & FITNESS (WATER, WEIGHT, GYM, SLEEP, STEPS) --- */
-function renderHealthView() {
-  const sec = document.getElementById("view-health");
-  if (!sec) return;
-  const health = OSProStore.get("health_stats", {
-    waterCups: 5,
-    weightKg: 74,
-    sleepHours: 7.5,
-    steps: 6400,
-    workouts: [
-      { day: "السبت — Push (صدر وكتف وتراي)", ex: "Bench Press 4x10 + Overhead Press 3x12", calories: "450 kcal" },
-      { day: "الإثنين — Pull (ظهر وباي)", ex: "Pull-ups 4x8 + Barbell Row 4x10", calories: "480 kcal" },
-      { day: "الأربعاء — Legs & Core (رجل وبطن)", ex: "Squats 4x10 + Plank 3 mins", calories: "520 kcal" }
-    ]
-  });
-
-  sec.innerHTML = `
-    <div class="section-toolbar">
-      <div>
-        <h3><i class="fa-solid fa-heart-pulse gold-text"></i> الصحة واللياقة البدنية (Health & Fitness Snapshot)</h3>
-        <small class="small-muted">شرب المياه • الوزن • جدول الجيم والتمارين • ساعات النوم • الخطوات</small>
-      </div>
-      <div class="filters-row">
-        <button type="button" id="btn-add-water-cup" class="btn btn-gold btn-sm">💧 + كوب مية (${health.waterCups} / 10)</button>
-        <button type="button" id="btn-update-health-metrics" class="btn btn-outline btn-sm">تحديث قياسات اليوم</button>
-        <button type="button" id="btn-add-workout-row" class="btn btn-outline btn-sm">+ تمرين جيم</button>
-      </div>
-    </div>
-
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-icon blue"><i class="fa-solid fa-glass-water"></i></div>
-        <div class="kpi-info"><span class="kpi-label">شرب المياه اليوم</span><h3>${health.waterCups} / 10 أكواب</h3><small>${(health.waterCups * 0.25).toFixed(2)} لتر</small></div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-icon emerald"><i class="fa-solid fa-weight-scale"></i></div>
-        <div class="kpi-info"><span class="kpi-label">الوزن الحالي</span><h3>${health.weightKg} kg</h3><small>تتبع اللياقة البدنية</small></div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-icon purple"><i class="fa-solid fa-bed"></i></div>
-        <div class="kpi-info"><span class="kpi-label">ساعات النوم</span><h3>${health.sleepHours} ساعات</h3><small>جودة النوم: ممتازة</small></div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-icon gold"><i class="fa-solid fa-person-walking"></i></div>
-        <div class="kpi-info"><span class="kpi-label">عدد الخطوات اليوم</span><h3>${Number(health.steps).toLocaleString()}</h3><small>الهدف اليومي: 10,000 خطوة</small></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header"><h3>🏋️‍♂️ جدول الجيم والتمارين والوجبات</h3></div>
-      ${(health.workouts || []).map((w, idx) => `
-        <div class="prayer-row">
-          <div>
-            <strong class="gold-text">${esc(w.day)}</strong>
-            <p class="small-muted">${esc(w.ex)}</p>
-          </div>
-          <div class="config-actions">
-            <span class="badge badge-emerald">${esc(w.calories || "400 kcal")}</span>
-            <button type="button" class="btn btn-xs btn-danger" data-del-workout="${idx}"><i class="fa-solid fa-trash"></i></button>
-          </div>
-        </div>
-      `).join("")}
-    </div>
-  `;
-
-  sec.querySelector("#btn-add-water-cup").onclick = () => {
-    health.waterCups = (Number(health.waterCups) || 0) + 1;
-    OSProStore.set("health_stats", health);
-    renderHealthView();
-    toast("بالهنا والشفا! تم تسجيل كوب مياه جديد 💧");
-  };
-
-  sec.querySelector("#btn-update-health-metrics").onclick = () => {
-    B().openFormModal("📊 تحديث قياسات الصحة والنوم والخطوات", `
-      <div class="form-group"><label>أكواب المياه اليوم</label><input type="number" name="waterCups" value="${health.waterCups}" required /></div>
-      <div class="form-group"><label>الوزن الحالي (kg)</label><input type="number" step="0.1" name="weightKg" value="${health.weightKg}" required /></div>
-      <div class="form-group"><label>ساعات النوم الليلة الماضية</label><input type="number" step="0.5" name="sleepHours" value="${health.sleepHours}" required /></div>
-      <div class="form-group"><label>عدد الخطوات اليوم</label><input type="number" name="steps" value="${health.steps}" required /></div>
-    `, async (data) => {
-      health.waterCups = Number(data.waterCups) || 0;
-      health.weightKg = Number(data.weightKg) || 70;
-      health.sleepHours = Number(data.sleepHours) || 7;
-      health.steps = Number(data.steps) || 5000;
-      OSProStore.set("health_stats", health);
-      renderHealthView();
-    });
-  };
-
-  sec.querySelector("#btn-add-workout-row").onclick = () => {
-    B().openFormModal("🏋️‍♂️ إضافة يوم تمرين أو وجبة صحية", `
-      <div class="form-group"><label>اليوم / اسم التمرين أو الوجبة</label><input name="day" required placeholder="مثال: الخميس — Cardio & Core" /></div>
-      <div class="form-group"><label>التمارين أو تفاصيل الوجبة</label><input name="ex" required placeholder="جري 20 دقيقة + تمارين بطن" /></div>
-      <div class="form-group"><label>السعرات الحرارية</label><input name="calories" value="450 kcal" /></div>
-    `, async (data) => {
-      health.workouts = health.workouts || [];
-      health.workouts.unshift(data);
-      OSProStore.set("health_stats", health);
-      renderHealthView();
-    });
-  };
-
-  sec.querySelectorAll("[data-del-workout]").forEach(btn => {
-    btn.onclick = () => {
-      health.workouts.splice(Number(btn.dataset.delWorkout), 1);
-      OSProStore.set("health_stats", health);
-      renderHealthView();
-    };
-  });
-}
-
-/* --- MODULE D: TIME INTELLIGENCE (YOUR TIME REPORT) --- */
+/* ============================================================================
+   MODULE D: TIME INTELLIGENCE & 24-HOUR CHRONO STUDIO
+   ============================================================================ */
 function renderTimeIntelView() {
   const sec = document.getElementById("view-time-intel");
   if (!sec) return;
@@ -1142,34 +1887,37 @@ function renderTimeIntelView() {
   const logs = JSON.parse(localStorage.getItem("MY_LIFE_OS_FOCUS_LOG") || "[]");
   const focusMins = logs.filter(l => l.date === today()).reduce((s, l) => s + (Number(l.minutes) || 0), 0);
 
-  const timeEntries = OSProStore.get("time_intel", [
-    { cat: "الدراسة والجامعة", mins: Math.max(200, focusMins), color: "#D4A72C" },
-    { cat: "البرمجة والمشاريع", mins: 120, color: "#19B889" },
-    { cat: "القراءة وتطوير الذات", mins: 45, color: "#21C5C5" },
-    { cat: "الترفيه والراحة", mins: 90, color: "#3B82F6" },
-    { cat: "وقت غير مصنف / ضائع", mins: 35, color: "#EF4444" }
+  const timeEntries = OSProStore.get("time_intel_v3", [
+    { cat: "📚 الدراسة والجامعة", mins: Math.max(210, focusMins), color: "#D4A72C" },
+    { cat: "💻 البرمجة والمشاريع", mins: 150, color: "#19B889" },
+    { cat: "🏋️‍♂️ الجيم والرياضة", mins: 60, color: "#21C5C5" },
+    { cat: "📖 القراءة والعبادة", mins: 60, color: "#3B82F6" },
+    { cat: "☕ الترفيه والراحة", mins: 75, color: "#8B5CF6" },
+    { cat: "⚠️ وقت ضائع / سوشيال ميديا", mins: 30, color: "#EF4444" }
   ]);
 
   const totalMins = Math.max(1, timeEntries.reduce((s, e) => s + Number(e.mins), 0));
+  const wastedMins = timeEntries[5]?.mins || 0;
+  const efficiencyPct = Math.round(((totalMins - wastedMins) / totalMins) * 100);
 
   sec.innerHTML = `
     <div class="section-toolbar">
       <div>
-        <h3><i class="fa-solid fa-chart-gantt gold-text"></i> ذكاء وإدارة الوقت (Time Intelligence — Your Time Report)</h3>
-        <small class="small-muted">تحليل أين تقضي يومك: الدراسة • البرمجة • القراءة • الترفيه • الوقت الضائع</small>
+        <h3><i class="fa-solid fa-chart-gantt gold-text"></i> استوديو ذكاء وإدارة الوقت (24h Chrono-Analytics)</h3>
+        <small class="small-muted">راقب أين تذهب ساعات عمرك اليومية وحلل كفاءة إنتاجيتك الفعلية</small>
       </div>
-      <button type="button" id="btn-log-time-block" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> تسجيل فترة زمنية</button>
+      <button type="button" id="btn-log-time-block" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> تسجيل نشاط زمني</button>
     </div>
 
     <div class="card mb-4" style="margin-bottom:18px;">
       <div class="flex-between">
-        <h4>📊 الخريطة الزمنية لتوزيع يومك (إجمالي: ${(totalMins / 60).toFixed(1)} ساعة)</h4>
-        <span class="badge badge-emerald">كفاءة استثمار الوقت: ${Math.round(((totalMins - (timeEntries[4]?.mins || 0)) / totalMins) * 100)}%</span>
+        <h4>📊 البصمة الزمنية ليومك (إجمالي المسجل: ${(totalMins / 60).toFixed(1)} ساعة)</h4>
+        <span class="badge ${efficiencyPct >= 85 ? "badge-emerald" : "badge-gold"}">كفاءة استثمار اليوم: ${efficiencyPct}%</span>
       </div>
       <div class="time-intel-bar">
         ${timeEntries.map(e => {
           const pct = Math.round((e.mins / totalMins) * 100);
-          return `<div class="time-segment" style="width:${pct}%; background:${e.color};" title="${esc(e.cat)}: ${e.mins} د">${pct >= 10 ? pct + "%" : ""}</div>`;
+          return `<div class="time-segment" style="width:${pct}%; background:${e.color};" title="${esc(e.cat)}: ${e.mins} د">${pct >= 9 ? pct + "%" : ""}</div>`;
         }).join("")}
       </div>
       <div class="kpi-grid mt-2">
@@ -1180,9 +1928,10 @@ function renderTimeIntelView() {
             <div class="subject-progress-box">
               <div class="flex-between">
                 <strong style="color:${e.color}">${esc(e.cat)}</strong>
-                <button type="button" class="btn-link" data-add-15m="${idx}">+15د</button>
+                <button type="button" class="btn btn-xs btn-outline" data-add-15m="${idx}">+30د</button>
               </div>
               <h4 class="mt-1">${h > 0 ? h + " ساعة و " : ""}${m} دقيقة</h4>
+              <small class="small-muted">${Math.round((e.mins / totalMins) * 100)}% من يومك</small>
             </div>
           `;
         }).join("")}
@@ -1191,7 +1940,7 @@ function renderTimeIntelView() {
   `;
 
   sec.querySelector("#btn-log-time-block").onclick = () => {
-    B().openFormModal("⏱️ تسجيل وقت في تقرير اليوم", `
+    B().openFormModal("⏱️ تسجيل فترة زمنية في يومك", `
       <div class="form-group"><label>الفئة</label>
         <select name="catIdx">
           ${timeEntries.map((e, i) => `<option value="${i}">${esc(e.cat)}</option>`).join("")}
@@ -1201,7 +1950,7 @@ function renderTimeIntelView() {
     `, async (data) => {
       const target = timeEntries[Number(data.catIdx)];
       if (target) target.mins = (Number(target.mins) || 0) + (Number(data.mins) || 0);
-      OSProStore.set("time_intel", timeEntries);
+      OSProStore.set("time_intel_v3", timeEntries);
       renderTimeIntelView();
     });
   };
@@ -1209,14 +1958,16 @@ function renderTimeIntelView() {
   sec.querySelectorAll("[data-add-15m]").forEach(btn => {
     btn.onclick = () => {
       const item = timeEntries[Number(btn.dataset.add15m)];
-      if (item) item.mins += 15;
-      OSProStore.set("time_intel", timeEntries);
+      if (item) item.mins += 30;
+      OSProStore.set("time_intel_v3", timeEntries);
       renderTimeIntelView();
     };
   });
 }
 
-/* --- MODULE F: SECOND BRAIN & KNOWLEDGE GRAPH --- */
+/* ============================================================================
+   MODULE F: SECOND BRAIN (PARA METHOD + INTERACTIVE KNOWLEDGE GRAPH)
+   ============================================================================ */
 function renderSecondBrainView() {
   const sec = document.getElementById("view-second-brain");
   if (!sec) return;
@@ -1226,19 +1977,19 @@ function renderSecondBrainView() {
   sec.innerHTML = `
     <div class="section-toolbar">
       <div>
-        <h3><i class="fa-solid fa-network-wired gold-text"></i> العقل الثاني وشبكة المعرفة (Second Brain & Knowledge Graph)</h3>
-        <small class="small-muted">الروابط المتشعبة [[Backlinks]] • تحويل الملاحظات لمهام • خريطة ترابط الأفكار التفاعلية</small>
+        <h3><i class="fa-solid fa-network-wired gold-text"></i> العقل الثاني وشبكة المعرفة (Second Brain & PARA Graph)</h3>
+        <small class="small-muted">اربط أفكارك، ملخصاتك، ومشاريعك في خريطة عصبية تفاعلية</small>
       </div>
       <div class="filters-row">
-        <button type="button" id="btn-sb-ai-connect" class="btn btn-outline btn-sm"><i class="fa-solid fa-wand-magic-sparkles gold-text"></i> AI يربط ويلخص معرفتي</button>
+        <button type="button" id="btn-sb-ai-connect" class="btn btn-outline btn-sm"><i class="fa-solid fa-wand-magic-sparkles gold-text"></i> تلخيص وربط بالـ AI</button>
         <button type="button" id="btn-sb-new-thought" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> عقدة معرفة جديدة</button>
       </div>
     </div>
 
     <div class="card mb-4" style="margin-bottom:18px;">
       <div class="flex-between mb-1">
-        <h4>🕸️ خريطة شبكة المعرفة الحية (Knowledge Graph — اضغط وحرك العقد)</h4>
-        <small class="small-muted">تربط ملاحظاتك بموادك ومشاريعك البرمجية بصرياً</small>
+        <h4>🕸️ خريطة العقل الثاني الحية (Knowledge Graph)</h4>
+        <span class="badge badge-gold">${notes.length} ملاحظات • ${(state.collections.subjects || []).length} مواد • ${(state.collections.projects || []).length} مشاريع</span>
       </div>
       <canvas id="sb-knowledge-canvas" class="knowledge-graph-canvas"></canvas>
     </div>
@@ -1254,7 +2005,7 @@ function renderSecondBrainView() {
             <p class="small-muted mt-1">${esc(n.content)}</p>
           </div>
           <div class="flex-between mt-2">
-            <button type="button" class="btn btn-xs btn-gold" data-note-to-task="${n.id}"><i class="fa-solid fa-list-check"></i> تحويل إلى مهمة</button>
+            <button type="button" class="btn btn-xs btn-gold" data-note-to-task="${n.id}"><i class="fa-solid fa-list-check"></i> حول لمهمة</button>
             <small class="small-muted">#${esc(n.tags || "معرفة")}</small>
           </div>
         </div>
@@ -1264,16 +2015,14 @@ function renderSecondBrainView() {
 
   drawInteractiveKnowledgeGraph(notes, state.collections.subjects || [], state.collections.projects || []);
 
-  sec.querySelector("#btn-sb-new-thought").onclick = () => {
-    document.getElementById("btn-add-note")?.click();
-  };
+  sec.querySelector("#btn-sb-new-thought").onclick = () => document.getElementById("btn-add-note")?.click();
 
   sec.querySelector("#btn-sb-ai-connect").onclick = async () => {
     const box = document.getElementById("sb-ai-summary-box");
     box.classList.remove("hidden");
     box.textContent = "⏳ جاري تحليل جميع ملاحظاتك واستخراج الروابط المعرفية بينها...";
     const titles = notes.map(n => n.title).join("، ") || "هندسة البرمجيات والدوائر المنطقية";
-    const reply = await B().askAI?.(`لدي في عقلي الثاني الملاحظات التالية: (${titles}). لخص الروابط المعرفية بينها واقترح فكرة تطبيقية تجمعها في 3 نقاط مركزة.`);
+    const reply = await B().askAI?.(`لدي في عقلي الثاني الملاحظات التالية: (${titles}). لخص الروابط المعرفية بينها واقترح فكرة تطبيقية تجمعها.`);
     box.innerHTML = `<strong class="gold-text">🧠 خلاصة العقل الثاني بالـ AI:</strong><p class="mt-1" style="white-space:pre-line">${esc(reply)}</p>`;
   };
 
@@ -1302,25 +2051,22 @@ function drawInteractiveKnowledgeGraph(notes, subjects, projects) {
 
   const nodes = [
     { label: "🧠 العقل الثاني", x: canvas.width / 2, y: 170, r: 22, color: "#D4A72C" },
-    ...subjects.slice(0, 4).map((s, i) => ({ label: `📚 ${s.name}`, x: 160 + i * 170, y: 75, r: 15, color: "#19B889" })),
-    ...projects.slice(0, 4).map((p, i) => ({ label: `💻 ${p.title}`, x: 180 + i * 170, y: 265, r: 15, color: "#21C5C5" })),
+    ...subjects.slice(0, 4).map((s, i) => ({ label: `📚 ${s.name}`, x: 150 + i * 170, y: 70, r: 15, color: "#19B889" })),
+    ...projects.slice(0, 4).map((p, i) => ({ label: `💻 ${p.title}`, x: 170 + i * 170, y: 270, r: 15, color: "#21C5C5" })),
     ...notes.slice(0, 6).map((n, i) => ({ label: `💡 ${n.title.slice(0, 18)}`, x: 110 + i * 130, y: i % 2 === 0 ? 130 : 215, r: 13, color: "#8B5CF6" }))
   ];
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // رسم خطوط الترابط العصبي
   nodes.forEach((nd, i) => {
     if (i === 0) return;
-    ctx.strokeStyle = "rgba(212, 167, 44, 0.25)";
-    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = "rgba(212, 167, 44, 0.28)";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(nodes[0].x, nodes[0].y);
     ctx.lineTo(nd.x, nd.y);
     ctx.stroke();
   });
 
-  // رسم العقد المضيئة
   nodes.forEach(nd => {
     ctx.fillStyle = nd.color;
     ctx.beginPath();
@@ -1333,44 +2079,67 @@ function drawInteractiveKnowledgeGraph(notes, subjects, projects) {
   });
 }
 
-/* --- MODULE G: LEARNING CENTER (COURSES, BOOKS & COURSE->CALENDAR) --- */
+/* ============================================================================
+   MODULE G: 3D VISUAL BOOKSHELF & LEARNING ACADEMY
+   ============================================================================ */
 function renderLearningCenterView() {
   const sec = document.getElementById("view-learning-center");
   if (!sec) return;
-  const items = OSProStore.get("learning_items", [
-    { id: "c1", title: "كورس Full-Stack JavaScript & Firebase", type: "Course", totalUnits: 24, doneUnits: 16, nextReview: today() },
-    { id: "c2", title: "كتاب Clean Code — Robert C. Martin", type: "Book", totalUnits: 460, doneUnits: 190, nextReview: today() }
+  const items = OSProStore.get("learning_items_v3", [
+    {
+      id: "c1",
+      title: "Clean Code — Robert C. Martin",
+      type: "Book",
+      totalUnits: 460,
+      doneUnits: 210,
+      dailyRate: 20,
+      img: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      id: "c2",
+      title: "Full-Stack Web & Cybersecurity Bootcamp",
+      type: "Course",
+      totalUnits: 40,
+      doneUnits: 26,
+      dailyRate: 2,
+      img: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80"
+    }
   ]);
 
   sec.innerHTML = `
     <div class="section-toolbar">
       <div>
-        <h3><i class="fa-solid fa-book-open-reader gold-text"></i> مركز القراءة والتعلم الذاتي (Learning Center)</h3>
-        <small class="small-muted">مكتبة الكورسات • الكتب • المراجعة المتباعدة • تحويل أي كورس لخطة في التقويم والمهام</small>
+        <h3><i class="fa-solid fa-book-open-reader gold-text"></i> مكتبة الكتب والكورسات ثلاثية الأبعاد (3D Learning Shelf)</h3>
+        <small class="small-muted">تتبع الصفحات والدروس، واحسب موعد الختم المتوقع، ووزع أي كورس على تقويمك</small>
       </div>
-      <button type="button" id="btn-add-learning-item" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> إضافة كورس أو كتاب</button>
+      <button type="button" id="btn-add-learning-item" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> إضافة كتاب أو كورس</button>
     </div>
 
     <div class="items-grid">
       ${items.map((it, idx) => {
         const pct = Math.min(100, Math.round((it.doneUnits / Math.max(1, it.totalUnits)) * 100));
+        const rem = Math.max(0, it.totalUnits - it.doneUnits);
+        const daysToFinish = Math.ceil(rem / Math.max(1, it.dailyRate || 10));
         return `
-          <div class="item-card">
-            <div>
-              <div class="flex-between">
+          <div class="visual-cover-card">
+            <div class="visual-cover-img" style="background-image:url('${esc(it.img || "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80")}');">
+              <div class="flex-between" style="width:100%;">
                 <span class="badge badge-gold">${it.type === "Book" ? "📖 كتاب" : "🎓 كورس تدريبي"}</span>
-                <small class="gold-text">مراجعة: ${esc(it.nextReview)}</small>
-              </div>
-              <h4 class="mt-2">${esc(it.title)}</h4>
-              <div class="subject-progress-box">
-                <div class="flex-between"><span>التقدم: ${it.doneUnits} / ${it.totalUnits}</span><strong>${pct}%</strong></div>
-                <div class="progress-bar-track"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+                <span class="badge badge-emerald">${pct}%</span>
               </div>
             </div>
-            <div class="flex-between mt-2">
-              <button type="button" class="btn btn-xs btn-gold" data-inc-learn="${idx}">+ تقدم</button>
-              <button type="button" class="btn btn-xs btn-outline" data-course-to-cal="${idx}"><i class="fa-regular fa-calendar-plus gold-text"></i> توزيع على التقويم والمهام</button>
-              <button type="button" class="btn btn-xs btn-danger" data-del-learn="${idx}"><i class="fa-solid fa-trash"></i></button>
+            <div class="visual-cover-body">
+              <div>
+                <h4>${esc(it.title)}</h4>
+                <small class="small-muted d-block mt-1">المنجز: <strong>${it.doneUnits}</strong> من <strong>${it.totalUnits}</strong> ${it.type === "Book" ? "صفحة" : "درس"}</small>
+                <small class="gold-text d-block">⏳ تنتهي منه خلال: <strong>${rem === 0 ? "مكتمل! 🎉" : daysToFinish + " يوم"}</strong></small>
+                <div class="progress-bar-track mt-1"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+              </div>
+              <div class="flex-between mt-2">
+                <button type="button" class="btn btn-xs btn-gold" data-inc-learn="${idx}">+ تسجيل قراءة/درس</button>
+                <button type="button" class="btn btn-xs btn-outline" data-course-to-cal="${idx}"><i class="fa-regular fa-calendar-plus gold-text"></i> جدول بالتقويم</button>
+                <button type="button" class="btn btn-xs btn-danger" data-del-learn="${idx}"><i class="fa-solid fa-trash"></i></button>
+              </div>
             </div>
           </div>
         `;
@@ -1379,21 +2148,25 @@ function renderLearningCenterView() {
   `;
 
   sec.querySelector("#btn-add-learning-item").onclick = () => {
-    B().openFormModal("🎓 إضافة كورس أو كتاب للمكتبة", `
-      <div class="form-group"><label>اسم الكورس أو الكتاب</label><input name="title" required /></div>
-      <div class="form-group"><label>النوع</label><select name="type"><option value="Course">كورس تدريبي</option><option value="Book">كتاب للقراءة</option></select></div>
-      <div class="form-group"><label>إجمالي الدروس أو الصفحات</label><input type="number" name="totalUnits" value="20" required /></div>
+    B().openFormModal("🎓 إضافة كتاب أو كورس جديد للمكتبة", `
+      <div class="form-group"><label>اسم الكتاب أو الكورس</label><input name="title" required /></div>
+      <div class="form-group"><label>النوع</label><select name="type"><option value="Book">📖 كتاب</option><option value="Course">🎓 كورس تدريبي</option></select></div>
+      <div class="form-group"><label>إجمالي الصفحات أو الدروس</label><input type="number" name="totalUnits" value="300" required /></div>
       <div class="form-group"><label>المنجز حالياً</label><input type="number" name="doneUnits" value="0" required /></div>
+      <div class="form-group"><label>معدلك اليومي (كم صفحة أو درس يومياً؟)</label><input type="number" name="dailyRate" value="20" required /></div>
     `, async (data) => {
       items.unshift({
         id: Date.now().toString(),
         title: data.title,
         type: data.type,
-        totalUnits: Number(data.totalUnits) || 20,
+        totalUnits: Number(data.totalUnits) || 100,
         doneUnits: Number(data.doneUnits) || 0,
-        nextReview: today()
+        dailyRate: Number(data.dailyRate) || 10,
+        img: data.type === "Book"
+          ? "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80"
+          : "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80"
       });
-      OSProStore.set("learning_items", items);
+      OSProStore.set("learning_items_v3", items);
       renderLearningCenterView();
     });
   };
@@ -1402,9 +2175,10 @@ function renderLearningCenterView() {
     btn.onclick = () => {
       const it = items[Number(btn.dataset.incLearn)];
       if (!it) return;
-      it.doneUnits = Math.min(it.totalUnits, (Number(it.doneUnits) || 0) + (it.type === "Book" ? 15 : 1));
-      OSProStore.set("learning_items", items);
+      it.doneUnits = Math.min(it.totalUnits, (Number(it.doneUnits) || 0) + (Number(it.dailyRate) || 1));
+      OSProStore.set("learning_items_v3", items);
       renderLearningCenterView();
+      toast(`عاش! تم تحديث تقدمك في "${it.title}" 📚`);
     };
   });
 
@@ -1413,168 +2187,255 @@ function renderLearningCenterView() {
       const it = items[Number(btn.dataset.courseToCal)];
       if (!it) return;
       await B().createRecord("tasks", {
-        title: `دراسة وحدة من: ${it.title}`,
-        description: `خطة التعلم الذاتي (${it.doneUnits}/${it.totalUnits})`,
+        title: `دراسة ورد من: ${it.title}`,
+        description: `التقدم الحالي: ${it.doneUnits}/${it.totalUnits}`,
         dueDate: today(),
         priority: "High",
         status: "Pending",
         category: "تعلم"
       });
-      await B().createRecord("events", {
-        title: `موعد مذاكرة: ${it.title}`,
-        date: today(),
-        time: "18:00",
-        type: "University"
-      });
-      toast("تم تحويل الكورس إلى خطة مهام وموعد في تقويمك تلقائياً! 📅✅");
+      toast("تمت جدولة الكتاب/الكورس في مهام اليوم! 📅✅");
     };
   });
 
   sec.querySelectorAll("[data-del-learn]").forEach(btn => {
     btn.onclick = () => {
       items.splice(Number(btn.dataset.delLearn), 1);
-      OSProStore.set("learning_items", items);
+      OSProStore.set("learning_items_v3", items);
       renderLearningCenterView();
     };
   });
 }
 
-/* --- MODULE E, H, J: EXPERIENCES, CONTACTS CRM & JOURNAL / AUTOMATION --- */
+/* ============================================================================
+   MODULE E: WORLD BUCKET LIST, TRAVEL & EXPERIENCES PASSPORT (WITH PHOTOS)
+   ============================================================================ */
 function renderExperiencesView() {
   const sec = document.getElementById("view-experiences");
   if (!sec) return;
-  const list = OSProStore.get("experiences", [
-    { title: "رحلة استكشافية إلى أسوان والأقصر", cat: "سفر ورحلات ✈️", status: "قائمة الأمنيات", note: "في إجازة نصف العام" },
-    { title: "بناء وإطلاق منصة SaaS متكاملة", cat: "أحلام شخصية 🚀", status: "جاري التحقيق", note: "مشروع MY LIFE OS" }
+  const list = OSProStore.get("experiences_v3", [
+    {
+      title: "أداء العمرة وزيارة الحرمين الشريفين",
+      cat: "رحلة روحانية 🕋",
+      status: "قائمة الأمنيات 🌟",
+      budget: "35,000 EGP",
+      img: "https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=900&q=80",
+      note: "هدف بإذن الله بعد التخرج"
+    },
+    {
+      title: "رحلة استكشافية للنوبة وأسوان والأقصر",
+      cat: "سفر واستكشاف ✈️",
+      status: "قائمة الأمنيات 🌟",
+      budget: "8,000 EGP",
+      img: "https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=900&q=80",
+      note: "في إجازة الشتاء مع الأصدقاء"
+    },
+    {
+      title: "إطلاق منصة MY LIFE OS لمستخدمين حقيقيين",
+      cat: "إنجاز تقني 🚀",
+      status: "تم التحقيق ✅",
+      budget: "0 EGP",
+      img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=900&q=80",
+      note: "مشروع العمر الهندسي"
+    }
   ]);
 
   sec.innerHTML = `
     <div class="section-toolbar">
       <div>
-        <h3><i class="fa-solid fa-compass gold-text"></i> السفر والتجارب وقائمة الأحلام (Life Experiences)</h3>
-        <small class="small-muted">أماكن تريد زيارتها • تجارب • كتب وأفلام • سجل الذكريات والرحلات</small>
+        <h3><i class="fa-solid fa-earth-americas gold-text"></i> جواز سفر الأحلام والتجارب والرحلات (Visual Bucket List)</h3>
+        <small class="small-muted">وثّق الأماكن التي تطمح لزيارتها والتجارب التي تريد خوضها بالصور والميزانية</small>
       </div>
-      <button type="button" id="btn-add-exp" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> إضافة تجربة أو حلم</button>
+      <button type="button" id="btn-add-exp" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> إضافة وجهة أو تجربة</button>
     </div>
+
     <div class="items-grid">
       ${list.map((ex, i) => `
-        <div class="item-card">
-          <div>
-            <div class="flex-between"><span class="badge badge-gold">${esc(ex.cat)}</span><span class="badge badge-emerald">${esc(ex.status)}</span></div>
-            <h4 class="mt-2">${esc(ex.title)}</h4>
-            <p class="small-muted mt-1">${esc(ex.note || "")}</p>
+        <div class="visual-cover-card">
+          <div class="visual-cover-img" style="background-image:url('${esc(ex.img || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80")}');">
+            <div class="flex-between" style="width:100%;">
+              <span class="badge badge-gold">${esc(ex.cat)}</span>
+              <span class="badge ${ex.status.includes("تم") ? "badge-emerald" : "badge-warning"}">${esc(ex.status)}</span>
+            </div>
           </div>
-          <button type="button" class="btn btn-xs btn-danger" data-del-exp="${i}"><i class="fa-solid fa-trash"></i></button>
+          <div class="visual-cover-body">
+            <div>
+              <h4>${esc(ex.title)}</h4>
+              <small class="gold-text d-block mt-1">💰 الميزانية التقديرية: ${esc(ex.budget || "غير محددة")}</small>
+              <p class="small-muted mt-1">${esc(ex.note || "")}</p>
+            </div>
+            <div class="flex-between mt-2">
+              <button type="button" class="btn btn-xs btn-gold" data-toggle-exp="${i}">تبديل الحالة ✅</button>
+              <button type="button" class="btn btn-xs btn-danger" data-del-exp="${i}"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
         </div>
       `).join("")}
     </div>
   `;
 
   sec.querySelector("#btn-add-exp").onclick = () => {
-    B().openFormModal("🌍 إضافة مكان أو تجربة أو حلم شخصي", `
-      <div class="form-group"><label>العنوان</label><input name="title" required /></div>
+    B().openFormModal("🌍 إضافة حلم أو وجهة سفر جديدة", `
+      <div class="form-group"><label>اسم الوجهة أو التجربة</label><input name="title" required /></div>
       <div class="form-group"><label>الفئة</label>
-        <select name="cat"><option value="سفر ورحلات ✈️">سفر ورحلات ✈️</option><option value="تجربة جديدة 🌟">تجربة جديدة 🌟</option><option value="أحلام شخصية 🚀">أحلام شخصية 🚀</option><option value="أفلام وكتب 🎬">أفلام وكتب 🎬</option></select>
+        <select name="cat"><option value="سفر واستكشاف ✈️">سفر واستكشاف ✈️</option><option value="رحلة روحانية 🕋">رحلة روحانية 🕋</option><option value="إنجاز تقني 🚀">إنجاز تقني 🚀</option><option value="مغامرة وتجربة 🌟">مغامرة وتجربة 🌟</option></select>
       </div>
-      <div class="form-group"><label>الحالة</label><select name="status"><option value="قائمة الأمنيات">قائمة الأمنيات</option><option value="تمت التجربة ✅">تمت التجربة ✅</option></select></div>
-      <div class="form-group"><label>ملاحظات وذكريات</label><input name="note" /></div>
+      <div class="form-group"><label>الميزانية التقديرية</label><input name="budget" placeholder="10,000 EGP" /></div>
+      <div class="form-group"><label>ملاحظات أو ذكريات</label><input name="note" /></div>
     `, async (d) => {
-      list.unshift(d);
-      OSProStore.set("experiences", list);
+      list.unshift({
+        ...d,
+        status: "قائمة الأمنيات 🌟",
+        img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80"
+      });
+      OSProStore.set("experiences_v3", list);
       renderExperiencesView();
     });
   };
+
+  sec.querySelectorAll("[data-toggle-exp]").forEach(b => {
+    b.onclick = () => {
+      const it = list[Number(b.dataset.toggleExp)];
+      if (it) it.status = it.status.includes("تم") ? "قائمة الأمنيات 🌟" : "تم التحقيق ✅";
+      OSProStore.set("experiences_v3", list);
+      renderExperiencesView();
+    };
+  });
+
   sec.querySelectorAll("[data-del-exp]").forEach(b => {
-    b.onclick = () => { list.splice(Number(b.dataset.delExp), 1); OSProStore.set("experiences", list); renderExperiencesView(); };
+    b.onclick = () => { list.splice(Number(b.dataset.delExp), 1); OSProStore.set("experiences_v3", list); renderExperiencesView(); };
   });
 }
 
+/* ============================================================================
+   MODULE H: VIP CONTACTS & PERSONAL CRM STUDIO
+   ============================================================================ */
 function renderContactsView() {
   const sec = document.getElementById("view-contacts");
   if (!sec) return;
-  const contacts = OSProStore.get("contacts_crm", [
-    { name: "فريق مشروع الكلية", role: "زملاء دراسة وعمل", date: today(), note: "متابعة تقسيم مهام المشروع الأسبوعية" }
+  const contacts = OSProStore.get("contacts_crm_v3", [
+    { name: "فريق مشروع التخرج والكلية", role: "زملاء دراسة وعمل 💻", circle: "الجامعة", date: today(), note: "اجتماع أسبوعي لمراجعة الكود وتوزيع المهام" },
+    { name: "أساتذة ومعيدو قسم الهندسة", role: "إشراف أكاديمي 🎓", circle: "شبكة مهنية", date: today(), note: "مراجعة تسليمات Logic Design و Modern Workshop" }
   ]);
 
   sec.innerHTML = `
     <div class="section-toolbar">
       <div>
-        <h3><i class="fa-solid fa-address-book gold-text"></i> العلاقات والتواصل والشبكة المهنية (People & Contacts)</h3>
-        <small class="small-muted">الأشخاص المهمون • مواعيد المناسبات • ملاحظات الاجتماعات</small>
+        <h3><i class="fa-solid fa-address-book gold-text"></i> إدارة العلاقات والشبكة المهنية (VIP Personal CRM)</h3>
+        <small class="small-muted">حافظ على تواصلك مع الأشخاص المهمين، الأساتذة، وزملاء المشاريع</small>
       </div>
-      <button type="button" id="btn-add-contact" class="btn btn-gold btn-sm"><i class="fa-solid fa-user-plus"></i> إضافة شخص / مناسبة</button>
+      <button type="button" id="btn-add-contact" class="btn btn-gold btn-sm"><i class="fa-solid fa-user-plus"></i> إضافة شخص مهم</button>
     </div>
     <div class="items-grid">
       ${contacts.map((c, i) => `
         <div class="item-card">
           <div>
-            <div class="flex-between"><span class="badge badge-gold">${esc(c.role)}</span><small class="small-muted">مناسبة/تواصل: ${esc(c.date)}</small></div>
-            <h4 class="mt-2">${esc(c.name)}</h4>
-            <p class="small-muted mt-1">${esc(c.note)}</p>
+            <div class="flex-between">
+              <span class="badge badge-gold">${esc(c.role)}</span>
+              <span class="badge badge-emerald">${esc(c.circle || "شبكة مهنية")}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; margin-top:12px;">
+              <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=D4A72C&color=090D19&bold=true" style="width:48px; height:48px; border-radius:50%;" alt="Avatar" />
+              <div>
+                <h4>${esc(c.name)}</h4>
+                <small class="small-muted">📅 آخر تواصل / موعد: ${esc(c.date)}</small>
+              </div>
+            </div>
+            <p class="small-muted mt-2">${esc(c.note)}</p>
           </div>
-          <button type="button" class="btn btn-xs btn-danger" data-del-cnt="${i}"><i class="fa-solid fa-trash"></i></button>
+          <div class="flex-between mt-2">
+            <button type="button" class="btn btn-xs btn-outline" data-ping-cnt="${i}"><i class="fa-solid fa-check gold-text"></i> سجّل تواصل اليوم</button>
+            <button type="button" class="btn btn-xs btn-danger" data-del-cnt="${i}"><i class="fa-solid fa-trash"></i></button>
+          </div>
         </div>
       `).join("")}
     </div>
   `;
 
   sec.querySelector("#btn-add-contact").onclick = () => {
-    B().openFormModal("🤝 إضافة شخص مهم أو مناسبة", `
+    B().openFormModal("🤝 إضافة شخص في شبكتك", `
       <div class="form-group"><label>الاسم</label><input name="name" required /></div>
-      <div class="form-group"><label>العلاقة / الدور المهني</label><input name="role" required placeholder="أستاذ جامعي / صديق / عميل..." /></div>
-      <div class="form-group"><label>تاريخ المناسبة أو المتابعة القادمة</label><input type="date" name="date" value="${today()}" /></div>
-      <div class="form-group"><label>ملاحظات شخصية عن الاجتماعات</label><textarea name="note" rows="2"></textarea></div>
+      <div class="form-group"><label>الدور أو العلاقة</label><input name="role" required placeholder="مهندس / أستاذ جامعي / صديق مقرب..." /></div>
+      <div class="form-group"><label>الدائرة</label><select name="circle"><option value="شبكة مهنية">شبكة مهنية</option><option value="الجامعة">الجامعة</option><option value="العائلة">العائلة</option><option value="أصدقاء">أصدقاء</option></select></div>
+      <div class="form-group"><label>ملاحظات</label><textarea name="note" rows="2"></textarea></div>
     `, async (d) => {
-      contacts.unshift(d);
-      OSProStore.set("contacts_crm", contacts);
+      contacts.unshift({ ...d, date: today() });
+      OSProStore.set("contacts_crm_v3", contacts);
       renderContactsView();
     });
   };
+
+  sec.querySelectorAll("[data-ping-cnt]").forEach(b => {
+    b.onclick = () => {
+      const c = contacts[Number(b.dataset.pingCnt)];
+      if (c) c.date = today();
+      OSProStore.set("contacts_crm_v3", contacts);
+      renderContactsView();
+      toast("تم تحديث تاريخ التواصل لليوم 🤝");
+    };
+  });
+
   sec.querySelectorAll("[data-del-cnt]").forEach(b => {
-    b.onclick = () => { contacts.splice(Number(b.dataset.delCnt), 1); OSProStore.set("contacts_crm", contacts); renderContactsView(); };
+    b.onclick = () => { contacts.splice(Number(b.dataset.delCnt), 1); OSProStore.set("contacts_crm_v3", contacts); renderContactsView(); };
   });
 }
 
+/* ============================================================================
+   MODULE J: DAILY JOURNAL, MOOD STUDIO & AUTOMATION RECIPES
+   ============================================================================ */
 function renderJournalView() {
   const sec = document.getElementById("view-journal");
   if (!sec) return;
-  const journals = OSProStore.get("journals", [
-    { date: today(), mood: "🔥 حماسي", title: "انطلاقة نظام MY LIFE OS Pro", content: "تم دمج منظومة الأهداف والعادات وذكاء الوقت والميكسر الصوتي بالكامل." }
+  const journals = OSProStore.get("journals_v3", [
+    { date: today(), mood: "🔥 حماسي وعالي التركيز", energy: 92, title: "تطوير منظومة الجيم 3D ومسارات البرمجة", content: "الحمد لله تم إنجاز تحديثات ضخمة في النظام مع ضبط خطة التمرين والمذاكرة." }
   ]);
 
   sec.innerHTML = `
     <div class="section-toolbar">
       <div>
-        <h3><i class="fa-solid fa-book-journal-whills gold-text"></i> اليوميات، المراجعة الأسبوعية، وسجل إنجازات الحياة</h3>
-        <small class="small-muted">Daily Journal • Weekly Review • Life Timeline • تصدير التقويم (.ICS)</small>
+        <h3><i class="fa-solid fa-book-journal-whills gold-text"></i> استوديو اليوميات، الحالة المزاجية، ومركز الأتمتة</h3>
+        <small class="small-muted">وثّق يومياتك ومشاعرك وتابع قواعد الأتمتة الذكية في نظامك</small>
       </div>
       <div class="filters-row">
-        <button type="button" id="btn-export-ics" class="btn btn-outline btn-sm"><i class="fa-regular fa-calendar-check gold-text"></i> تصدير التقويم الخارجي (.ICS)</button>
+        <button type="button" id="btn-export-ics" class="btn btn-outline btn-sm"><i class="fa-regular fa-calendar-check gold-text"></i> تصدير التقويم (.ICS)</button>
         <button type="button" id="btn-add-journal" class="btn btn-gold btn-sm"><i class="fa-solid fa-pen-fancy"></i> تدوينة يومية جديدة</button>
       </div>
     </div>
+
     <div class="items-grid">
       ${journals.map((j, i) => `
         <div class="item-card">
           <div>
-            <div class="flex-between"><span class="badge badge-gold">${esc(j.mood)}</span><small class="small-muted">${esc(j.date)}</small></div>
+            <div class="flex-between">
+              <span class="badge badge-gold">${esc(j.mood)}</span>
+              <span class="badge badge-emerald">⚡ طاقة اليوم: ${j.energy || 85}%</span>
+            </div>
             <h4 class="mt-2">${esc(j.title)}</h4>
-            <p class="small-muted mt-1">${esc(j.content)}</p>
+            <small class="small-muted d-block">${esc(j.date)}</small>
+            <p class="small-muted mt-2">${esc(j.content)}</p>
           </div>
-          <button type="button" class="btn btn-xs btn-danger" data-del-jrn="${i}"><i class="fa-solid fa-trash"></i></button>
+          <button type="button" class="btn btn-xs btn-danger mt-2" data-del-jrn="${i}"><i class="fa-solid fa-trash"></i> حذف</button>
         </div>
       `).join("")}
     </div>
   `;
 
   sec.querySelector("#btn-add-journal").onclick = () => {
-    B().openFormModal("📔 كتابة يوميات أو مراجعة أسبوعية", `
-      <div class="form-group"><label>الحالة المزاجية</label><select name="mood"><option value="🔥 حماسي">🔥 حماسي</option><option value="😊 هادئ وممتن">😊 هادئ وممتن</option><option value="🏆 إنجاز عالي">🏆 إنجاز عالي</option></select></div>
-      <div class="form-group"><label>عنوان اليوم أو المحطة</label><input name="title" required /></div>
-      <div class="form-group"><label>التفاصيل والدروس المستفادة</label><textarea name="content" rows="4" required></textarea></div>
+    B().openFormModal("📔 تدوينة يومية ومراجعة ذاتية", `
+      <div class="form-group"><label>الحالة المزاجية اليوم</label>
+        <select name="mood">
+          <option value="🔥 حماسي وعالي التركيز">🔥 حماسي وعالي التركيز</option>
+          <option value="😊 هادئ وممتن لله">😊 هادئ وممتن لله</option>
+          <option value="🏆 يوم إنجاز عظيم">🏆 يوم إنجاز عظيم</option>
+          <option value="☕ يوم هادئ للاستشفاء">☕ يوم هادئ للاستشفاء</option>
+        </select>
+      </div>
+      <div class="form-group"><label>نسبة طاقتك اليوم (%)</label><input type="number" name="energy" min="10" max="100" value="90" required /></div>
+      <div class="form-group"><label>عنوان اليوم أو أبرز حدث</label><input name="title" required /></div>
+      <div class="form-group"><label>تفاصيل اليوم والخواطر</label><textarea name="content" rows="4" required></textarea></div>
     `, async (d) => {
       journals.unshift({ ...d, date: today() });
-      OSProStore.set("journals", journals);
+      OSProStore.set("journals_v3", journals);
       renderJournalView();
     });
   };
@@ -1592,11 +2453,11 @@ function renderJournalView() {
     a.href = URL.createObjectURL(blob);
     a.download = `my-life-os-calendar-${today()}.ics`;
     a.click();
-    toast("تم تصدير ملف التقويم القياسي (.ICS) لربطه بـ Google/Apple Calendar! 📅");
+    toast("تم تصدير ملف التقويم القياسي (.ICS) بنجاح! 📅");
   };
 
   sec.querySelectorAll("[data-del-jrn]").forEach(b => {
-    b.onclick = () => { journals.splice(Number(b.dataset.delJrn), 1); OSProStore.set("journals", journals); renderJournalView(); };
+    b.onclick = () => { journals.splice(Number(b.dataset.delJrn), 1); OSProStore.set("journals_v3", journals); renderJournalView(); };
   });
 }
 
@@ -1635,7 +2496,6 @@ function upgradeExistingProjectsToolbar() {
    5. SYSTEM SYNERGY LISTENERS (AUTO-LINKING UNIVERSITY EXAMS TO CALENDAR)
    ============================================================================ */
 function initSystemSynergy() {
-  // عندما يضيف المستخدم امتحاناً أو واجباً في الجامعة، يُضاف تلقائياً للتقويم إذا لم يكن موجوداً
   document.addEventListener("submit", async (e) => {
     if (e.target.id !== "universal-modal-form") return;
     const modalTitle = document.getElementById("modal-title")?.textContent || "";
@@ -1659,12 +2519,15 @@ function initSystemSynergy() {
   });
 }
 
-// تشغيل المنظومة بالكامل عند تحميل الصفحة
-document.addEventListener("DOMContentLoaded", () => {
-  setTimeout(() => {
-    initThemeAndSidebarSystem();
-    injectProModulesIntoDOM();
-    initTimestampFocusPersistence();
-    initSystemSynergy();
-  }, 350);
-});
+function bootOSProV3() {
+  initThemeAndSidebarSystem();
+  injectProModulesIntoDOM();
+  initTimestampFocusPersistence();
+  initSystemSynergy();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => setTimeout(bootOSProV3, 250));
+} else {
+  setTimeout(bootOSProV3, 150);
+}
