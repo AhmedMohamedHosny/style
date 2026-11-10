@@ -274,15 +274,38 @@ function initWorldEntities() {
   }));
 }
 
+function escapeGameHTML(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function showGameNotification(msg) {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+  const toast = document.createElement("div");
+  toast.className = "toast success";
+  toast.innerHTML = `<i class="fa-solid fa-crown gold-text"></i><span>${escapeGameHTML(msg)}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+
 function startWorldSimulation() {
   worldCanvas = document.getElementById("bc-world-canvas");
   if (!worldCanvas) return;
   worldCtx = worldCanvas.getContext("2d");
 
+  // توليد البشر والحيوانات والأشجار والنجوم والنار إذا لم تكن موجودة
+  if (!WorldEntities.trees.length) {
+    initWorldEntities();
+  }
+
   const resize = () => {
     if (!worldCanvas) return;
-    worldCanvas.width = worldCanvas.clientWidth || 960;
-    worldCanvas.height = worldCanvas.clientHeight || 410;
+    worldCanvas.width = worldCanvas.clientWidth || 1100;
+    worldCanvas.height = worldCanvas.clientHeight || 440;
   };
   resize();
   window.addEventListener("resize", resize);
@@ -456,10 +479,7 @@ function drawLivingAncientWorld(t) {
     ctx.stroke();
   });
 
-  // 12. رسم "أليكس" الحارس التاريخي الطائر داخل عالم اللعبة
-  const alexX = 500 + Math.cos(t * 0.8) * 140;
-  const alexY = 140 + Math.sin(t * 1.4) * 22;
-  drawAncientAlexInCanvas(ctx, alexX, alexY, t);
+
 
   // 13. تأثيرات الطقس (مطر الخصب أو عاصفة رملية)
   if (GameState.weather === "rain") {
@@ -837,7 +857,7 @@ function buildAvatarSVG(eraObj) {
 }
 
 /* ============================================================================
-   3. RENDER GAME UI & INTERACTIVE ENGINEERING PUZZLES
+   3. RENDER FULLSCREEN GAME UI & INTERACTIVE ENGINEERING PUZZLES (NO ALEX)
    ============================================================================ */
 function renderAncientGameTab() {
   const container = document.getElementById("view-ancient-game");
@@ -850,14 +870,14 @@ function renderAncientGameTab() {
 
   container.innerHTML = `
     <div class="bc-game-shell">
-      <!-- 1. شاشة العالم الحي المتحرك (بشر، حيوانات، أشجار، نيل، نار، وأليكس) -->
+      <!-- 1. شاشة العالم الحي المتحرك (بشر، حيوانات، أشجار، نيل، نار، وأهرامات) -->
       <div class="bc-world-stage">
         <canvas id="bc-world-canvas"></canvas>
 
         <div class="bc-world-hud-top">
           <div class="bc-hud-pill">
             <i class="fa-solid fa-crown gold-text"></i>
-            <span id="bc-hud-era-name">${ currentEra.eraName }</span>
+            <span id="bc-hud-era-name">${currentEra.eraName}</span>
             <span class="badge badge-gold" id="bc-hud-lvl">Lv. ${GameState.level} (${GameState.xp} XP)</span>
           </div>
 
@@ -870,22 +890,21 @@ function renderAncientGameTab() {
               <i class="fa-solid fa-cloud-sun-rain gold-text"></i>
               <span>${GameState.weather === "clear" ? "جو صافٍ" : GameState.weather === "rain" ? "أمطار الخير" : "رياح الصحراء"}</span>
             </button>
-            <button type="button" id="btn-bc-audio" class="bc-hud-pill" title="صوت نار المخيم والطبيعة">
-              <i class="fa-solid ${GameState.soundEnabled ? "fa-volume-high gold-text" : "fa-volume-xmark"}"></i>
-              <span>${GameState.soundEnabled ? "صوت الطبيعة: حي" : "تشغيل صوت الوادي"}</span>
+            <button type="button" id="btn-bc-certificate" class="bc-hud-pill" style="border-color:#10b981;">
+              <i class="fa-solid fa-scroll gold-text"></i> وثيقة البردية القيادية
             </button>
-            <button type="button" id="btn-bc-certificate" class="btn btn-gold btn-sm">
-              <i class="fa-solid fa-scroll"></i> وثيقة البردية القيادية
+            <button type="button" id="btn-bc-exit-fullscreen" class="btn btn-danger btn-sm" style="pointer-events:auto; border-radius:99px;">
+              <i class="fa-solid fa-right-from-bracket"></i> الخروج والعودة للنظام
             </button>
           </div>
         </div>
 
-        <div class="bc-alex-advisor-bar">
+        <div class="bc-chronicle-bar">
           <div class="flex-between" style="gap:10px;">
-            <span class="badge badge-gold">🤖 أليكس حارس الحكمة</span>
-            <span id="bc-alex-live-comment">${escapeHTML(GameState.alexComment)}</span>
+            <span class="badge badge-gold"><i class="fa-solid fa-feather-pointed"></i> السجل التاريخي للوادي</span>
+            <span id="bc-alex-live-comment">${escapeGameHTML(GameState.alexComment)}</span>
           </div>
-          <small class="small-muted">اضغط في أي مكان داخل الوادي لتشجيع العمال (+XP)</small>
+          <small class="small-muted">اضغط بالماوس على الوادي لتشجيع البنائين والصيادين (+5 XP)</small>
         </div>
       </div>
 
@@ -913,13 +932,13 @@ function renderAncientGameTab() {
       <div class="bc-main-grid">
         <!-- خزانة الشخصيات والأزياء التاريخية -->
         <div class="bc-avatar-stage">
-          <span class="badge badge-gold mb-1">الشخصية والزي الحالي</span>
+          <span class="badge badge-gold mb-1">الشخصية والزي التاريخي</span>
           <div id="bc-avatar-svg-box">${buildAvatarSVG(currentOutfit)}</div>
           <h3 class="gold-text">${currentOutfit.charTitle}</h3>
           <p class="small-muted mt-1">${currentOutfit.outfitName}</p>
 
           <hr class="divider" />
-          <small class="small-muted d-block mb-1">اختر من الشخصيات والأزياء المفتوحة حسب مستواك:</small>
+          <small class="small-muted d-block mb-1">الشخصيات والأزياء عبر العصور:</small>
           <div class="bc-outfits-row">
             ${BC_ERAS.map((er, idx) => {
               const isUnlocked = GameState.level >= er.level;
@@ -953,7 +972,7 @@ function renderAncientGameTab() {
 
           <div class="card">
             <div class="card-header">
-              <h3><i class="fa-solid fa-compass-drafting gold-text"></i> مختبر ألغاز الهندسة والفيزياء القديمة (ارفع مستواك وافتح الملابس!)</h3>
+              <h3><i class="fa-solid fa-compass-drafting gold-text"></i> مختبر ألغاز الهندسة والفيزياء القديمة (ارفع مستواك وافتح الملابس والشخصيات!)</h3>
             </div>
             <div class="bc-puzzles-grid">
               <div class="bc-puzzle-card">
@@ -1007,7 +1026,19 @@ function updateGameHUDOnly() {
   if (eraEl) eraEl.textContent = currentEra.eraName;
 }
 
+function exitAncientGameFullscreen() {
+  document.body.classList.remove("ancient-game-fullscreen");
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {});
+  }
+  const dashBtn = document.querySelector('.nav-item[data-view="dashboard"]');
+  if (dashBtn) dashBtn.click();
+}
+
 function bindAncientGameEvents() {
+  // زر الخروج من الشاشة الكاملة والعودة للنظام
+  document.getElementById("btn-bc-exit-fullscreen")?.addEventListener("click", exitAncientGameFullscreen);
+
   // تبديل الوقت (نهار / غروب / ليل)
   document.getElementById("btn-bc-time")?.addEventListener("click", () => {
     const order = ["day", "sunset", "night"];
@@ -1024,22 +1055,13 @@ function bindAncientGameEvents() {
     renderAncientGameTab();
   });
 
-  // صوت الطبيعة ونار المخيم
-  document.getElementById("btn-bc-audio")?.addEventListener("click", () => {
-    GameState.soundEnabled = !GameState.soundEnabled;
-    if (typeof toggleAmbientSound === "function") toggleAmbientSound("fire");
-    renderAncientGameTab();
-  });
-
   // اختيار الملابس والشخصيات المفتوحة
   document.querySelectorAll("[data-outfit-idx]").forEach(btn => {
     btn.onclick = () => {
       const idx = Number(btn.dataset.outfitIdx);
       const targetEra = BC_ERAS[idx];
       if (GameState.level < targetEra.level) {
-        if (typeof showToast === "function") {
-          showToast(`🔒 هذه الشخصية واللبس يفتحان في المستوى ${targetEra.level}! حل الألغاز واتخذ القرارات لرفع مستواك.`, "error");
-        }
+        showGameNotification(`🔒 هذه الشخصية واللبس يفتحان في المستوى ${targetEra.level}! حل الألغاز واتخذ القرارات لرفع مستواك.`);
         return;
       }
       GameState.selectedOutfitIdx = idx;
@@ -1073,10 +1095,7 @@ function bindAncientGameEvents() {
       if (GameState.level > oldLevel) {
         GameState.selectedOutfitIdx = GameState.level - 1;
         saveGameState();
-        if (typeof launchAlexConfetti === "function") launchAlexConfetti();
-        if (typeof showToast === "function") {
-          showToast(`🎉 ارتقيت إلى المستوى ${GameState.level}! تم فتح شخصية ولبس تاريخي جديد وصرح معماري أعظم!`, "success");
-        }
+        showGameNotification(`🎉 ارتقيت إلى المستوى ${GameState.level}! تم فتح شخصية ولبس تاريخي جديد وصرح معماري أعظم!`);
       }
       renderAncientGameTab();
     };
@@ -1092,7 +1111,7 @@ function bindAncientGameEvents() {
 }
 
 /* ============================================================================
-   4. REALISTIC HISTORICAL & ENGINEERING PUZZLES (MAX REALISM)
+   4. REALISTIC HISTORICAL & ENGINEERING PUZZLES
    ============================================================================ */
 function openAncientEngineeringPuzzle(type) {
   if (type === "sled") {
@@ -1140,8 +1159,7 @@ function rewardPuzzleSuccess(msg) {
     GameState.selectedOutfitIdx = GameState.level - 1;
     saveGameState();
   }
-  if (typeof launchAlexConfetti === "function") launchAlexConfetti();
-  if (typeof showToast === "function") showToast("🎉 +60 XP! " + msg, "success");
+  showGameNotification("🎉 +60 XP! " + msg);
   renderAncientGameTab();
 }
 
@@ -1154,7 +1172,6 @@ function downloadPapyrusLeaderCertificate() {
   c.height = 500;
   const ctx = c.getContext("2d");
 
-  // خلفية بردية ملكية مذهبة
   const grad = ctx.createLinearGradient(0, 0, 860, 500);
   grad.addColorStop(0, "#1c1917");
   grad.addColorStop(0.5, "#292524");
@@ -1205,14 +1222,23 @@ function downloadPapyrusLeaderCertificate() {
   a.click();
 }
 
-// تهيئة اللعبة تلقائياً عند فتح التبويب أو تحميل الصفحة
+// تفعيل ملء الشاشة وإخفاء أليكس تلقائياً عند فتح تبويب اللعبة
 document.addEventListener("DOMContentLoaded", () => {
+  initWorldEntities();
   renderAncientGameTab();
 
   document.addEventListener("click", (e) => {
-    const navBtn = e.target.closest('[data-view="ancient-game"]');
-    if (navBtn) {
-      setTimeout(renderAncientGameTab, 60);
+    const navBtn = e.target.closest("[data-view]");
+    if (!navBtn) return;
+
+    if (navBtn.dataset.view === "ancient-game") {
+      document.body.classList.add("ancient-game-fullscreen");
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+      setTimeout(renderAncientGameTab, 50);
+    } else {
+      document.body.classList.remove("ancient-game-fullscreen");
     }
   });
 });
