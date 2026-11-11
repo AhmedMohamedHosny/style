@@ -5118,37 +5118,153 @@ function playLiveIslamicRadio(stationVal, stationName) {
   });
 }
 
-// 2. قارئ الموجز اليومي الصوتي الذكي (Voice Daily Briefing TTS)
+// 2. المحرك الصوتي الذكي ثنائي اللغة للموجز اليومي (Bilingual Arabic & English Neural/Web TTS)
+let activeBriefingAudio = null;
+let isBriefingPlaying = false;
+
+function stopDailyBriefingTTS() {
+  isBriefingPlaying = false;
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+  if (activeBriefingAudio) {
+    activeBriefingAudio.pause();
+    activeBriefingAudio = null;
+  }
+  const btn = document.getElementById("btn-speak-briefing");
+  if (btn) {
+    btn.innerHTML = `<i class="fa-solid fa-volume-high gold-text"></i> اقرأ لي موجز اليوم صوتياً`;
+  }
+}
+
 function speakDailyBriefingTTS() {
-  if (!("speechSynthesis" in window)) {
-    showToast("متصفحك الحالي لا يدعم القراءة الصوتية المباشرة TTS", "error");
+  if (isBriefingPlaying) {
+    stopDailyBriefingTTS();
     return;
   }
 
-  window.speechSynthesis.cancel();
+  // تحديث نص الموجز أولاً ببيانات Firebase الحقيقية قبل القراءة
+  if (typeof renderMorningBriefing === "function") {
+    renderMorningBriefing();
+  }
 
-  const userName = (AppState.user?.displayName || "يا باشمهندس").split(" ")[0];
-  const briefingText = document.getElementById("morning-briefing-text")?.textContent || "";
-  const nextPrayerText = document.getElementById("next-prayer-countdown")?.textContent || "";
-  const fullSpeech = `السلام عليكم يا ${userName}. إليك موجز القيادة الذكي ليومك: ${briefingText}. ${nextPrayerText}. أتمنى لك يوماً مباركاً ومليئاً بالإنجاز.`;
+  const userName = (AppState.user?.displayName || "أحمد").split(" ")[0];
+  const today = todayISO();
+  const pendingTasks = (AppState.collections.tasks || []).filter(t => t.status !== "Completed");
+  const todayTasks = pendingTasks.filter(t => t.dueDate === today);
+  const subjectsCount = (AppState.collections.subjects || []).length;
+  const projectsCount = (AppState.collections.projects || []).length;
+  const nextPrayerText = (document.getElementById("next-prayer-countdown")?.textContent || "").replace(/[^\u0600-\u06FFa-zA-Z0-9\s:]/g, " ");
 
-  const utterance = new SpeechSynthesisUtterance(fullSpeech);
-  utterance.lang = "ar-EG";
-  utterance.rate = 0.98;
+  const hour = new Date().getHours();
+  const timeGreeting = hour >= 4 && hour < 12 ? "صباح الخير والبركة" : hour >= 12 && hour < 17 ? "مساء الخير والهمة" : "مساء النور والهدوء";
 
-  const voices = window.speechSynthesis.getVoices();
-  const arabicVoice = voices.find(v => v.lang.includes("ar"));
-  if (arabicVoice) utterance.voice = arabicVoice;
+  let topTaskTitle = "";
+  if (todayTasks.length > 0) topTaskTitle = todayTasks[0].title;
+  else if (pendingTasks.length > 0) topTaskTitle = pendingTasks[0].title;
 
+  let fullText = `السلام عليكم، ${timeGreeting} يا بشمهندس ${userName}. `;
+  fullText += `إليك موجز القيادة الذكي ليومك. لديك حالياً ${subjectsCount} مواد دراسية مسجلة، و ${projectsCount} مشاريع برمجية نشطة. `;
+
+  if (pendingTasks.length > 0) {
+    fullText += `يوجد في جدولك ${pendingTasks.length} مهام قيد الانتظار، وأهم مهمة لديك الآن هي: ${topTaskTitle}. `;
+  } else {
+    fullText += `لقد أتممت جميع مهامك المجدولة بنجاح، وقت مثالي للتركيز العميق أو الراحة. `;
+  }
+
+  if (nextPrayerText) {
+    fullText += `${nextPrayerText}. `;
+  }
+  fullText += `أتمنى لك يوماً مباركاً ومليئاً بالإنجاز والتفوق.`;
+
+  // تنظيف الإيموجي والرموز حتى لا يتلعثم القارئ الصوتي
+  const cleanText = fullText
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}•&bull;]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // تقسيم النص تلقائياً إلى مقاطع عربية ومقاطع إنجليزية ليقرأ كل لغة بنطقها السليم
+  const rawTokens = cleanText.match(/[a-zA-Z0-9][a-zA-Z0-9\s.\-_:/]*|[^\sa-zA-Z0-9]+(?:\s+[^\sa-zA-Z0-9]+)*/g) || [cleanText];
+  const segments = [];
+  rawTokens.forEach(tok => {
+    const t = tok.trim();
+    if (!t) return;
+    const isEng = /[a-zA-Z]{2,}/.test(t);
+    const lang = isEng ? "en" : "ar";
+    if (segments.length > 0 && segments[segments.length - 1].lang === lang && (segments[segments.length - 1].text.length + t.length) < 160) {
+      segments[segments.length - 1].text += " " + t;
+    } else {
+      segments.push({ lang, text: t });
+    }
+  });
+
+  isBriefingPlaying = true;
   const btn = document.getElementById("btn-speak-briefing");
-  if (btn) btn.innerHTML = `<i class="fa-solid fa-waveform-lines fa-beat gold-text"></i> جاري القراءة... (اضغط للإيقاف)`;
+  if (btn) {
+    btn.innerHTML = `<i class="fa-solid fa-waveform-lines fa-beat gold-text"></i> جاري القراءة بالعربية والإنجليزية... (اضغط للإيقاف)`;
+  }
+  showToast("أليكس يقرأ لك موجز يومك الآن باللغتين العربية والإنجليزية 🔊", "info");
 
-  utterance.onend = () => {
-    if (btn) btn.innerHTML = `<i class="fa-solid fa-volume-high gold-text"></i> اقرأ لي موجز اليوم صوتياً`;
+  const voices = ("speechSynthesis" in window) ? window.speechSynthesis.getVoices() : [];
+  const arVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith("ar"));
+  const enVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith("en")) || voices[0];
+
+  // 1. إذا كان الويندوز/المتصفح يمتلك صوتاً عربياً مثبتاً، نستخدم القارئ المحلي المزدوج (عربي + إنجليزي)
+  if (arVoice) {
+    window.speechSynthesis.cancel();
+    let idx = 0;
+    const speakNextLocal = () => {
+      if (!isBriefingPlaying || idx >= segments.length) {
+        stopDailyBriefingTTS();
+        return;
+      }
+      const seg = segments[idx++];
+      const u = new SpeechSynthesisUtterance(seg.text);
+      if (seg.lang === "ar") {
+        u.voice = arVoice;
+        u.lang = arVoice.lang || "ar-EG";
+        u.rate = 0.98;
+      } else {
+        if (enVoice) u.voice = enVoice;
+        u.lang = "en-US";
+        u.rate = 1.0;
+      }
+      u.onend = speakNextLocal;
+      u.onerror = speakNextLocal;
+      window.speechSynthesis.speak(u);
+    };
+    speakNextLocal();
+    return;
+  }
+
+  // 2. إذا لم يكن في الويندوز صوت عربي مثبت، نستخدم البث الصوتي السحابي الفوري للعربية مع نطق الإنجليزية بوضوح
+  let segIdx = 0;
+  const playNextHybridSegment = () => {
+    if (!isBriefingPlaying || segIdx >= segments.length) {
+      stopDailyBriefingTTS();
+      return;
+    }
+    const seg = segments[segIdx++];
+    const ttsUrl = `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=${seg.lang === "ar" ? "ar" : "en"}&dt=t&q=${encodeURIComponent(seg.text)}`;
+    activeBriefingAudio = new Audio(ttsUrl);
+    activeBriefingAudio.playbackRate = 1.05;
+    activeBriefingAudio.onended = playNextHybridSegment;
+    activeBriefingAudio.onerror = () => {
+      // في حال حجب الصوت السحابي لمقطع إنجليزي، ينطقه المتصفح محلياً
+      if ("speechSynthesis" in window) {
+        const u = new SpeechSynthesisUtterance(seg.text);
+        u.lang = seg.lang === "ar" ? "ar-EG" : "en-US";
+        u.onend = playNextHybridSegment;
+        u.onerror = playNextHybridSegment;
+        window.speechSynthesis.speak(u);
+      } else {
+        playNextHybridSegment();
+      }
+    };
+    activeBriefingAudio.play().catch(() => playNextHybridSegment());
   };
 
-  window.speechSynthesis.speak(utterance);
-  showToast("أليكس يقرأ لك ملخص يومك الآن 🔊", "info");
+  playNextHybridSegment();
 }
 
 // 3. محرك كبسولة الزمن ورسائل المستقبل (Future Self Time-Capsule)
@@ -5309,15 +5425,8 @@ document.addEventListener("DOMContentLoaded", () => {
     playLiveIslamicRadio(sel.value, stationName);
   });
 
-  // زر القراءة الصوتية للموجز اليومي (TTS)
-  document.getElementById("btn-speak-briefing")?.addEventListener("click", () => {
-    if (window.speechSynthesis && window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-      document.getElementById("btn-speak-briefing").innerHTML = `<i class="fa-solid fa-volume-high gold-text"></i> اقرأ لي موجز اليوم صوتياً`;
-      return;
-    }
-    speakDailyBriefingTTS();
-  });
+// زر القراءة الصوتية للموجز اليومي (TTS)
+  document.getElementById("btn-speak-briefing")?.addEventListener("click", speakDailyBriefingTTS);
 
   // أزرار كبسولة الزمن
   document.getElementById("btn-open-time-capsule")?.addEventListener("click", openCreateTimeCapsuleModal);
