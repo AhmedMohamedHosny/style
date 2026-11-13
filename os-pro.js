@@ -518,8 +518,31 @@ function injectSuperTopbarStyles() {
       border-radius: 0 !important;
       padding: 16px 24px !important;
     }
+.modal-overlay:has(.wb-studio-fullscreen) {
+      padding: 0 !important;
+    }
+    .modal-card.wide-lab-modal.wb-studio-fullscreen,
+    .modal-card.wb-studio-fullscreen {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      max-width: 100vw !important;
+      height: 100vh !important;
+      max-height: 100vh !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      padding: 12px 20px !important;
+      z-index: 999999 !important;
+    }
     .wb-studio-fullscreen .whiteboard-canvas-box {
-      height: calc(100vh - 195px) !important;
+      height: calc(100vh - 180px) !important;
+    }
+    /* إخفاء أليكس والسبحة والمسودة تماماً عند فتح السبورة أو تكبيرها */
+    body.wb-fullscreen-mode #alex-mascot-Root,
+    body.wb-fullscreen-mode #floating-tasbeeh-widget,
+    body.wb-fullscreen-mode #btn-toggle-scratchpad,
+    body.wb-fullscreen-mode #scratchpad-drawer {
+      display: none !important;
     }
     .calc-grid-buttons {
       display: grid;
@@ -718,17 +741,19 @@ function openPrivateMP4RecorderModal() {
    ULTIMATE ENGINEERING WHITEBOARD, IMAGE ANNOTATOR & MULTI-BRANCH TREE STUDIO
    ============================================================================ */
 const WBState = {
-  tool: "select", // select | pen | highlight | line | arrow | rect | circle | text | eraser
+  tool: "select", // select | pen | laser | highlight | line | arrow | rect | circle | text | eraser
   bgMode: "grid", // grid | dots | dark | white
   color: "#D4A72C",
   size: 4,
   strokes: [],
   nodes: [
-    { id: "n_root", text: "🌟 الموضوع الرئيسي للشرح", x: 430, y: 80, w: 210, h: 46, color: "#D4A72C", parentId: null }
+    { id: "n_root", text: "🌟 الموضوع الرئيسي للشرح", shape: "rect", x: 450, y: 75, w: 220, h: 48, color: "#D4A72C", parentId: null }
   ],
   images: [],
   selectedNodeId: "n_root",
   selectedImgId: null,
+  selectedStrokeIdx: null,
+  laserPoints: [],
   undoStack: [],
   isRecordingCanvas: false,
   canvasRecorder: null,
@@ -741,28 +766,32 @@ function pushWBUndoSnapshot() {
     strokes: WBState.strokes,
     nodes: WBState.nodes
   }));
-  if (WBState.undoStack.length > 25) WBState.undoStack.shift();
+  if (WBState.undoStack.length > 30) WBState.undoStack.shift();
 }
 
 function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
+  // إخفاء أليكس تلقائياً أثناء فتح السبورة لعدم التغطية على الشرح
+  document.body.classList.add("wb-fullscreen-mode");
+
   B().openFormModal("🎨 استوديو السبورة الهندسية، الخرائط المتفرعة، والشرح على الصور", `
-    <!-- شريط الأدوات الهندسي الشامل -->
+    <!-- الشريط الأول: أدوات الرسم والأشكال والنصوص القابلة للتحريك -->
     <div class="wb-studio-toolbar">
       <div class="filters-row" style="gap:5px;">
-        <button type="button" class="wb-tool-btn ${WBState.tool === "select" ? "active" : ""}" data-wb-tool="select" title="تحديد وتحريك الفروع والصور"><i class="fa-solid fa-arrows-up-down-left-right"></i> تحريك</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "select" ? "active" : ""}" data-wb-tool="select" title="تحديد وتحريك أي نص أو دائرة أو مستطيل أو صورة"><i class="fa-solid fa-arrows-up-down-left-right"></i> تحريك وتعديل</button>
         <button type="button" class="wb-tool-btn ${WBState.tool === "pen" ? "active" : ""}" data-wb-tool="pen"><i class="fa-solid fa-pen"></i> قلم</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "laser" ? "active" : ""}" data-wb-tool="laser" title="مؤشر ليزر للشرح يختفي تلقائياً"><i class="fa-solid fa-wand-magic-sparkles"></i> ليزر</button>
         <button type="button" class="wb-tool-btn ${WBState.tool === "highlight" ? "active" : ""}" data-wb-tool="highlight"><i class="fa-solid fa-highlighter"></i> تظليل</button>
         <button type="button" class="wb-tool-btn ${WBState.tool === "arrow" ? "active" : ""}" data-wb-tool="arrow"><i class="fa-solid fa-arrow-trend-up"></i> سهم</button>
         <button type="button" class="wb-tool-btn ${WBState.tool === "line" ? "active" : ""}" data-wb-tool="line"><i class="fa-solid fa-slash"></i> خط</button>
-        <button type="button" class="wb-tool-btn ${WBState.tool === "rect" ? "active" : ""}" data-wb-tool="rect"><i class="fa-regular fa-square"></i> صندوق</button>
-        <button type="button" class="wb-tool-btn ${WBState.tool === "circle" ? "active" : ""}" data-wb-tool="circle"><i class="fa-regular fa-circle"></i> دائرة</button>
-        <button type="button" class="wb-tool-btn ${WBState.tool === "text" ? "active" : ""}" data-wb-tool="text"><i class="fa-solid fa-font"></i> نص</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "rect" ? "active" : ""}" data-wb-tool="rect" title="ارسم مستطيلاً واكتب بداخله نصاً"><i class="fa-regular fa-square"></i> مستطيل (+نص)</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "circle" ? "active" : ""}" data-wb-tool="circle" title="ارسم دائرة واكتب بداخلها نصاً"><i class="fa-regular fa-circle"></i> دائرة (+نص)</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "text" ? "active" : ""}" data-wb-tool="text" title="إضافة نص حر قابل للتحريك والتكبير"><i class="fa-solid fa-font"></i> نص حر</button>
         <button type="button" class="wb-tool-btn ${WBState.tool === "eraser" ? "active" : ""}" data-wb-tool="eraser"><i class="fa-solid fa-eraser"></i> ممحاة</button>
       </div>
 
       <div class="filters-row" style="gap:6px;">
-        <input type="color" id="wb-color" value="${WBState.color}" style="width:36px; height:32px; padding:1px; cursor:pointer;" title="لون الرسم أو الفرع" />
-        <input type="range" id="wb-size" min="2" max="18" value="${WBState.size}" style="width:70px;" title="سمك الخط" />
+        <input type="color" id="wb-color" value="${WBState.color}" style="width:36px; height:32px; padding:1px; cursor:pointer;" title="اللون" />
+        <input type="range" id="wb-size" min="2" max="18" value="${WBState.size}" style="width:70px;" title="السمك وحجم الخط" />
         <select id="wb-bg-select" class="select-sm" style="min-width:115px; padding:4px 8px;">
           <option value="grid" ${WBState.bgMode === "grid" ? "selected" : ""}>📐 شبكة هندسية</option>
           <option value="dots" ${WBState.bgMode === "dots" ? "selected" : ""}>⠿ نقاط رقمية</option>
@@ -772,42 +801,47 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
       </div>
     </div>
 
-    <!-- شريط التفريع الشجري اللانهائي وإدراج الصور وتصدير الفيديو MP4 -->
-    <div class="wb-studio-toolbar" style="background:rgba(15, 23, 42, 0.92);">
-      <div class="filters-row" style="gap:6px;">
-        <button type="button" id="btn-wb-add-root" class="btn btn-xs btn-gold" title="إضافة موضوع أو فرع رئيسي جديد">
-          <i class="fa-solid fa-sitemap"></i> + موضوع رئيسي
+    <!-- الشريط الثاني: التفريع الشجري (مستطيل/دائرة) + تحجيم الصور والعناصر + التسجيل -->
+    <div class="wb-studio-toolbar" style="background:rgba(15, 23, 42, 0.94);">
+      <div class="filters-row" style="gap:5px;">
+        <button type="button" id="btn-wb-add-root" class="btn btn-xs btn-gold" title="إضافة عقدة رئيسية (مستطيل أو دائرة)">
+          <i class="fa-solid fa-sitemap"></i> + شكل رئيسي
         </button>
-        <button type="button" id="btn-wb-spawn-branches" class="btn btn-xs btn-gold" style="background:linear-gradient(135deg,#19B889,#059669)!important; color:#05070e!important;" title="توليد عدة فروع متشعبة من العقدة المحددة حالياً">
-          <i class="fa-solid fa-code-branch"></i> + فرّع عدة فروع من المحدد
+        <button type="button" id="btn-wb-toggle-shape" class="btn btn-xs btn-outline" title="تحويل شكل الفرع المحدد بين مستطيل ودائرة ومعين">
+          <i class="fa-solid fa-shapes gold-text"></i> شكل الفرع (مستطيل/دائرة)
         </button>
-        <button type="button" id="btn-wb-edit-node" class="btn btn-xs btn-outline" title="تعديل نص العقدة المحددة أو دبل كليك عليها">
+        <button type="button" id="btn-wb-spawn-branches" class="btn btn-xs btn-gold" style="background:linear-gradient(135deg,#19B889,#059669)!important; color:#05070e!important;">
+          <i class="fa-solid fa-code-branch"></i> + فرّع عدة فروع
+        </button>
+        <button type="button" id="btn-wb-edit-node" class="btn btn-xs btn-outline">
           <i class="fa-solid fa-pen-to-square gold-text"></i> تعديل النص
         </button>
-        <button type="button" id="btn-wb-del-node" class="btn btn-xs btn-outline text-danger" title="حذف العقدة المحددة">
-          <i class="fa-solid fa-xmark"></i> حذف الفرع
-        </button>
-        <label class="btn btn-xs btn-outline" style="cursor:pointer; margin:0;" title="إدراج صورة من جهازك للشرح والرسم عليها">
-          <i class="fa-regular fa-image gold-text"></i> إدراج صورة للشرح
+        <label class="btn btn-xs btn-outline" style="cursor:pointer; margin:0;">
+          <i class="fa-regular fa-image gold-text"></i> إدراج صورة
           <input type="file" id="wb-img-upload-inp" accept="image/*" class="hidden" />
         </label>
+        <button type="button" id="btn-wb-scale-up" class="btn btn-xs btn-outline" title="تكبير الصورة أو الشكل أو النص المحدد"><i class="fa-solid fa-magnifying-glass-plus gold-text"></i> تكبير العنصر</button>
+        <button type="button" id="btn-wb-scale-down" class="btn btn-xs btn-outline" title="تصغير الصورة أو الشكل أو النص المحدد"><i class="fa-solid fa-magnifying-glass-minus gold-text"></i> تصغير العنصر</button>
+        <button type="button" id="btn-wb-del-node" class="btn btn-xs btn-outline text-danger" title="حذف العنصر المحدد (فرع / صورة / شكل / نص)">
+          <i class="fa-solid fa-xmark"></i> حذف المحدد
+        </button>
       </div>
 
-      <div class="filters-row" style="gap:6px;">
-        <button type="button" id="btn-wb-undo" class="btn btn-xs btn-outline" title="تراجع عن آخر خطوة"><i class="fa-solid fa-rotate-left"></i> تراجع</button>
+      <div class="filters-row" style="gap:5px;">
+        <button type="button" id="btn-wb-undo" class="btn btn-xs btn-outline"><i class="fa-solid fa-rotate-left"></i> تراجع</button>
         <button type="button" id="btn-wb-clear" class="btn btn-xs btn-danger"><i class="fa-solid fa-trash"></i> مسح الكل</button>
         <button type="button" id="btn-wb-rec-mp4" class="btn btn-xs btn-outline" style="border-color:#19B889;">
-          <i class="fa-solid fa-video gold-text"></i> <span id="wb-rec-btn-lbl">تسجيل الشرح MP4 (خاص 🔒)</span>
+          <i class="fa-solid fa-video gold-text"></i> <span id="wb-rec-btn-lbl">تسجيل MP4 (خاص 🔒)</span>
         </button>
-        <button type="button" id="btn-wb-download" class="btn btn-xs btn-gold"><i class="fa-solid fa-download"></i> تصدير صورة الشرح PNG</button>
-        <button type="button" id="btn-wb-fullscreen" class="btn btn-xs btn-outline" title="ملء الشاشة"><i class="fa-solid fa-expand"></i></button>
+        <button type="button" id="btn-wb-download" class="btn btn-xs btn-gold"><i class="fa-solid fa-download"></i> حفظ صورة PNG</button>
+        <button type="button" id="btn-wb-fullscreen" class="btn btn-xs btn-gold" title="ملء الشاشة بالكامل"><i class="fa-solid fa-expand"></i> ملء الشاشة</button>
       </div>
     </div>
 
     <canvas id="smart-whiteboard-canvas" class="whiteboard-canvas-box"></canvas>
     <div class="flex-between mt-1 small-muted">
-      <span>💡 <strong>كيف تفرّع الشجرة؟</strong> اضغط على أي صندوق في السبورة لتحديده، ثم اضغط <strong>(+ فرّع عدة فروع من المحدد)</strong> واكتب كل الفروع مفصولة بفاصلة! واسحب أي فرع بالماوس لتحريكه.</span>
-      <span id="wb-selected-node-indicator" class="gold-text">المحدد حالياً: الموضوع الرئيسي</span>
+      <span>💡 <strong>تحكم كامل:</strong> بأداة <strong>(تحريك وتعديل)</strong> اسحب أي نص أو دائرة أو مستطيل أو صورة، أو اسحب المربع الذهبي <strong>(↘)</strong> بزاوية الصورة لتكبيرها وتصغيرها، أو اضغط دبل كليك على أي دائرة/مستطيل للكتابة بداخله!</span>
+      <span id="wb-selected-node-indicator" class="gold-text">المحدد: الموضوع الرئيسي</span>
     </div>
   `, async () => {});
 
@@ -816,19 +850,32 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
   const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
   if (saveBtn) saveBtn.style.display = "none";
 
+  // إعادة إظهار أليكس عند إغلاق السبورة
+  const closeBtn = document.getElementById("btn-close-modal");
+  const origClose = closeBtn?.onclick;
+  if (closeBtn) {
+    closeBtn.onclick = (e) => {
+      document.body.classList.remove("wb-fullscreen-mode");
+      modalCard?.classList.remove("wb-studio-fullscreen");
+      if (origClose) origClose(e);
+    };
+  }
+
   const canvas = document.getElementById("smart-whiteboard-canvas");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
   const resizeBoard = () => {
-    canvas.width = canvas.clientWidth || 920;
+    canvas.width = canvas.clientWidth || 960;
     canvas.height = canvas.clientHeight || 520;
     renderWhiteboardScene(ctx, canvas.width, canvas.height);
   };
-  setTimeout(resizeBoard, 30);
+  setTimeout(resizeBoard, 40);
 
   let isDraggingNode = null;
   let isDraggingImg = null;
+  let isResizingImg = null;
+  let isDraggingStroke = null;
   let dragOffsetX = 0;
   let dragOffsetY = 0;
   let isDrawingStroke = false;
@@ -854,11 +901,46 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
   const findImgAt = (x, y) => {
     for (let i = WBState.images.length - 1; i >= 0; i--) {
       const im = WBState.images[i];
+      // فحص مقبض تغيير الحجم في الزاوية السفلية اليمنى للصورة (22x22)
+      if (x >= im.x + im.w - 20 && x <= im.x + im.w + 10 && y >= im.y + im.h - 20 && y <= im.y + im.h + 10) {
+        return { img: im, resize: true };
+      }
       if (x >= im.x && x <= im.x + im.w && y >= im.y && y <= im.y + im.h) {
-        return im;
+        return { img: im, resize: false };
       }
     }
     return null;
+  };
+
+  // البحث عن أي نص حر أو دائرة أو مستطيل مرسوم لتحريكه أو الكتابة بداخله
+  const findMovableStrokeAt = (x, y) => {
+    for (let i = WBState.strokes.length - 1; i >= 0; i--) {
+      const s = WBState.strokes[i];
+      if (s.type === "text") {
+        const approxW = Math.max(60, (s.text || "").length * (s.size * 2.6));
+        const approxH = Math.max(28, s.size * 5);
+        if (x >= s.x - 10 && x <= s.x + approxW + 10 && y >= s.y - approxH && y <= s.y + 12) {
+          return { stroke: s, idx: i };
+        }
+      } else if (s.type === "rect") {
+        const minX = Math.min(s.x1, s.x2), maxX = Math.max(s.x1, s.x2);
+        const minY = Math.min(s.y1, s.y2), maxY = Math.max(s.y1, s.y2);
+        if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+          return { stroke: s, idx: i };
+        }
+      } else if (s.type === "circle") {
+        const r = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+        if (Math.hypot(x - s.x1, y - s.y1) <= r + 8) {
+          return { stroke: s, idx: i };
+        }
+      }
+    }
+    return null;
+  };
+
+  const setIndicator = (txt) => {
+    const ind = document.getElementById("wb-selected-node-indicator");
+    if (ind) ind.textContent = txt;
   };
 
   canvas.onmousedown = (e) => {
@@ -866,34 +948,46 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
     WBState.color = document.getElementById("wb-color")?.value || "#D4A72C";
     WBState.size = Number(document.getElementById("wb-size")?.value || 4);
 
-    // فحص إذا ضغط المستخدم على عقدة شجرية لتحريكها أو تحديدها
-    const hitNode = findNodeAt(x, y);
-    if (hitNode && (WBState.tool === "select" || e.shiftKey)) {
-      WBState.selectedNodeId = hitNode.id;
-      isDraggingNode = hitNode;
-      dragOffsetX = x - hitNode.x;
-      dragOffsetY = y - hitNode.y;
-      const ind = document.getElementById("wb-selected-node-indicator");
-      if (ind) ind.textContent = `المحدد حالياً: ${hitNode.text}`;
-      renderWhiteboardScene(ctx, canvas.width, canvas.height);
-      return;
-    }
-
-    if (WBState.tool === "select") {
+    if (WBState.tool === "select" || e.shiftKey) {
+      const hitNode = findNodeAt(x, y);
       if (hitNode) {
         WBState.selectedNodeId = hitNode.id;
+        WBState.selectedImgId = null;
+        WBState.selectedStrokeIdx = null;
         isDraggingNode = hitNode;
         dragOffsetX = x - hitNode.x;
         dragOffsetY = y - hitNode.y;
+        setIndicator(`المحدد: فرع "${hitNode.text}"`);
         renderWhiteboardScene(ctx, canvas.width, canvas.height);
         return;
       }
-      const hitImg = findImgAt(x, y);
-      if (hitImg) {
-        WBState.selectedImgId = hitImg.id;
-        isDraggingImg = hitImg;
-        dragOffsetX = x - hitImg.x;
-        dragOffsetY = y - hitImg.y;
+
+      const hitImgObj = findImgAt(x, y);
+      if (hitImgObj) {
+        WBState.selectedImgId = hitImgObj.img.id;
+        WBState.selectedNodeId = null;
+        WBState.selectedStrokeIdx = null;
+        if (hitImgObj.resize) {
+          isResizingImg = hitImgObj.img;
+        } else {
+          isDraggingImg = hitImgObj.img;
+          dragOffsetX = x - hitImgObj.img.x;
+          dragOffsetY = y - hitImgObj.img.y;
+        }
+        setIndicator(`المحدد: صورة (اسحب زاويتها الذهبية ↘ لتكبيرها أو تصغيرها)`);
+        renderWhiteboardScene(ctx, canvas.width, canvas.height);
+        return;
+      }
+
+      const hitSt = findMovableStrokeAt(x, y);
+      if (hitSt) {
+        WBState.selectedStrokeIdx = hitSt.idx;
+        WBState.selectedNodeId = null;
+        WBState.selectedImgId = null;
+        isDraggingStroke = hitSt.stroke;
+        dragOffsetX = x;
+        dragOffsetY = y;
+        setIndicator(`المحدد: ${hitSt.stroke.type === "text" ? "نص حر" : hitSt.stroke.type === "circle" ? "دائرة" : "مستطيل"} (دبل كليك لتعديل النص بداخله)`);
         renderWhiteboardScene(ctx, canvas.width, canvas.height);
         return;
       }
@@ -901,7 +995,7 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
     }
 
     if (WBState.tool === "text") {
-      const txt = prompt("✍️ اكتب النص المراد وضعه على السبورة:");
+      const txt = prompt("✍️ اكتب النص (يمكنك تحريكه وتكبيره لاحقاً بأداة التحريك):");
       if (txt && txt.trim()) {
         pushWBUndoSnapshot();
         WBState.strokes.push({
@@ -912,8 +1006,15 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
           color: WBState.color,
           size: WBState.size
         });
+        WBState.selectedStrokeIdx = WBState.strokes.length - 1;
         renderWhiteboardScene(ctx, canvas.width, canvas.height);
       }
+      return;
+    }
+
+    if (WBState.tool === "laser") {
+      isDrawingStroke = true;
+      WBState.laserPoints = [{ x, y }];
       return;
     }
 
@@ -927,7 +1028,8 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
       x1: x,
       y1: y,
       x2: x,
-      y2: y
+      y2: y,
+      innerText: ""
     };
     WBState.strokes.push(currentStroke);
   };
@@ -940,14 +1042,46 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
       renderWhiteboardScene(ctx, canvas.width, canvas.height);
       return;
     }
+    if (isResizingImg) {
+      isResizingImg.w = Math.max(60, x - isResizingImg.x);
+      isResizingImg.h = Math.max(60, y - isResizingImg.y);
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      return;
+    }
     if (isDraggingImg) {
       isDraggingImg.x = x - dragOffsetX;
       isDraggingImg.y = y - dragOffsetY;
       renderWhiteboardScene(ctx, canvas.width, canvas.height);
       return;
     }
-    if (!isDrawingStroke || !currentStroke) return;
+    if (isDraggingStroke) {
+      const dx = x - dragOffsetX;
+      const dy = y - dragOffsetY;
+      dragOffsetX = x;
+      dragOffsetY = y;
+      if (isDraggingStroke.type === "text") {
+        isDraggingStroke.x += dx;
+        isDraggingStroke.y += dy;
+      } else {
+        isDraggingStroke.x1 += dx;
+        isDraggingStroke.y1 += dy;
+        isDraggingStroke.x2 += dx;
+        isDraggingStroke.y2 += dy;
+      }
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      return;
+    }
 
+    if (!isDrawingStroke) return;
+
+    if (WBState.tool === "laser") {
+      WBState.laserPoints.push({ x, y });
+      if (WBState.laserPoints.length > 25) WBState.laserPoints.shift();
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      return;
+    }
+
+    if (!currentStroke) return;
     if (currentStroke.type === "pen" || currentStroke.type === "highlight" || currentStroke.type === "eraser") {
       currentStroke.points.push({ x, y });
     } else {
@@ -958,29 +1092,113 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
   };
 
   window.addEventListener("mouseup", () => {
+    if (isDrawingStroke && currentStroke && (currentStroke.type === "rect" || currentStroke.type === "circle")) {
+      const dist = Math.hypot(currentStroke.x2 - currentStroke.x1, currentStroke.y2 - currentStroke.y1);
+      if (dist > 30) {
+        const shapeLabel = currentStroke.type === "circle" ? "الدائرة" : "المستطيل";
+        const insideTxt = prompt(`✍️ اكتب النص الذي يظهر داخل ${shapeLabel} (أو اتركه فارغاً):`, "");
+        if (insideTxt && insideTxt.trim()) {
+          currentStroke.innerText = insideTxt.trim();
+        }
+        WBState.selectedStrokeIdx = WBState.strokes.length - 1;
+      }
+    }
     isDraggingNode = null;
     isDraggingImg = null;
+    isResizingImg = null;
+    isDraggingStroke = null;
     isDrawingStroke = false;
     currentStroke = null;
+    WBState.laserPoints = [];
+    renderWhiteboardScene(ctx, canvas.width, canvas.height);
   });
 
-  // دبل كليك على أي عقدة لتعديل اسمها أو تفريعها فوراً
+  // دبل كليك على أي عقدة أو دائرة أو مستطيل أو نص حر لتعديل الكلام بداخله فوراً!
   canvas.ondblclick = (e) => {
     const { x, y } = getPos(e);
     const hitNode = findNodeAt(x, y);
     if (hitNode) {
       WBState.selectedNodeId = hitNode.id;
-      const newTxt = prompt("✏️ تعديل عنوان الفرع:", hitNode.text);
-      if (newTxt && newTxt.trim()) {
+      const newTxt = prompt("✏️ تعديل النص داخل الشكل:", hitNode.text);
+      if (newTxt !== null && newTxt.trim()) {
         pushWBUndoSnapshot();
         hitNode.text = newTxt.trim();
-        hitNode.w = Math.max(130, hitNode.text.length * 9 + 36);
+        hitNode.w = Math.max(130, hitNode.text.length * 9 + 40);
         renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      }
+      return;
+    }
+
+    const hitSt = findMovableStrokeAt(x, y);
+    if (hitSt) {
+      const s = hitSt.stroke;
+      if (s.type === "text") {
+        const newTxt = prompt("✏️ تعديل النص الحر:", s.text);
+        if (newTxt !== null && newTxt.trim()) {
+          s.text = newTxt.trim();
+          renderWhiteboardScene(ctx, canvas.width, canvas.height);
+        }
+      } else if (s.type === "rect" || s.type === "circle") {
+        const newTxt = prompt("✏️ اكتب أو عدّل النص داخل هذا الشكل:", s.innerText || "");
+        if (newTxt !== null) {
+          s.innerText = newTxt.trim();
+          renderWhiteboardScene(ctx, canvas.width, canvas.height);
+        }
       }
     }
   };
 
-  // أزرار اختيار الأداة
+  // تكبير وتصغير أي صورة أو شكل أو نص محدد ببكرة الماوس!
+  canvas.addEventListener("wheel", (e) => {
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    if (WBState.selectedImgId) {
+      e.preventDefault();
+      const im = WBState.images.find(i => i.id === WBState.selectedImgId);
+      if (im) {
+        im.w = Math.max(50, Math.round(im.w * factor));
+        im.h = Math.max(50, Math.round(im.h * factor));
+        renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      }
+    } else if (WBState.selectedStrokeIdx !== null && WBState.strokes[WBState.selectedStrokeIdx]) {
+      e.preventDefault();
+      const s = WBState.strokes[WBState.selectedStrokeIdx];
+      if (s.type === "text") {
+        s.size = Math.max(2, Math.min(28, s.size * factor));
+      } else {
+        s.x2 = s.x1 + (s.x2 - s.x1) * factor;
+        s.y2 = s.y1 + (s.y2 - s.y1) * factor;
+      }
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+    }
+  }, { passive: false });
+
+  const scaleSelectedElement = (factor) => {
+    if (WBState.selectedImgId) {
+      const im = WBState.images.find(i => i.id === WBState.selectedImgId);
+      if (im) {
+        im.w = Math.max(50, Math.round(im.w * factor));
+        im.h = Math.max(50, Math.round(im.h * factor));
+      }
+    } else if (WBState.selectedNodeId) {
+      const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+      if (nd) {
+        nd.w = Math.max(90, Math.round(nd.w * factor));
+        nd.h = Math.max(36, Math.round(nd.h * factor));
+      }
+    } else if (WBState.selectedStrokeIdx !== null && WBState.strokes[WBState.selectedStrokeIdx]) {
+      const s = WBState.strokes[WBState.selectedStrokeIdx];
+      if (s.type === "text") s.size = Math.max(2, Math.min(30, s.size * factor));
+      else {
+        s.x2 = s.x1 + (s.x2 - s.x1) * factor;
+        s.y2 = s.y1 + (s.y2 - s.y1) * factor;
+      }
+    }
+    renderWhiteboardScene(ctx, canvas.width, canvas.height);
+  };
+
+  document.getElementById("btn-wb-scale-up").onclick = () => scaleSelectedElement(1.18);
+  document.getElementById("btn-wb-scale-down").onclick = () => scaleSelectedElement(0.84);
+
   document.querySelectorAll("[data-wb-tool]").forEach(btn => {
     btn.onclick = () => {
       WBState.tool = btn.dataset.wbTool;
@@ -994,20 +1212,22 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
     renderWhiteboardScene(ctx, canvas.width, canvas.height);
   };
 
-  // إضافة موضوع رئيسي جديد
   document.getElementById("btn-wb-add-root").onclick = () => {
-    const title = prompt("🌟 اكتب عنوان الموضوع أو الفرع الرئيسي الجديد:", "موضوع رئيسي جديد");
+    const title = prompt("🌟 اكتب النص داخل الشكل الجديد:", "عنصر رئيسي جديد");
     if (!title || !title.trim()) return;
+    const isCircle = confirm("اضغط (موافق OK) لجعله دائرة ⭕، أو (إلغاء Cancel) لجعله مستطيلاً ▭:");
     pushWBUndoSnapshot();
     const id = "nd_" + Date.now();
     const c = document.getElementById("wb-color")?.value || "#D4A72C";
+    const w = Math.max(140, title.trim().length * 9 + 42);
     WBState.nodes.push({
       id,
       text: title.trim(),
+      shape: isCircle ? "circle" : "rect",
       x: canvas.width / 2,
-      y: 90 + (WBState.nodes.length % 4) * 55,
-      w: Math.max(150, title.trim().length * 9 + 40),
-      h: 44,
+      y: 110 + (WBState.nodes.length % 4) * 55,
+      w: isCircle ? Math.max(110, w * 0.75) : w,
+      h: isCircle ? Math.max(110, w * 0.75) : 48,
       color: c,
       parentId: null
     });
@@ -1017,11 +1237,27 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
     renderWhiteboardScene(ctx, canvas.width, canvas.height);
   };
 
-  // تفريع عدة فروع متشعبة دفعة واحدة من العقدة المحددة!
+  // تبديل شكل العقدة المحددة بين مستطيل ودائرة ومعين
+  document.getElementById("btn-wb-toggle-shape").onclick = () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (!nd) return;
+    const shapes = ["rect", "circle", "diamond"];
+    nd.shape = shapes[(shapes.indexOf(nd.shape || "rect") + 1) % shapes.length];
+    if (nd.shape === "circle") {
+      const d = Math.max(95, nd.text.length * 6.5 + 36);
+      nd.w = d;
+      nd.h = d;
+    } else {
+      nd.w = Math.max(140, nd.text.length * 9 + 40);
+      nd.h = 48;
+    }
+    renderWhiteboardScene(ctx, canvas.width, canvas.height);
+  };
+
   document.getElementById("btn-wb-spawn-branches").onclick = () => {
     const parent = WBState.nodes.find(n => n.id === WBState.selectedNodeId) || WBState.nodes[0];
     if (!parent) {
-      toast("أضف موضوعاً رئيسياً أولاً!", "error");
+      toast("أضف شكلاً رئيسياً أولاً!", "error");
       return;
     }
     const raw = prompt(
@@ -1034,19 +1270,20 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
 
     pushWBUndoSnapshot();
     const c = document.getElementById("wb-color")?.value || "#19B889";
-    const spreadW = Math.min(canvas.width - 120, parts.length * 190);
+    const spreadW = Math.min(canvas.width - 120, parts.length * 195);
     const startX = parent.x - spreadW / 2 + (spreadW / (parts.length * 2));
     const stepX = parts.length > 1 ? spreadW / parts.length : 0;
-    const childY = Math.min(canvas.height - 55, parent.y + 115);
+    const childY = Math.min(canvas.height - 60, parent.y + 125);
 
     parts.forEach((txt, idx) => {
       WBState.nodes.push({
         id: "nd_" + Date.now() + "_" + idx,
         text: txt,
+        shape: parent.shape || "rect",
         x: Math.max(85, Math.min(canvas.width - 85, parts.length === 1 ? parent.x : startX + idx * stepX)),
         y: childY,
-        w: Math.max(130, txt.length * 9 + 34),
-        h: 40,
+        w: Math.max(130, txt.length * 9 + 36),
+        h: parent.shape === "circle" ? 95 : 44,
         color: c,
         parentId: parent.id
       });
@@ -1055,32 +1292,51 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
     WBState.tool = "select";
     document.querySelectorAll("[data-wb-tool]").forEach(b => b.classList.toggle("active", b.dataset.wbTool === "select"));
     renderWhiteboardScene(ctx, canvas.width, canvas.height);
-    toast(`تم توليد ${parts.length} فروع متشعبة من "${parent.text}"! اسحب أي فرع لترتيبه 🌿✨`);
+    toast(`تم توليد ${parts.length} فروع متشعبة! 🌿✨`);
   };
 
   document.getElementById("btn-wb-edit-node").onclick = () => {
-    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
-    if (!nd) return;
-    const txt = prompt("✏️ تعديل نص الفرع:", nd.text);
-    if (txt && txt.trim()) {
-      pushWBUndoSnapshot();
-      nd.text = txt.trim();
-      nd.w = Math.max(130, nd.text.length * 9 + 36);
-      nd.color = document.getElementById("wb-color")?.value || nd.color;
-      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+    if (WBState.selectedNodeId) {
+      const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+      if (nd) {
+        const txt = prompt("✏️ تعديل نص الفرع:", nd.text);
+        if (txt !== null && txt.trim()) {
+          pushWBUndoSnapshot();
+          nd.text = txt.trim();
+          nd.w = Math.max(130, nd.text.length * 9 + 36);
+          nd.color = document.getElementById("wb-color")?.value || nd.color;
+          renderWhiteboardScene(ctx, canvas.width, canvas.height);
+        }
+      }
+    } else if (WBState.selectedStrokeIdx !== null && WBState.strokes[WBState.selectedStrokeIdx]) {
+      const s = WBState.strokes[WBState.selectedStrokeIdx];
+      const curTxt = s.type === "text" ? s.text : (s.innerText || "");
+      const txt = prompt("✏️ تعديل النص:", curTxt);
+      if (txt !== null) {
+        if (s.type === "text") s.text = txt.trim();
+        else s.innerText = txt.trim();
+        s.color = document.getElementById("wb-color")?.value || s.color;
+        renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      }
     }
   };
 
   document.getElementById("btn-wb-del-node").onclick = () => {
-    if (!WBState.selectedNodeId) return;
     pushWBUndoSnapshot();
-    const delId = WBState.selectedNodeId;
-    WBState.nodes = WBState.nodes.filter(n => n.id !== delId && n.parentId !== delId);
-    WBState.selectedNodeId = WBState.nodes[0]?.id || null;
+    if (WBState.selectedImgId) {
+      WBState.images = WBState.images.filter(im => im.id !== WBState.selectedImgId);
+      WBState.selectedImgId = null;
+    } else if (WBState.selectedStrokeIdx !== null) {
+      WBState.strokes.splice(WBState.selectedStrokeIdx, 1);
+      WBState.selectedStrokeIdx = null;
+    } else if (WBState.selectedNodeId) {
+      const delId = WBState.selectedNodeId;
+      WBState.nodes = WBState.nodes.filter(n => n.id !== delId && n.parentId !== delId);
+      WBState.selectedNodeId = WBState.nodes[0]?.id || null;
+    }
     renderWhiteboardScene(ctx, canvas.width, canvas.height);
   };
 
-  // إدراج صورة من الجهاز للشرح عليها
   document.getElementById("wb-img-upload-inp").onchange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1090,16 +1346,20 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
       imgEl.onload = () => {
         const maxW = 360;
         const scale = Math.min(1, maxW / imgEl.width);
+        const newImgId = "im_" + Date.now();
         WBState.images.push({
-          id: "im_" + Date.now(),
+          id: newImgId,
           imgEl,
-          x: 60,
+          x: 80,
           y: 120,
           w: Math.round(imgEl.width * scale),
           h: Math.round(imgEl.height * scale)
         });
+        WBState.selectedImgId = newImgId;
+        WBState.tool = "select";
+        document.querySelectorAll("[data-wb-tool]").forEach(b => b.classList.toggle("active", b.dataset.wbTool === "select"));
         renderWhiteboardScene(ctx, canvas.width, canvas.height);
-        toast("تم إدراج الصورة على السبورة! يمكنك تحريكها أو الرسم والتفريع فوقها 🖼️✨");
+        toast("تم إدراج الصورة! اسحب المربع الذهبي (↘) بزاوية الصورة لتكبيرها أو تصغيرها بحرية 🖼️✨");
       };
       imgEl.src = ev.target.result;
     };
@@ -1130,15 +1390,22 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
     a.download = `Smart-Diagram-Explanation-${today()}.png`;
     a.href = canvas.toDataURL("image/png");
     a.click();
-    toast("تم تصدير صورة الشرح والخريطة بجودة PNG عالية! 📸✅");
+    toast("تم تصدير صورة الشرح بجودة PNG عالية! 📸✅");
   };
 
+  // تكبير السبورة بملء الشاشة 100% وإخفاء أليكس
   document.getElementById("btn-wb-fullscreen").onclick = () => {
-    modalCard?.classList.toggle("wb-studio-fullscreen");
+    const isFull = modalCard?.classList.toggle("wb-studio-fullscreen");
+    document.body.classList.add("wb-fullscreen-mode");
+    const btn = document.getElementById("btn-wb-fullscreen");
+    if (btn) {
+      btn.innerHTML = isFull
+        ? `<i class="fa-solid fa-compress"></i> تصغير النافذة`
+        : `<i class="fa-solid fa-expand"></i> ملء الشاشة`;
+    }
     setTimeout(resizeBoard, 60);
   };
 
-  // تسجيل السبورة مباشرة إلى ملف فيديو .MP4 بدون نافذة مشاركة الشاشة (خصوصية 100%)
   const toggleCanvasPrivateRecording = async () => {
     const recLbl = document.getElementById("wb-rec-btn-lbl");
     const recBtn = document.getElementById("btn-wb-rec-mp4");
@@ -1147,7 +1414,7 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
       WBState.canvasRecorder.stop();
       WBState.micStream?.getTracks().forEach(t => t.stop());
       WBState.isRecordingCanvas = false;
-      if (recLbl) recLbl.textContent = "تسجيل الشرح MP4 (خاص 🔒)";
+      if (recLbl) recLbl.textContent = "تسجيل MP4 (خاص 🔒)";
       recBtn?.classList.remove("btn-danger");
       return;
     }
@@ -1157,9 +1424,7 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
       try {
         WBState.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         WBState.micStream.getAudioTracks().forEach(track => canvasStream.addTrack(track));
-      } catch (micErr) {
-        // يكمل تسجيل فيديو السبورة حتى لو لم يكن هناك مايكروفون
-      }
+      } catch (micErr) {}
 
       const mime = getBestMP4MimeType();
       WBState.canvasRecorder = mime
@@ -1183,7 +1448,7 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
       WBState.isRecordingCanvas = true;
       if (recLbl) recLbl.textContent = "إيقاف وحفظ MP4 🔴";
       recBtn?.classList.add("btn-danger");
-      toast("🔒 بدأ تسجيل السبورة وصوتك مباشرة بصيغة MP4 (بدون ظهور أي تابات أو اسم حسابك)!", "success");
+      toast("🔒 بدأ تسجيل السبورة وصوتك مباشرة بصيغة MP4!", "success");
     } catch (e) {
       toast("تعذر بدء تسجيل الكانفاس", "error");
     }
@@ -1198,13 +1463,12 @@ function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
 function renderWhiteboardScene(ctx, W, H) {
   ctx.clearRect(0, 0, W, H);
 
-  // 1. رسم الخلفية الهندسية المختارة
   const isWhite = WBState.bgMode === "white";
   ctx.fillStyle = isWhite ? "#F8FAFC" : "#080D1A";
   ctx.fillRect(0, 0, W, H);
 
   if (WBState.bgMode === "grid") {
-    ctx.strokeStyle = "rgba(212, 167, 44, 0.07)";
+    ctx.strokeStyle = isWhite ? "rgba(15, 23, 42, 0.07)" : "rgba(212, 167, 44, 0.07)";
     ctx.lineWidth = 1;
     for (let x = 0; x < W; x += 32) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
@@ -1213,24 +1477,32 @@ function renderWhiteboardScene(ctx, W, H) {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     }
   } else if (WBState.bgMode === "dots") {
-    ctx.fillStyle = "rgba(148, 163, 184, 0.22)";
+    ctx.fillStyle = "rgba(148, 163, 184, 0.25)";
     for (let x = 24; x < W; x += 28) {
       for (let y = 24; y < H; y += 28) {
-        ctx.beginPath(); ctx.arc(x, y, 1.3, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y, 1.4, 0, Math.PI * 2); ctx.fill();
       }
     }
   }
 
-  // 2. رسم الصور المدرجة للشرح عليها
+  // رسم الصور المدرجة + مقبض التكبير والتصغير الذهبي في الزاوية (↘)
   WBState.images.forEach(im => {
     ctx.drawImage(im.imgEl, im.x, im.y, im.w, im.h);
-    ctx.strokeStyle = "rgba(212, 167, 44, 0.6)";
-    ctx.lineWidth = 2;
+    const isSel = im.id === WBState.selectedImgId;
+    ctx.strokeStyle = isSel ? "#19B889" : "rgba(212, 167, 44, 0.5)";
+    ctx.lineWidth = isSel ? 3 : 1.5;
     ctx.strokeRect(im.x, im.y, im.w, im.h);
+
+    // مقبض السحب لتغيير حجم الصورة
+    ctx.fillStyle = "#D4A72C";
+    ctx.fillRect(im.x + im.w - 14, im.y + im.h - 14, 16, 16);
+    ctx.strokeStyle = "#05070e";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(im.x + im.w - 14, im.y + im.h - 14, 16, 16);
   });
 
-  // 3. رسم الخطوط والأشكال المرسومة باليد
-  WBState.strokes.forEach(s => {
+  // رسم الخطوط، المستطيلات، الدوائر (مع النصوص بداخلها!)، والنصوص الحرة
+  WBState.strokes.forEach((s, idx) => {
     ctx.save();
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -1238,6 +1510,11 @@ function renderWhiteboardScene(ctx, W, H) {
     ctx.strokeStyle = s.type === "eraser" ? (isWhite ? "#F8FAFC" : "#080D1A") : s.color;
     ctx.fillStyle = s.color;
     if (s.type === "highlight") ctx.globalAlpha = 0.32;
+
+    if (idx === WBState.selectedStrokeIdx) {
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = "#19B889";
+    }
 
     if (s.type === "pen" || s.type === "highlight" || s.type === "eraser") {
       if (s.points.length > 0) {
@@ -1254,20 +1531,49 @@ function renderWhiteboardScene(ctx, W, H) {
     } else if (s.type === "arrow") {
       drawArrowOnCtx(ctx, s.x1, s.y1, s.x2, s.y2, s.color, s.size);
     } else if (s.type === "rect") {
-      ctx.strokeRect(s.x1, s.y1, s.x2 - s.x1, s.y2 - s.y1);
+      const rw = s.x2 - s.x1;
+      const rh = s.y2 - s.y1;
+      ctx.strokeRect(s.x1, s.y1, rw, rh);
+      if (s.innerText) {
+        ctx.font = `bold ${Math.max(14, s.size * 3.2)}px Alexandria, Cairo, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(s.innerText, s.x1 + rw / 2, s.y1 + rh / 2);
+      }
     } else if (s.type === "circle") {
       const r = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
       ctx.beginPath();
       ctx.arc(s.x1, s.y1, r, 0, Math.PI * 2);
       ctx.stroke();
+      if (s.innerText) {
+        ctx.font = `bold ${Math.max(14, s.size * 3.2)}px Alexandria, Cairo, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(s.innerText, s.x1, s.y1);
+      }
     } else if (s.type === "text") {
-      ctx.font = `bold ${Math.max(15, s.size * 4)}px Alexandria, Cairo, sans-serif`;
+      ctx.font = `bold ${Math.max(16, s.size * 4.2)}px Alexandria, Cairo, sans-serif`;
       ctx.fillText(s.text, s.x, s.y);
     }
     ctx.restore();
   });
 
-  // 4. رسم الروابط المنحنية بين الفروع الشجرية (Tree / Mindmap Curved Connectors)
+  // رسم مؤشر الليزر المتوهج أثناء الشرح
+  if (WBState.laserPoints.length > 1) {
+    ctx.save();
+    ctx.strokeStyle = "#EF4444";
+    ctx.shadowBlur = 16;
+    ctx.shadowColor = "#EF4444";
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(WBState.laserPoints[0].x, WBState.laserPoints[0].y);
+    WBState.laserPoints.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // رسم الروابط المنحنية بين الفروع الشجرية
   WBState.nodes.forEach(nd => {
     if (!nd.parentId) return;
     const parent = WBState.nodes.find(p => p.id === nd.parentId);
@@ -1286,7 +1592,6 @@ function renderWhiteboardScene(ctx, W, H) {
     ctx.bezierCurveTo(startX, midY, endX, midY, endX, endY);
     ctx.stroke();
 
-    // رأس السهم عند الفرع الابن
     ctx.fillStyle = nd.color || "#19B889";
     ctx.beginPath();
     ctx.arc(endX, endY, 4.5, 0, Math.PI * 2);
@@ -1294,7 +1599,7 @@ function renderWhiteboardScene(ctx, W, H) {
     ctx.restore();
   });
 
-  // 5. رسم صناديق الفروع والعقد الشجرية
+  // رسم العقد الشجرية (مستطيل / دائرة / معين) مع النص بداخلها
   WBState.nodes.forEach(nd => {
     const isSel = nd.id === WBState.selectedNodeId;
     ctx.save();
@@ -1307,11 +1612,21 @@ function renderWhiteboardScene(ctx, W, H) {
     }
 
     ctx.fillStyle = isWhite ? "#FFFFFF" : "#11192E";
-    ctx.strokeStyle = isSel ? "#FFFFFF" : (nd.color || "#D4A72C");
-    ctx.lineWidth = isSel ? 3 : 2;
+    ctx.strokeStyle = isSel ? "#19B889" : (nd.color || "#D4A72C");
+    ctx.lineWidth = isSel ? 3.2 : 2;
 
     ctx.beginPath();
-    ctx.roundRect(rx, ry, nd.w, nd.h, 12);
+    if (nd.shape === "circle") {
+      ctx.arc(nd.x, nd.y, Math.max(nd.w, nd.h) / 2, 0, Math.PI * 2);
+    } else if (nd.shape === "diamond") {
+      ctx.moveTo(nd.x, ry - 8);
+      ctx.lineTo(rx + nd.w + 12, nd.y);
+      ctx.lineTo(nd.x, ry + nd.h + 8);
+      ctx.lineTo(rx - 12, nd.y);
+      ctx.closePath();
+    } else {
+      ctx.roundRect(rx, ry, nd.w, nd.h, 12);
+    }
     ctx.fill();
     ctx.stroke();
 
@@ -4557,8 +4872,1189 @@ function bootOSProV3() {
   initSystemSynergy();
 }
 
+/* ============================================================================
+   MY LIFE OS — V6 MEGA EXPANSION PACK (APPEND-ONLY • ZERO DELETION)
+   1. Live Co-Study & Shared Whiteboard Room (Real-Time Firestore Sync)
+   2. Encrypted Developer Vault (Web Crypto API AES-256-GCM + PBKDF2)
+   3. Topbar Smart OCR Scanner (Extract Lecture Text & Code from Images)
+   4. Topbar Multi-Clipboard History (Auto-Captures Last 15 Copies + Pinning)
+   5. Topbar Mini Prayer Radar (Live Countdown + Gentle Adhan Chime)
+   6. Floating Video Teleprompter (Auto-Scrolling Script Overlay Over Whiteboard)
+   7. 1-Click Images to PDF Converter (Instant Multi-Image Homework PDF Builder)
+   ============================================================================ */
+
+const V6ExpansionState = {
+  clipboardHistory: OSProStore.get("multi_clipboard_v6", []),
+  vaultUnlockedKey: null,
+  vaultMasterPass: "",
+  activeRoomCode: localStorage.getItem("MY_LIFE_OS_COSTUDY_ROOM") || "",
+  roomUnsub: null,
+  isApplyingRemoteWB: false,
+  teleprompterScrolling: false,
+  teleprompterTimer: null,
+  teleprompterSpeed: 2,
+  lastAdhanNotifiedKey: ""
+};
+
+function injectV6ExpansionStyles() {
+  if (document.getElementById("os-v6-expansion-styles")) return;
+  const st = document.createElement("style");
+  st.id = "os-v6-expansion-styles";
+  st.textContent = `
+    .prayer-radar-pill {
+      background: linear-gradient(135deg, rgba(212, 167, 44, 0.16), rgba(25, 184, 137, 0.12)) !important;
+      border: 1px solid rgba(212, 167, 44, 0.45) !important;
+    }
+    .costudy-live-pill {
+      background: rgba(25, 184, 137, 0.2) !important;
+      border: 1px solid #19B889 !important;
+      color: #19B889 !important;
+      box-shadow: 0 0 14px rgba(25, 184, 137, 0.3);
+    }
+
+    /* النافذة العائمة للملقن الذكي (Floating Teleprompter) فوق السبورة */
+    .os-floating-teleprompter {
+      position: fixed;
+      top: 90px;
+      left: 30px;
+      width: 350px;
+      background: rgba(8, 12, 22, 0.84);
+      border: 1.5px solid var(--gold-primary);
+      border-radius: 18px;
+      backdrop-filter: blur(12px);
+      z-index: 1000005;
+      box-shadow: 0 22px 50px rgba(0, 0, 0, 0.85);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: opacity 0.2s ease;
+    }
+    .teleprompter-header {
+      background: rgba(18, 25, 43, 0.95);
+      padding: 8px 12px;
+      cursor: move;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(212, 167, 44, 0.25);
+    }
+    .teleprompter-body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .teleprompter-script-area {
+      width: 100%;
+      height: 165px;
+      background: rgba(5, 8, 15, 0.75) !important;
+      color: #f8fafc !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 1.05rem;
+      line-height: 1.85;
+      font-weight: 700;
+      resize: vertical;
+      overflow-y: auto;
+    }
+
+    /* بطاقات خزنة المطور المشفرة AES-256 */
+    .vault-secret-card {
+      background: linear-gradient(160deg, rgba(16, 23, 40, 0.96), rgba(9, 13, 24, 0.99));
+      border: 1px solid rgba(212, 167, 44, 0.35);
+      border-radius: 16px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .vault-cipher-box {
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px dashed rgba(33, 197, 197, 0.35);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-family: 'Inter', monospace;
+      font-size: 0.84rem;
+      color: #67e8f9;
+      word-break: break-all;
+      direction: ltr;
+      text-align: left;
+    }
+    .pdf-img-preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .pdf-img-thumb {
+      height: 95px;
+      border-radius: 10px;
+      border: 1.5px solid var(--gold-primary);
+      background-size: cover;
+      background-position: center;
+      position: relative;
+    }
+  `;
+  document.head.appendChild(st);
+}
+
+/* ============================================================================
+   HELPER: SAFE CLIPBOARD COPY (BYPASSES ANTI-COPY GUARD FOR AUTHORIZED BUTTONS)
+   ============================================================================ */
+async function copyTextSafely(text, successMsg = "تم النسخ إلى الحافظة بنجاح 📋✅") {
+  try {
+    await navigator.clipboard.writeText(text);
+    addClipToMultiHistory(text);
+    toast(successMsg);
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+    addClipToMultiHistory(text);
+    toast(successMsg);
+  }
+}
+
+/* ============================================================================
+   1. MINI PRAYER RADAR IN TOPBAR (LIVE COUNTDOWN & GENTLE ADHAN CHIME)
+   ============================================================================ */
+function updateTopbarPrayerRadar() {
+  const pill = document.getElementById("btn-top-prayer-radar");
+  if (!pill) return;
+
+  const now = new Date();
+  const curMins = now.getHours() * 60 + now.getMinutes();
+  const schedule = [
+    { key: "fajr", name: "الفجر", h: 4, m: 43 },
+    { key: "dhuhr", name: "الظهر", h: 11, m: 39 },
+    { key: "asr", name: "العصر", h: 14, m: 44 },
+    { key: "maghrib", name: "المغرب", h: 17, m: 9 },
+    { key: "isha", name: "العشاء", h: 18, m: 28 }
+  ];
+
+  let nextP = schedule.find(p => (p.h * 60 + p.m) > curMins);
+  if (!nextP) {
+    nextP = { ...schedule[0], totalMins: (schedule[0].h + 24) * 60 + schedule[0].m };
+  } else {
+    nextP = { ...nextP, totalMins: nextP.h * 60 + nextP.m };
+  }
+
+  const diff = nextP.totalMins - curMins;
+  const remH = Math.floor(diff / 60);
+  const remM = diff % 60;
+
+  pill.innerHTML = `
+    <i class="fa-solid fa-mosque gold-text"></i>
+    <span>${nextP.name}: ${remH > 0 ? remH + "س " : ""}${remM}د</span>
+  `;
+
+  // تنبيه صوتي روحاني هادئ عند دخول وقت الصلاة تماماً
+  const nowKey = `${today()}_${nextP.key}`;
+  if (diff === 1 && V6ExpansionState.lastAdhanNotifiedKey !== nowKey) {
+    V6ExpansionState.lastAdhanNotifiedKey = nowKey;
+    playGentleAdhanChime();
+    toast(`🕌 اقترب الآن موعد أذان ${nextP.name} — تقبل الله طاعتكم`, "info");
+  }
+}
+
+function playGentleAdhanChime() {
+  try {
+    const ctx = B().getAudioContext?.();
+    if (!ctx) return;
+    [528, 660, 792].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.28);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime + idx * 0.28);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + idx * 0.28 + 0.9);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + idx * 0.28);
+      osc.stop(ctx.currentTime + idx * 0.28 + 0.9);
+    });
+  } catch (e) {}
+}
+
+/* ============================================================================
+   2. MULTI-CLIPBOARD HISTORY MANAGER (CAPTURES LAST 15 COPIES)
+   ============================================================================ */
+function addClipToMultiHistory(rawText) {
+  const txt = String(rawText || "").trim();
+  if (!txt || txt.length < 2) return;
+  let list = V6ExpansionState.clipboardHistory || [];
+  list = list.filter(item => item.text !== txt);
+
+  const isCode = /[{}();=<>]|function|const |let |import |SELECT /i.test(txt);
+  const isUrl = /^https?:\/\//i.test(txt);
+  const tag = isUrl ? "🔗 رابط" : isCode ? "💻 كود" : "📝 نص";
+
+  list.unshift({
+    id: Date.now().toString(),
+    text: txt.slice(0, 1500),
+    tag,
+    time: new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })
+  });
+  V6ExpansionState.clipboardHistory = list.slice(0, 15);
+  OSProStore.set("multi_clipboard_v6", V6ExpansionState.clipboardHistory);
+}
+
+function openMultiClipboardModal() {
+  const list = V6ExpansionState.clipboardHistory || [];
+  const rowsHtml = list.length
+    ? list.map((item, idx) => `
+        <div class="prayer-row" style="align-items:flex-start; gap:10px;">
+          <div style="flex:1; overflow:hidden;">
+            <div class="flex-between">
+              <span class="badge badge-gold">${esc(item.tag)}</span>
+              <small class="small-muted">${esc(item.time)}</small>
+            </div>
+            <pre dir="auto" style="margin-top:6px; white-space:pre-wrap; word-break:break-word; font-size:0.82rem; max-height:85px; overflow-y:auto; background:rgba(0,0,0,0.3); padding:6px 10px; border-radius:8px;">${esc(item.text)}</pre>
+          </div>
+          <div class="config-actions" style="flex-direction:column;">
+            <button type="button" class="btn btn-xs btn-gold" data-clip-copy="${idx}"><i class="fa-regular fa-copy"></i> نسخ</button>
+            <button type="button" class="btn btn-xs btn-outline" data-clip-to-note="${idx}" title="حفظ في الملاحظات"><i class="fa-regular fa-note-sticky"></i></button>
+            <button type="button" class="btn btn-xs btn-danger" data-clip-del="${idx}"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </div>
+      `).join("")
+    : `<p class="small-muted text-center py-2">الحافظة الذكية فارغة حالياً. أضف أي نص أو كود أو رابط بالأسفل للرجوع إليه في أي وقت!</p>`;
+
+  B().openFormModal("📋 الحافظة الذكية المتعددة (Multi-Clipboard History)", `
+    <div class="input-action-row mb-2">
+      <input type="text" id="manual-clip-inp" placeholder="الصق أو اكتب أي كود أو نص أو رابط لحفظه في الحافظة السريعة..." autofocus />
+      <button type="button" id="btn-add-manual-clip" class="btn btn-gold btn-sm">+ حفظ في الحافظة</button>
+      <button type="button" id="btn-clear-all-clips" class="btn btn-danger btn-sm">مسح الكل</button>
+    </div>
+    <div style="max-height:360px; overflow-y:auto;">${rowsHtml}</div>
+  `, async () => {});
+
+  document.querySelector("#universal-modal .modal-card")?.classList.add("wide-lab-modal");
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  document.getElementById("btn-add-manual-clip").onclick = () => {
+    const val = document.getElementById("manual-clip-inp")?.value.trim();
+    if (!val) return;
+    addClipToMultiHistory(val);
+    openMultiClipboardModal();
+    toast("تم حفظ العنصر في الحافظة الذكية 📋");
+  };
+
+  document.getElementById("btn-clear-all-clips").onclick = () => {
+    V6ExpansionState.clipboardHistory = [];
+    OSProStore.set("multi_clipboard_v6", []);
+    openMultiClipboardModal();
+  };
+
+  document.querySelectorAll("[data-clip-copy]").forEach(btn => {
+    btn.onclick = () => {
+      const item = list[Number(btn.dataset.clipCopy)];
+      if (item) copyTextSafely(item.text);
+    };
+  });
+
+  document.querySelectorAll("[data-clip-to-note]").forEach(btn => {
+    btn.onclick = async () => {
+      const item = list[Number(btn.dataset.clipToNote)];
+      if (!item) return;
+      await B().createRecord?.("notes", {
+        title: `نسخة من الحافظة (${item.tag})`,
+        content: item.text,
+        category: "Clipboard"
+      });
+    };
+  });
+
+  document.querySelectorAll("[data-clip-del]").forEach(btn => {
+    btn.onclick = () => {
+      list.splice(Number(btn.dataset.clipDel), 1);
+      OSProStore.set("multi_clipboard_v6", list);
+      openMultiClipboardModal();
+    };
+  });
+}
+
+/* ============================================================================
+   3. SMART LECTURE & CODE OCR SCANNER (GEMINI VISION + TESSERACT FALLBACK)
+   ============================================================================ */
+async function extractTextFromImageDataUrl(dataUrl, statusEl) {
+  const geminiKey = localStorage.getItem("MY_LIFE_OS_GEMINI_KEY");
+  const base64Data = dataUrl.split(",")[1];
+  const mimeType = dataUrl.substring(dataUrl.indexOf(":") + 1, dataUrl.indexOf(";")) || "image/jpeg";
+
+  // 1. استخدام Gemini Vision الفائق السرعة إذا كان المفتاح متوفراً
+  if (geminiKey && base64Data) {
+    try {
+      if (statusEl) statusEl.textContent = "⏳ جاري استخراج النصوص والأكواد بدقة فائقة عبر Gemini Vision...";
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(geminiKey)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: "استخرج كل النص أو الكود البرمجي أو المعادلات الموجودة في هذه الصورة بدقة تامة كما هي (بدون مقدمات):" },
+              { inlineData: { mimeType, data: base64Data } }
+            ]
+          }]
+        })
+      });
+      const json = await res.json();
+      const reply = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (reply) return reply.trim();
+    } catch (e) {}
+  }
+
+  // 2. المحرك المحلي المجاني (Tesseract.js OCR للعربية والإنجليزية) بدون الحاجة لأي مفتاح
+  if (statusEl) statusEl.textContent = "⏳ جاري قراءة الصورة عبر محرك المسح الضوئي (يدعم العربية والإنجليزية والأكواد)...";
+  if (!window.Tesseract) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  const result = await window.Tesseract.recognize(dataUrl, "ara+eng");
+  return (result?.data?.text || "").trim();
+}
+
+function openSmartOCRScannerModal() {
+  B().openFormModal("📷 ماسح المحاضرات والشيتات والأكواد من الصور (Smart OCR Scanner)", `
+    <p class="small-muted mb-2">ارفع صورة سلايد محاضرة، صفحة كتاب، أو كود مكتوب على السبورة (أو اضغط <strong>Ctrl+V</strong> للصق لقطة شاشة مباشرة):</p>
+
+    <label class="goal-upload-zone d-block mb-2">
+      <i class="fa-solid fa-camera-retro gold-text" style="font-size:1.8rem;"></i>
+      <strong class="d-block mt-1" id="ocr-upload-status">اضغط لاختيار صورة من جهازك أو الصق لقطة شاشة بـ Ctrl+V</strong>
+      <input type="file" id="ocr-file-input" accept="image/*" class="hidden" />
+    </label>
+
+    <div class="dashboard-grid" style="grid-template-columns: 240px 1fr; gap:14px; align-items:stretch;">
+      <div class="subject-progress-box text-center" style="display:flex; align-items:center; justify-content:center; min-height:180px;">
+        <img id="ocr-img-preview" src="" alt="Preview" style="max-width:100%; max-height:190px; border-radius:10px; display:none;" />
+        <small id="ocr-img-placeholder" class="small-muted">معاينة الصورة ستظهر هنا</small>
+      </div>
+      <div>
+        <div class="flex-between mb-1">
+          <strong class="gold-text">📄 النص أو الكود المستخرج من الصورة:</strong>
+          <div class="filters-row">
+            <button type="button" id="btn-ocr-copy" class="btn btn-xs btn-gold"><i class="fa-regular fa-copy"></i> نسخ النص</button>
+            <button type="button" id="btn-ocr-to-note" class="btn btn-xs btn-outline"><i class="fa-regular fa-note-sticky gold-text"></i> حفظ كملاحظة</button>
+            <button type="button" id="btn-ocr-ai-explain" class="btn btn-xs btn-outline"><i class="fa-solid fa-wand-magic-sparkles gold-text"></i> لخص واشرح بالـ AI</button>
+          </div>
+        </div>
+        <textarea id="ocr-output-area" rows="8" placeholder="سيظهر النص أو الكود المستخرج هنا لتعديله أو نسخه..."></textarea>
+      </div>
+    </div>
+  `, async () => {});
+
+  document.querySelector("#universal-modal .modal-card")?.classList.add("wide-lab-modal");
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  const statusEl = document.getElementById("ocr-upload-status");
+  const previewImg = document.getElementById("ocr-img-preview");
+  const placeholder = document.getElementById("ocr-img-placeholder");
+  const outputArea = document.getElementById("ocr-output-area");
+
+  const processImageFile = async (file) => {
+    if (!file) return;
+    const dataUrl = await compressGoalImageFile(file);
+    if (previewImg) {
+      previewImg.src = dataUrl;
+      previewImg.style.display = "block";
+    }
+    if (placeholder) placeholder.style.display = "none";
+    try {
+      const extracted = await extractTextFromImageDataUrl(dataUrl, statusEl);
+      outputArea.value = extracted || "لم يتم العثور على نص واضح في الصورة.";
+      statusEl.innerHTML = `<span style="color:#19B889;">✅ تم استخراج النص بنجاح!</span>`;
+      toast("تم استخراج النص والكود من الصورة بنجاح! 📷✨");
+    } catch (err) {
+      statusEl.textContent = "❌ تعذر قراءة الصورة، حاول بصورة أوضح.";
+    }
+  };
+
+  document.getElementById("ocr-file-input").onchange = (e) => processImageFile(e.target.files?.[0]);
+
+  // دعم لصق لقطة الشاشة مباشرة عبر Ctrl+V
+  const onPasteImage = (e) => {
+    if (document.getElementById("universal-modal")?.classList.contains("hidden")) return;
+    const items = e.clipboardData?.items || [];
+    for (const it of items) {
+      if (it.type.startsWith("image/")) {
+        processImageFile(it.getAsFile());
+        break;
+      }
+    }
+  };
+  window.addEventListener("paste", onPasteImage, { once: true });
+
+  document.getElementById("btn-ocr-copy").onclick = () => {
+    if (outputArea.value) copyTextSafely(outputArea.value);
+  };
+
+  document.getElementById("btn-ocr-to-note").onclick = async () => {
+    if (!outputArea.value.trim()) return;
+    await B().createRecord?.("notes", {
+      title: `نص مستخرج بالماسح الضوئي OCR (${today()})`,
+      content: outputArea.value.trim(),
+      category: "OCR Scanner"
+    });
+  };
+
+  document.getElementById("btn-ocr-ai-explain").onclick = async () => {
+    const txt = outputArea.value.trim();
+    if (!txt) return;
+    outputArea.value = "⏳ جاري تحليل وشرح المحتوى المستخرج بالذكاء الاصطناعي...";
+    const reply = await B().askAI?.(`لقد استخرجت هذا النص/الكود من محاضرتي بالماسح الضوئي:\n"${txt}"\nقم بترتيبه وشرحه وتلخيص أهم النقاط أو شرح الكود الموجود فيه بوضوح.`);
+    outputArea.value = `${txt}\n\n====================\n🤖 الشرح والتلخيص الذكي:\n${reply}`;
+  };
+}
+
+/* ============================================================================
+   4. FLOATING VIDEO TELEPROMPTER (AUTO-SCROLLING SCRIPT OVER WHITEBOARD)
+   ============================================================================ */
+function toggleFloatingTeleprompter() {
+  let box = document.getElementById("os-floating-teleprompter");
+  if (box) {
+    box.classList.toggle("hidden");
+    return;
+  }
+
+  box = document.createElement("div");
+  box.id = "os-floating-teleprompter";
+  box.className = "os-floating-teleprompter";
+  const savedScript = localStorage.getItem("MY_LIFE_OS_TELEPROMPTER_TEXT") || "بسم الله الرحمن الرحيم\n\n1. مقدمة سريعة عن فكرة الدرس والمشروع\n2. شرح المخطط الشجري والفروع الأساسية على السبورة\n3. تطبيق المثال العملي خطوة بخطوة\n4. خلاصة الدرس وأهم أسئلة الامتحان";
+
+  box.innerHTML = `
+    <div class="teleprompter-header" id="teleprompter-drag-handle">
+      <strong class="gold-text" style="font-size:0.84rem;"><i class="fa-solid fa-scroll"></i> المُلقّن الذكي للشرح (اسحبني)</strong>
+      <div class="filters-row" style="gap:4px;">
+        <button type="button" id="btn-tp-play" class="btn btn-xs btn-gold"><i class="fa-solid fa-play"></i> تحريك</button>
+        <input type="range" id="tp-speed-slider" min="1" max="6" value="2" style="width:55px;" title="سرعة التمرير التلقائي" />
+        <input type="range" id="tp-opacity-slider" min="35" max="100" value="88" style="width:55px;" title="درجة الشفافية" />
+        <button type="button" id="btn-tp-close" class="btn-icon-xs text-danger"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    <div class="teleprompter-body">
+      <textarea id="teleprompter-script-area" class="teleprompter-script-area" placeholder="اكتب نقاط الدرس التي تريد قراءتها أثناء تسجيل الفيديو...">${esc(savedScript)}</textarea>
+      <small class="small-muted">💡 يظهر أمام عينيك فقط ولا يظهر داخل ملف فيديو السبورة الخاص MP4!</small>
+    </div>
+  `;
+  document.body.appendChild(box);
+
+  // سحب وتحريك نافذة الملقن في أي مكان
+  const handle = document.getElementById("teleprompter-drag-handle");
+  let dragging = false, sx = 0, sy = 0, il = 30, it = 90;
+  handle.onmousedown = (e) => {
+    if (e.target.closest("button, input")) return;
+    dragging = true;
+    sx = e.clientX;
+    sy = e.clientY;
+    const r = box.getBoundingClientRect();
+    il = r.left;
+    it = r.top;
+  };
+  window.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    box.style.left = `${Math.max(10, il + (e.clientX - sx))}px`;
+    box.style.top = `${Math.max(10, it + (e.clientY - sy))}px`;
+  });
+  window.addEventListener("mouseup", () => { dragging = false; });
+
+  const area = document.getElementById("teleprompter-script-area");
+  area.oninput = () => localStorage.setItem("MY_LIFE_OS_TELEPROMPTER_TEXT", area.value);
+
+  document.getElementById("tp-opacity-slider").oninput = (e) => {
+    box.style.opacity = String(Number(e.target.value) / 100);
+  };
+
+  document.getElementById("btn-tp-play").onclick = (e) => {
+    V6ExpansionState.teleprompterScrolling = !V6ExpansionState.teleprompterScrolling;
+    const btn = e.currentTarget;
+    if (V6ExpansionState.teleprompterScrolling) {
+      btn.innerHTML = `<i class="fa-solid fa-pause"></i> إيقاف`;
+      if (V6ExpansionState.teleprompterTimer) clearInterval(V6ExpansionState.teleprompterTimer);
+      V6ExpansionState.teleprompterTimer = setInterval(() => {
+        const spd = Number(document.getElementById("tp-speed-slider")?.value || 2);
+        area.scrollTop += spd * 0.6;
+      }, 50);
+    } else {
+      btn.innerHTML = `<i class="fa-solid fa-play"></i> تحريك`;
+      clearInterval(V6ExpansionState.teleprompterTimer);
+    }
+  };
+
+  document.getElementById("btn-tp-close").onclick = () => {
+    clearInterval(V6ExpansionState.teleprompterTimer);
+    V6ExpansionState.teleprompterScrolling = false;
+    box.classList.add("hidden");
+  };
+}
+
+/* ============================================================================
+   5. 1-CLICK MULTI-IMAGE TO PDF CONVERTER (HOMEWORK & SHEETS BUILDER)
+   ============================================================================ */
+let selectedPdfImages = [];
+
+function openImageToPdfConverterModal() {
+  selectedPdfImages = [];
+  B().openFormModal("📄 محول الصور والشيتات السريع إلى ملف PDF واحد (1-Click PDF Builder)", `
+    <div class="dashboard-grid" style="grid-template-columns:1fr 1fr; gap:12px;">
+      <div class="form-group">
+        <label>اسم ملف الـ PDF عند التحميل</label>
+        <input type="text" id="pdf-doc-filename" value="University-Assignment-${today()}" required />
+      </div>
+      <div class="form-group">
+        <label>اتجاه الصفحات</label>
+        <select id="pdf-doc-orient">
+          <option value="p">📄 طولي قياسي (A4 Portrait)</option>
+          <option value="l">🖼️ عرضي للسلايدات والسبورة (A4 Landscape)</option>
+        </select>
+      </div>
+    </div>
+
+    <label class="goal-upload-zone d-block mt-1">
+      <i class="fa-solid fa-file-pdf gold-text" style="font-size:1.8rem;"></i>
+      <strong class="d-block mt-1">اضغط هنا لاختيار صورة أو عدة صور من جهازك (يرتبها في ملف PDF واحد)</strong>
+      <input type="file" id="pdf-multi-img-inp" accept="image/*" multiple class="hidden" />
+    </label>
+
+    <div id="pdf-imgs-preview-box" class="pdf-img-preview-grid"></div>
+
+    <button type="button" id="btn-generate-pdf-now" class="btn btn-gold btn-block btn-luxury-shine mt-4">
+      <i class="fa-solid fa-file-arrow-down"></i> دمج الصور وتحميل ملف الـ PDF الآن 🚀
+    </button>
+  `, async () => {});
+
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  const previewBox = document.getElementById("pdf-imgs-preview-box");
+  document.getElementById("pdf-multi-img-inp").onchange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    toast(`⏳ جاري تجهيز ${files.length} صور...`, "info");
+    for (const f of files) {
+      const dataUrl = await compressGoalImageFile(f);
+      selectedPdfImages.push(dataUrl);
+    }
+    previewBox.innerHTML = selectedPdfImages.map((src, i) => `
+      <div class="pdf-img-thumb" style="background-image:url('${src}')">
+        <span class="badge badge-gold" style="position:absolute; top:4px; right:4px;">صفحة ${i + 1}</span>
+      </div>
+    `).join("");
+    toast(`تم تجهيز ${selectedPdfImages.length} صفحات جاهزة للتحويل إلى PDF! 📄✅`);
+  };
+
+  document.getElementById("btn-generate-pdf-now").onclick = async () => {
+    if (!selectedPdfImages.length) {
+      toast("اختر صورة واحدة على الأقل أولاً!", "error");
+      return;
+    }
+    toast("⏳ جاري بناء وتصدير ملف الـ PDF...", "info");
+    try {
+      if (!window.jspdf) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+          s.onload = resolve;
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      }
+      const { jsPDF } = window.jspdf;
+      const orient = document.getElementById("pdf-doc-orient")?.value || "p";
+      const pdf = new jsPDF({ orientation: orient, unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+
+      selectedPdfImages.forEach((imgData, idx) => {
+        if (idx > 0) pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 8, 8, pageW - 16, pageH - 16);
+      });
+
+      const fname = (document.getElementById("pdf-doc-filename")?.value.trim() || "Assignment") + ".pdf";
+      pdf.save(fname);
+      toast(`تم تحميل ملف "${fname}" بنجاح! 📄🎉`);
+    } catch (err) {
+      toast("تعذر تحميل مكتبة PDF، تأكد من اتصالك بالإنترنت", "error");
+    }
+  };
+}
+
+/* ============================================================================
+   6. LIVE CO-STUDY & SHARED WHITEBOARD ROOM (REAL-TIME FIRESTORE SYNC)
+   ============================================================================ */
+async function getFirestoreMod() {
+  return await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+}
+
+async function joinOrCreateCoStudyRoom(roomCodeInput, isCreating = false) {
+  const cleanCode = String(roomCodeInput || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+  if (!cleanCode) {
+    toast("أدخل كود غرفة صحيح", "error");
+    return;
+  }
+
+  const db = B().getAppState?.()?.db;
+  const user = B().getAppState?.()?.user;
+  if (!db) {
+    toast("جاري الاتصال بـ Firebase...", "info");
+    return;
+  }
+
+  const { doc, setDoc, onSnapshot, serverTimestamp } = await getFirestoreMod();
+  const roomRef = doc(db, "co_study_rooms", cleanCode);
+
+  if (isCreating) {
+    await setDoc(roomRef, {
+      roomCode: cleanCode,
+      hostName: user?.displayName || "Eng. Ahmed M Hosny",
+      wbNodes: JSON.stringify(WBState.nodes || []),
+      wbStrokes: JSON.stringify(WBState.strokes || []),
+      pomoDuration: 50 * 60,
+      pomoTargetTs: Date.now() + 50 * 60 * 1000,
+      pomoRunning: false,
+      sharedNote: "مرحباً بكم في غرفة المذاكرة والشرح المشترك 🚀",
+      updatedBy: user?.displayName || "Host",
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  }
+
+  V6ExpansionState.activeRoomCode = cleanCode;
+  localStorage.setItem("MY_LIFE_OS_COSTUDY_ROOM", cleanCode);
+
+  if (V6ExpansionState.roomUnsub) V6ExpansionState.roomUnsub();
+
+  V6ExpansionState.roomUnsub = onSnapshot(roomRef, (snap) => {
+    if (!snap.exists()) return;
+    const data = snap.data();
+
+    // تحديث شارة الغرفة في الشريط العلوي
+    const topRoomBtn = document.getElementById("btn-top-costudy-room");
+    if (topRoomBtn) {
+      topRoomBtn.classList.add("costudy-live-pill");
+      topRoomBtn.innerHTML = `<span class="live-dot"></span> <span>غرفة: ${esc(cleanCode)}</span>`;
+    }
+
+    // مزامنة السبورة الهندسية الحية لكل المتصلين في الغرفة
+    if (data.wbNodes && data.wbStrokes) {
+      try {
+        V6ExpansionState.isApplyingRemoteWB = true;
+        WBState.nodes = JSON.parse(data.wbNodes);
+        WBState.strokes = JSON.parse(data.wbStrokes);
+        const canvas = document.getElementById("smart-whiteboard-canvas");
+        if (canvas) {
+          const ctx = canvas.getContext("2d");
+          renderWhiteboardScene(ctx, canvas.width, canvas.height);
+        }
+        V6ExpansionState.isApplyingRemoteWB = false;
+      } catch (e) {}
+    }
+
+    // مزامنة مؤقت البومودورو المشترك إذا كان مفعلاً
+    if (data.pomoRunning && data.pomoTargetTs > Date.now()) {
+      const remSecs = Math.max(1, Math.round((data.pomoTargetTs - Date.now()) / 1000));
+      const pState = B().getPomodoroState?.();
+      if (pState && Math.abs(pState.timeLeft - remSecs) > 4) {
+        pState.timeLeft = remSecs;
+        if (!pState.isRunning) B().startPomodoro?.();
+      }
+    }
+  });
+
+  toast(`🟢 متصل الآن بغرفة المذاكرة والسبورة المشتركة (${cleanCode})!`);
+}
+
+async function broadcastWhiteboardToRoom() {
+  const code = V6ExpansionState.activeRoomCode;
+  const db = B().getAppState?.()?.db;
+  const user = B().getAppState?.()?.user;
+  if (!code || !db || V6ExpansionState.isApplyingRemoteWB) return;
+
+  try {
+    const { doc, setDoc, serverTimestamp } = await getFirestoreMod();
+    await setDoc(doc(db, "co_study_rooms", code), {
+      wbNodes: JSON.stringify(WBState.nodes || []),
+      wbStrokes: JSON.stringify(WBState.strokes || []),
+      updatedBy: user?.displayName || "Member",
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    toast(`📡 تم بث تحديث السبورة لحظياً لجميع زملائك في الغرفة (${code})!`);
+  } catch (e) {}
+}
+
+function openCoStudyRoomModal() {
+  const curCode = V6ExpansionState.activeRoomCode;
+  const generatedCode = "MUC-" + Math.floor(100 + Math.random() * 900);
+
+  B().openFormModal("🟢 غرفة المذاكرة والسبورة الهندسية المشتركة الحية (Live Co-Study Room)", `
+    <p class="small-muted mb-2">أنشئ كود غرفة وشاركه مع زميلك في الكلية أو فريق مشروع التخرج، لترسموا معاً على نفس السبورة وتذاكروا على نفس مؤقت البومودورو عبر Firebase لحظياً:</p>
+
+    <div class="subject-progress-box mb-2" style="border:1.5px solid #19B889;">
+      <div class="flex-between">
+        <div>
+          <span class="badge ${curCode ? "badge-emerald" : "badge-gold"}">${curCode ? "🟢 متصل حالياً بالغرفة" : "⚪ غير متصل بغرفة"}</span>
+          <h3 class="gold-text mt-1" dir="ltr">${curCode || "No Active Room"}</h3>
+        </div>
+        ${curCode ? `
+          <div class="filters-row">
+            <button type="button" id="btn-copy-room-code" class="btn btn-xs btn-gold"><i class="fa-regular fa-copy"></i> نسخ الكود لزميلي</button>
+            <button type="button" id="btn-open-shared-wb" class="btn btn-xs btn-outline"><i class="fa-solid fa-diagram-project gold-text"></i> فتح السبورة المشتركة</button>
+            <button type="button" id="btn-sync-shared-pomo" class="btn btn-xs btn-outline"><i class="fa-solid fa-stopwatch gold-text"></i> بدء بومودورو مشترك (50د)</button>
+            <button type="button" id="btn-leave-room" class="btn btn-xs btn-danger">مغادرة الغرفة</button>
+          </div>
+        ` : ""}
+      </div>
+    </div>
+
+    <div class="dashboard-grid" style="grid-template-columns:1fr 1fr; gap:14px;">
+      <div class="item-card">
+        <h4>🚀 1. إنشاء غرفة جديدة كقائد للفريق</h4>
+        <p class="small-muted mt-1">سيتم توليد كود غرفة فوري وتفعيل المزامنة اللحظية لسبورتك الحالية:</p>
+        <input type="text" id="new-room-code-inp" dir="ltr" value="${generatedCode}" style="text-align:center; font-weight:800; font-size:1.1rem;" class="mt-2" />
+        <button type="button" id="btn-create-room-now" class="btn btn-gold btn-sm btn-block mt-2">
+          <i class="fa-solid fa-plus-circle"></i> إنشاء وتفعيل الغرفة الآن
+        </button>
+      </div>
+
+      <div class="item-card">
+        <h4>🤝 2. الانضمام لغرفة زميلك بالكود</h4>
+        <p class="small-muted mt-1">أدخل كود الغرفة الذي أرسله لك زميلك للاتصال بسبورته ومؤقته فوراً:</p>
+        <input type="text" id="join-room-code-inp" dir="ltr" placeholder="مثال: MUC-482" style="text-align:center; font-weight:800; font-size:1.1rem;" class="mt-2" />
+        <button type="button" id="btn-join-room-now" class="btn btn-outline btn-sm btn-block mt-2" style="border-color:#19B889;">
+          <i class="fa-solid fa-right-to-bracket gold-text"></i> انضمام للغرفة الحية الآن
+        </button>
+      </div>
+    </div>
+  `, async () => {});
+
+  document.querySelector("#universal-modal .modal-card")?.classList.add("wide-lab-modal");
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  document.getElementById("btn-create-room-now").onclick = async () => {
+    const code = document.getElementById("new-room-code-inp")?.value;
+    await joinOrCreateCoStudyRoom(code, true);
+    openCoStudyRoomModal();
+  };
+
+  document.getElementById("btn-join-room-now").onclick = async () => {
+    const code = document.getElementById("join-room-code-inp")?.value;
+    await joinOrCreateCoStudyRoom(code, false);
+    openCoStudyRoomModal();
+  };
+
+  document.getElementById("btn-copy-room-code")?.addEventListener("click", () => {
+    copyTextSafely(curCode, `تم نسخ كود الغرفة (${curCode})! أرسله لزميلك الآن 📋`);
+  });
+
+  document.getElementById("btn-open-shared-wb")?.addEventListener("click", () => {
+    openSmartWhiteboardModal(false);
+  });
+
+  document.getElementById("btn-sync-shared-pomo")?.addEventListener("click", async () => {
+    const db = B().getAppState?.()?.db;
+    if (db && curCode) {
+      const { doc, setDoc } = await getFirestoreMod();
+      await setDoc(doc(db, "co_study_rooms", curCode), {
+        pomoRunning: true,
+        pomoTargetTs: Date.now() + 50 * 60 * 1000
+      }, { merge: true });
+    }
+    B().setCustomPomodoroTime?.(50, "work");
+    B().openPomodoroModal?.();
+    B().startPomodoro?.();
+    toast("بدأ مؤقت البومودورو المشترك (50 دقيقة) لكل أعضاء الغرفة! ⏱️🔥");
+  });
+
+  document.getElementById("btn-leave-room")?.addEventListener("click", () => {
+    if (V6ExpansionState.roomUnsub) V6ExpansionState.roomUnsub();
+    V6ExpansionState.activeRoomCode = "";
+    localStorage.removeItem("MY_LIFE_OS_COSTUDY_ROOM");
+    const topRoomBtn = document.getElementById("btn-top-costudy-room");
+    if (topRoomBtn) {
+      topRoomBtn.classList.remove("costudy-live-pill");
+      topRoomBtn.innerHTML = `<i class="fa-solid fa-users-rectangle gold-text"></i> <span>غرفة مشتركة</span>`;
+    }
+    openCoStudyRoomModal();
+    toast("تمت مغادرة الغرفة المشتركة", "info");
+  });
+}
+
+/* ============================================================================
+   7. ENCRYPTED DEVELOPER VAULT (REAL WEB CRYPTO API AES-256-GCM + PBKDF2)
+   ============================================================================ */
+async function deriveAES256Key(password, saltUint8) {
+  const enc = new TextEncoder();
+  const baseKey = await window.crypto.subtle.importKey(
+    "raw",
+    enc.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+  return await window.crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: saltUint8, iterations: 100000, hash: "SHA-256" },
+    baseKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+function bufToBase64(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+}
+
+function base64ToUint8(b64) {
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+
+async function encryptSecretAES256(plainText, masterPass) {
+  const salt = window.crypto.getRandomValues(new Uint8Array(16));
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveAES256Key(masterPass, salt);
+  const enc = new TextEncoder();
+  const cipherBuf = await window.crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    enc.encode(plainText)
+  );
+  return {
+    cipher: bufToBase64(cipherBuf),
+    iv: bufToBase64(iv),
+    salt: bufToBase64(salt)
+  };
+}
+
+async function decryptSecretAES256(encObj, masterPass) {
+  const salt = base64ToUint8(encObj.salt);
+  const iv = base64ToUint8(encObj.iv);
+  const cipher = base64ToUint8(encObj.cipher);
+  const key = await deriveAES256Key(masterPass, salt);
+  const plainBuf = await window.crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    key,
+    cipher
+  );
+  return new TextDecoder().decode(plainBuf);
+}
+
+async function renderDeveloperVaultView() {
+  const sec = document.getElementById("view-dev-vault");
+  if (!sec) return;
+
+  const vaultItems = OSProStore.get("encrypted_dev_vault_v6", []);
+
+  // إذا كانت الخزنة مقفلة، نطلب كلمة المرور الرئيسية لفك تشفير AES-256
+  if (!V6ExpansionState.vaultMasterPass) {
+    sec.innerHTML = `
+      <div class="card" style="max-width:520px; margin:30px auto; text-align:center; border-color:var(--gold-primary);">
+        <div class="wizard-emblem-circle" style="margin:0 auto;"><i class="fa-solid fa-user-shield"></i></div>
+        <span class="badge badge-gold mt-2">MILITARY-GRADE AES-256-GCM ENCRYPTION</span>
+        <h2 class="mt-1">🔐 خزنة المطور المشفرة (Developer Vault)</h2>
+        <p class="small-muted mt-1">احفظ مفاتيح الـ APIs، بيانات السيرفرات، وكلمات المرور الخاصة بمشاريعك بتشفير محلي كامل (AES-256) لا يمكن فكه إلا بكلمة المرور الرئيسية الخاصة بك:</p>
+        <form id="vault-unlock-form" class="mt-4">
+          <input type="password" id="vault-master-inp" class="wizard-input-giant" placeholder="أدخل كلمة سر الخزنة الرئيسية..." required autofocus />
+          <button type="submit" class="btn btn-gold btn-block btn-luxury-shine mt-2">
+            <i class="fa-solid fa-key"></i> فتح الخزنة وفك التشفير (AES-256)
+          </button>
+        </form>
+        <small class="small-muted d-block mt-2">💡 إذا كانت هذه أول مرة، فاكتب كلمة السر التي تريد اعتمادها للخزنة.</small>
+      </div>
+    `;
+
+    sec.querySelector("#vault-unlock-form").onsubmit = async (e) => {
+      e.preventDefault();
+      const pass = document.getElementById("vault-master-inp")?.value;
+      if (!pass) return;
+      if (vaultItems.length > 0) {
+        try {
+          await decryptSecretAES256(vaultItems[0].encData, pass);
+        } catch (err) {
+          toast("❌ كلمة المرور الرئيسية غير صحيحة لفك تشفير الخزنة!", "error");
+          return;
+        }
+      }
+      V6ExpansionState.vaultMasterPass = pass;
+      toast("🔓 تم فك تشفير خزنة المطور بنجاح (AES-256 Verified)!");
+      renderDeveloperVaultView();
+    };
+    return;
+  }
+
+  // فك تشفير العناصر لعرضها أثناء فتح الجلسة
+  const decryptedList = [];
+  for (const it of vaultItems) {
+    try {
+      const secretVal = await decryptSecretAES256(it.encData, V6ExpansionState.vaultMasterPass);
+      decryptedList.push({ ...it, secretVal });
+    } catch (e) {
+      decryptedList.push({ ...it, secretVal: "🔒 [مشفر بكلمة سر أخرى]" });
+    }
+  }
+
+  sec.innerHTML = `
+    <div class="section-toolbar">
+      <div>
+        <h3><i class="fa-solid fa-vault gold-text"></i> خزنة المطور المشفرة (AES-256 Encrypted Developer Vault)</h3>
+        <small class="small-muted">مفاتيح الـ APIs • بيانات السيرفرات وقواعد البيانات • التوكنز السرية (مشفرة بـ PBKDF2 & AES-GCM)</small>
+      </div>
+      <div class="filters-row">
+        <button type="button" id="btn-add-vault-secret" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> تشفير وإضافة مفتاح/سر جديد</button>
+        <button type="button" id="btn-lock-vault-now" class="btn btn-danger btn-sm"><i class="fa-solid fa-lock"></i> قفل الخزنة فوراً</button>
+      </div>
+    </div>
+
+    <div class="items-grid">
+      ${decryptedList.length ? decryptedList.map((item, idx) => `
+        <div class="vault-secret-card">
+          <div>
+            <div class="flex-between">
+              <span class="badge badge-gold">${esc(item.category)}</span>
+              <span class="badge badge-emerald"><i class="fa-solid fa-shield-halved"></i> AES-256</span>
+            </div>
+            <h4 class="mt-2">${esc(item.title)}</h4>
+            ${item.host ? `<small class="small-muted d-block" dir="ltr">Host/Env: ${esc(item.host)}</small>` : ""}
+            <div class="vault-cipher-box mt-2" id="vault-val-box-${idx}">
+              ••••••••••••••••••••••••••••
+            </div>
+            <small class="small-muted d-block mt-1">Cipher IV: ${esc(item.encData?.iv?.slice(0, 12) || "")}...</small>
+          </div>
+          <div class="flex-between mt-2">
+            <div class="filters-row">
+              <button type="button" class="btn btn-xs btn-gold" data-vault-copy="${idx}"><i class="fa-regular fa-copy"></i> نسخ المفتاح</button>
+              <button type="button" class="btn btn-xs btn-outline" data-vault-reveal="${idx}"><i class="fa-regular fa-eye gold-text"></i> إظهار/إخفاء</button>
+            </div>
+            <button type="button" class="btn btn-xs btn-danger" data-vault-del="${idx}"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </div>
+      `).join("") : `
+        <div class="empty-state" style="grid-column: 1 / -1;">
+          <i class="fa-solid fa-key"></i>
+          <p>الخزنة المشفرة جاهزة. أضف مفاتيح الـ APIs أو بيانات السيرفرات لتشفيرها بـ AES-256.</p>
+        </div>
+      `}
+    </div>
+  `;
+
+  sec.querySelector("#btn-lock-vault-now").onclick = () => {
+    V6ExpansionState.vaultMasterPass = "";
+    toast("🔒 تم قفل خزنة المطور وتأمين المفاتيح", "info");
+    renderDeveloperVaultView();
+  };
+
+  sec.querySelector("#btn-add-vault-secret").onclick = () => {
+    B().openFormModal("🔐 تشفير وحفظ مفتاح API أو بيانات سيرفر جديدة (AES-256)", `
+      <div class="form-group">
+        <label>اسم المفتاح أو السيرفر</label>
+        <input name="title" required placeholder="مثال: Production Firebase Key / OpenAI API / Ubuntu VPS SSH" autofocus />
+      </div>
+      <div class="form-group">
+        <label>التصنيف</label>
+        <select name="category">
+          <option value="🔑 API Key / Token">🔑 API Key / Token</option>
+          <option value="🖥️ Server / SSH Credentials">🖥️ Server / SSH Credentials</option>
+          <option value="🗄️ Database Connection URI">🗄️ Database Connection URI</option>
+          <option value="⚙️ Environment Variables (.env)">⚙️ Environment Variables (.env)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>الدومين أو اسم المستخدم (اختياري)</label>
+        <input name="host" dir="ltr" placeholder="root@192.168.1.1 / project-id" />
+      </div>
+      <div class="form-group">
+        <label>القيمة السرية المراد تشفيرها بـ AES-256</label>
+        <textarea name="secretValue" rows="3" dir="ltr" required placeholder="AIzaSy... أو كلمة المرور أو ملف الـ .env"></textarea>
+      </div>
+    `, async (d) => {
+      const encData = await encryptSecretAES256(d.secretValue, V6ExpansionState.vaultMasterPass);
+      vaultItems.unshift({
+        id: "v_" + Date.now(),
+        title: d.title,
+        category: d.category,
+        host: d.host,
+        encData,
+        date: today()
+      });
+      OSProStore.set("encrypted_dev_vault_v6", vaultItems);
+      renderDeveloperVaultView();
+      toast("تم تشفير المفتاح بـ AES-256 وحفظه في الخزنة! 🔐✅");
+    });
+  };
+
+  sec.querySelectorAll("[data-vault-copy]").forEach(btn => {
+    btn.onclick = () => {
+      const it = decryptedList[Number(btn.dataset.vaultCopy)];
+      if (it) copyTextSafely(it.secretVal, `تم نسخ "${it.title}" بأمان! 🔑`);
+    };
+  });
+
+  sec.querySelectorAll("[data-vault-reveal]").forEach(btn => {
+    btn.onclick = () => {
+      const idx = Number(btn.dataset.vaultReveal);
+      const box = document.getElementById(`vault-val-box-${idx}`);
+      const it = decryptedList[idx];
+      if (!box || !it) return;
+      if (box.dataset.shown === "1") {
+        box.textContent = "••••••••••••••••••••••••••••";
+        box.dataset.shown = "0";
+      } else {
+        box.textContent = it.secretVal;
+        box.dataset.shown = "1";
+      }
+    };
+  });
+
+  sec.querySelectorAll("[data-vault-del]").forEach(btn => {
+    btn.onclick = () => {
+      if (!confirm("هل تريد حذف هذا المفتاح المشفر نهائياً؟")) return;
+      vaultItems.splice(Number(btn.dataset.vaultDel), 1);
+      OSProStore.set("encrypted_dev_vault_v6", vaultItems);
+      renderDeveloperVaultView();
+    };
+  });
+}
+
+/* ============================================================================
+   8. BOOTSTRAP & WIRE ALL 7 V6 FEATURES INTO TOPBAR, SIDEBAR & WHITEBOARD
+   ============================================================================ */
+function initV6ExpansionPack() {
+  injectV6ExpansionStyles();
+
+  // 1. حقن الاختصارات الـ 5 الجديدة + زر الغرفة المشتركة في الشريط العلوي
+  const dock = document.getElementById("os-super-topbar-dock");
+  if (dock && !document.getElementById("btn-top-prayer-radar")) {
+    const extraBtnsHtml = `
+      <button type="button" id="btn-top-prayer-radar" class="super-dock-pill prayer-radar-pill" title="كبسولة الصلاة القادمة والعداد التنازلي">
+        <i class="fa-solid fa-mosque gold-text"></i>
+        <span>الصلاة...</span>
+      </button>
+
+      <button type="button" id="btn-top-costudy-room" class="super-dock-pill ${V6ExpansionState.activeRoomCode ? "costudy-live-pill" : ""}" title="غرفة المذاكرة والسبورة المشتركة الحية مع زملائك (Live Co-Study Room)">
+        <i class="fa-solid fa-users-rectangle gold-text"></i>
+        <span>${V6ExpansionState.activeRoomCode ? "غرفة: " + esc(V6ExpansionState.activeRoomCode) : "غرفة مشتركة"}</span>
+      </button>
+
+      <button type="button" id="btn-top-ocr-scanner" class="btn-icon gold-glow" title="ماسح المحاضرات والأكواد من الصور (Smart OCR Scanner)">
+        <i class="fa-solid fa-camera-retro"></i>
+      </button>
+
+      <button type="button" id="btn-top-multi-clip" class="btn-icon" title="الحافظة الذكية المتعددة (Multi-Clipboard History)">
+        <i class="fa-solid fa-clipboard-list"></i>
+      </button>
+
+      <button type="button" id="btn-top-teleprompter" class="btn-icon" title="المُلقّن الذكي العائم لتسجيل الشروحات (Video Teleprompter)">
+        <i class="fa-solid fa-scroll"></i>
+      </button>
+
+      <button type="button" id="btn-top-img2pdf" class="btn-icon" title="محول الصور والشيتات السريع إلى PDF واحد">
+        <i class="fa-solid fa-file-pdf"></i>
+      </button>
+    `;
+    dock.insertAdjacentHTML("afterbegin", extraBtnsHtml);
+
+    document.getElementById("btn-top-prayer-radar")?.addEventListener("click", () => {
+      B().switchView?.("islamic");
+    });
+    document.getElementById("btn-top-costudy-room")?.addEventListener("click", openCoStudyRoomModal);
+    document.getElementById("btn-top-ocr-scanner")?.addEventListener("click", openSmartOCRScannerModal);
+    document.getElementById("btn-top-multi-clip")?.addEventListener("click", openMultiClipboardModal);
+    document.getElementById("btn-top-teleprompter")?.addEventListener("click", toggleFloatingTeleprompter);
+    document.getElementById("btn-top-img2pdf")?.addEventListener("click", openImageToPdfConverterModal);
+
+    updateTopbarPrayerRadar();
+    setInterval(updateTopbarPrayerRadar, 30000);
+  }
+
+  // 2. إضافة تبويب "خزنة المطور المشفرة AES-256" في القائمة الجانبية
+  const nav = document.querySelector(".sidebar-nav");
+  const main = document.querySelector(".main-content");
+  const footer = document.querySelector(".app-footer");
+  if (nav && main && !nav.querySelector('[data-view="dev-vault"]')) {
+    const vBtn = document.createElement("button");
+    vBtn.className = "nav-item";
+    vBtn.dataset.view = "dev-vault";
+    vBtn.innerHTML = `<i class="fa-solid fa-user-shield gold-text"></i> <span>خزنة المطور المشفرة (AES-256)</span>`;
+    vBtn.onclick = () => {
+      B().switchView?.("dev-vault");
+      renderDeveloperVaultView();
+    };
+    nav.appendChild(vBtn);
+
+    const sec = document.createElement("section");
+    sec.id = "view-dev-vault";
+    sec.className = "view-section";
+    main.insertBefore(sec, footer);
+  }
+
+  // 3. حقن أزرار (بث للغرفة المشتركة + الملقن الذكي) تلقائياً داخل السبورة الهندسية عند فتحها
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("#btn-top-whiteboard, #btn-open-shared-wb")) {
+      setTimeout(() => {
+        const wbToolbars = document.querySelectorAll(".wb-studio-toolbar");
+        const secondBar = wbToolbars[1];
+        if (secondBar && !document.getElementById("btn-wb-live-sync-room")) {
+          const container = secondBar.querySelector(".filters-row:last-child");
+          if (container) {
+            const syncBtn = document.createElement("button");
+            syncBtn.type = "button";
+            syncBtn.id = "btn-wb-live-sync-room";
+            syncBtn.className = "btn btn-xs btn-outline";
+            syncBtn.style.borderColor = "#19B889";
+            syncBtn.innerHTML = `<i class="fa-solid fa-satellite-dish gold-text"></i> بث للغرفة المشتركة`;
+            syncBtn.onclick = () => {
+              if (!V6ExpansionState.activeRoomCode) {
+                openCoStudyRoomModal();
+              } else {
+                broadcastWhiteboardToRoom();
+              }
+            };
+
+            const tpBtn = document.createElement("button");
+            tpBtn.type = "button";
+            tpBtn.className = "btn btn-xs btn-outline";
+            tpBtn.innerHTML = `<i class="fa-solid fa-scroll gold-text"></i> الملقن`;
+            tpBtn.onclick = toggleFloatingTeleprompter;
+
+            container.prepend(tpBtn);
+            container.prepend(syncBtn);
+          }
+        }
+      }, 120);
+    }
+  });
+
+  // 4. التقاط أي نص ينسخه المستخدم داخل الحقول وحفظه تلقائياً في الحافظة المتعددة
+  document.addEventListener("copy", () => {
+    const sel = window.getSelection()?.toString();
+    if (sel && sel.trim().length > 1) {
+      addClipToMultiHistory(sel.trim());
+    }
+  });
+
+  // 5. إعادة الاتصال التلقائي بغرفة المذاكرة المشتركة إن كانت نشطة
+  if (V6ExpansionState.activeRoomCode) {
+    setTimeout(() => joinOrCreateCoStudyRoom(V6ExpansionState.activeRoomCode, false), 1400);
+  }
+}
+
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => setTimeout(bootOSProV3, 250));
+  document.addEventListener("DOMContentLoaded", () => setTimeout(initV6ExpansionPack, 550));
 } else {
-  setTimeout(bootOSProV3, 150);
+  setTimeout(initV6ExpansionPack, 350);
 }
