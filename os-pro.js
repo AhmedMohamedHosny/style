@@ -6053,8 +6053,13 @@ function initV6ExpansionPack() {
   }
 }
 
+function bootAllOSProAndV6() {
+  bootOSProV3();
+  setTimeout(initV6ExpansionPack, 120);
+}
+
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => setTimeout(initV6ExpansionPack, 550));
+  document.addEventListener("DOMContentLoaded", () => setTimeout(bootAllOSProAndV6, 250));
 } else {
-  setTimeout(initV6ExpansionPack, 350);
+  setTimeout(bootAllOSProAndV6, 150);
 }
