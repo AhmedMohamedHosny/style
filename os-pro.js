@@ -6063,3 +6063,2090 @@ if (document.readyState === "loading") {
 } else {
   setTimeout(bootAllOSProAndV6, 150);
 }
+/* ============================================================================
+   PART 1: 100% ZOOM RESPONSIVE ENGINE FIX (AUTO-FIT TOPBAR, KPIS & ADMIN CARDS)
+   يضمن ظهور كل الأزرار والكروت كاملة عند تكبير 100% بدون أي قص أو اختفاء
+   ============================================================================ */
+function inject100PercentResponsiveFix() {
+  if (document.getElementById("os-100pct-responsive-fix")) return;
+  const st = document.createElement("style");
+  st.id = "os-100pct-responsive-fix";
+  st.textContent = `
+    /* منع أي عنصر من دفع الشاشة خارج حدود الـ 100% */
+    .app-shell {
+      width: 100% !important;
+      max-width: 100vw !important;
+      overflow-x: hidden !important;
+    }
+    .main-content {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+    }
+    /* جعل الشريط العلوي يلتف بذكاء في سطرين متناسقين عند امتلائه بالأدوات */
+    .topbar {
+      flex-wrap: wrap !important;
+      gap: 8px 12px !important;
+      padding: 10px 16px !important;
+      height: auto !important;
+    }
+    .topbar-start {
+      flex-wrap: wrap !important;
+      gap: 8px !important;
+      min-width: 0 !important;
+    }
+    .topbar-start h1 {
+      font-size: 1.1rem !important;
+      white-space: nowrap !important;
+    }
+    .topbar-end {
+      flex-wrap: wrap !important;
+      justify-content: flex-end !important;
+      gap: 5px !important;
+      max-width: 100% !important;
+      flex: 1 1 auto !important;
+    }
+    .os-super-topbar-dock {
+      flex-wrap: wrap !important;
+      gap: 5px !important;
+      padding: 4px 8px !important;
+      max-width: 100% !important;
+    }
+    .super-dock-pill {
+      padding: 4px 9px !important;
+      font-size: 0.72rem !important;
+    }
+    .topbar .btn-icon {
+      width: 32px !important;
+      height: 32px !important;
+      min-width: 32px !important;
+    }
+    /* ضبط الكروت الـ 4 الإحصائية لتظهر كلها في صف واحد عند 100% */
+    .kpi-grid {
+      grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)) !important;
+      gap: 12px !important;
+    }
+    .admin-hero-banner, .welcome-banner, .track-hero-card, .pro-hero-banner {
+      padding: 18px 20px !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+  `;
+  document.head.appendChild(st);
+}
+inject100PercentResponsiveFix();
+
+/* ============================================================================
+   PART 2: ULTIMATE ENGINEERING WHITEBOARD STUDIO 2.0 (ALL 20 MODULES)
+   1. Infinite Canvas (Zoom, Pan, Fit, Center, Minimap, 7 Grids, Snap-to-Grid)
+   2. Advanced Drawing (Pen, Pencil, Brush, Highlighter, Tech Pen, Calligraphy,
+      Laser, Object/Stroke Eraser, Multi-Select, Duplicate, Lock, Z-Order, Rotate)
+   3. Smart Shapes & Auto-Recognition (Rect, Circle, Triangle, Diamond, Hex,
+      Star, 3D Cube/Cylinder/Pyramid, Sticky Notes, Code Block + Hand-Shape AI)
+   4. Smart Connectors & Auto-Layout (Curved, Straight, Elbow, Orthogonal,
+      Bidirectional, Dashed + Tree / Radial / Horizontal / Vertical Auto-Layout)
+   5. Engineering Toolkit (Electrical Symbols: Resistor, Capacitor, Inductor,
+      Diode, LED, Transistor, AC/DC, GND + Logic Gates: AND, OR, NOT, NAND, XOR,
+      Truth Table + Geometry: Interactive Ruler, Protractor, Dimension Line +
+      Math/Physics: Live Function Plotter f(x), LaTeX Stamp, Force Vector, Wave)
+   6. Board-Aware AI Assistant (Explain Board, Check Circuit, Generate MindMap,
+      Flowchart, Electrical Circuit, UML, Quiz & OCR Image Analysis)
+   7. Presentation Slides Mode + Layers/Objects Inspector + 12 Templates +
+      Export/Import Center (PNG, Transparent PNG, JPG, SVG, PDF, JSON, MP4) +
+      Version History & Keyboard Shortcuts (V, P, E, T, L, R, C, Space, Ctrl+Z/Y/D)
+   ============================================================================ */
+
+const WB2Templates = {
+  elec_rectifier: {
+    name: "⚡ دائرة توحيد التيار (Bridge Rectifier Circuit)",
+    bgMode: "eng",
+    nodes: [
+      { id: "e1", text: "AC 220V", shape: "elec_ac", val: "220V 50Hz", x: 180, y: 240, w: 95, h: 65, color: "#38BDF8", parentId: null },
+      { id: "e2", text: "Transformer", shape: "elec_trans", val: "12V RMS", x: 350, y: 240, w: 105, h: 70, color: "#D4A72C", parentId: "e1" },
+      { id: "e3", text: "Diode D1", shape: "elec_diode", val: "1N4007", x: 530, y: 160, w: 95, h: 50, color: "#10B981", parentId: "e2" },
+      { id: "e4", text: "Filter Cap C1", shape: "elec_cap", val: "1000μF", x: 700, y: 240, w: 95, h: 60, color: "#A855F7", parentId: "e3" },
+      { id: "e5", text: "Load R_L", shape: "elec_res", val: "1kΩ", x: 870, y: 240, w: 100, h: 52, color: "#F59E0B", parentId: "e4" },
+      { id: "e6", text: "GND", shape: "elec_gnd", val: "0V", x: 700, y: 370, w: 80, h: 50, color: "#94A3B8", parentId: "e4" }
+    ]
+  },
+  logic_adder: {
+    name: "🔌 دائرة الجامع الكامل المنطقية (Full Adder Logic Circuit)",
+    bgMode: "eng",
+    nodes: [
+      { id: "l1", text: "Input A & B", shape: "rect", val: "A=1, B=0", x: 170, y: 190, w: 120, h: 46, color: "#D4A72C", parentId: null },
+      { id: "l2", text: "XOR Gate 1", shape: "gate_xor", val: "A ⊕ B", x: 380, y: 140, w: 110, h: 56, color: "#38BDF8", parentId: "l1" },
+      { id: "l3", text: "AND Gate 1", shape: "gate_and", val: "A · B", x: 380, y: 270, w: 110, h: 56, color: "#10B981", parentId: "l1" },
+      { id: "l4", text: "XOR Gate 2 (SUM)", shape: "gate_xor", val: "Sum = A⊕B⊕Cin", x: 620, y: 140, w: 140, h: 56, color: "#D4A72C", parentId: "l2" },
+      { id: "l5", text: "OR Gate (CARRY)", shape: "gate_or", val: "Cout", x: 620, y: 270, w: 130, h: 56, color: "#F43F5E", parentId: "l3" }
+    ]
+  },
+  cyber_soc: {
+    name: "🛡️ معمارية الدفاع والاستجابة للحوادث (SOC & Incident Response)",
+    bgMode: "grid",
+    nodes: [
+      { id: "c1", text: "🌐 Firewall & WAF", shape: "hexagon", val: "Edge Filter", x: 200, y: 220, w: 150, h: 54, color: "#38BDF8", parentId: null },
+      { id: "c2", text: "📊 SIEM (Splunk/Wazuh)", shape: "cylinder", val: "Log Aggregation", x: 450, y: 220, w: 175, h: 64, color: "#D4A72C", parentId: "c1" },
+      { id: "c3", text: "🚨 SOC L1/L2 Triage", shape: "diamond", val: "Alert Analysis", x: 700, y: 140, w: 165, h: 60, color: "#F59E0B", parentId: "c2" },
+      { id: "c4", text: "🧬 DFIR Memory Forensics", shape: "rect", val: "Volatility 3", x: 700, y: 300, w: 175, h: 50, color: "#F43F5E", parentId: "c2" },
+      { id: "c5", text: "✅ Containment & Patch", shape: "round_rect", val: "Isolated", x: 940, y: 220, w: 165, h: 50, color: "#10B981", parentId: "c3" }
+    ]
+  },
+  swe_arch: {
+    name: "💻 معمارية الأنظمة الشاملة (Full-Stack System Architecture)",
+    bgMode: "dots",
+    nodes: [
+      { id: "s1", text: "⚛️ Client (React / Next.js)", shape: "round_rect", val: "HTTPS / WSS", x: 190, y: 220, w: 175, h: 50, color: "#38BDF8", parentId: null },
+      { id: "s2", text: "⚖️ Nginx Load Balancer", shape: "hexagon", val: "Reverse Proxy", x: 430, y: 220, w: 165, h: 54, color: "#D4A72C", parentId: "s1" },
+      { id: "s3", text: "⚙️ Backend API (Node/Laravel)", shape: "cube", val: "REST / GraphQL", x: 680, y: 150, w: 185, h: 56, color: "#10B981", parentId: "s2" },
+      { id: "s4", text: "⚡ Redis In-Memory Cache", shape: "diamond", val: "Sub-ms Latency", x: 680, y: 300, w: 175, h: 56, color: "#F43F5E", parentId: "s2" },
+      { id: "s5", text: "🗄️ PostgreSQL Primary DB", shape: "cylinder", val: "ACID Storage", x: 930, y: 220, w: 175, h: 64, color: "#A855F7", parentId: "s3" }
+    ]
+  }
+};
+
+// توسيع حالة السبورة لتشمل الـ 20 محوراً مع الحفاظ الكامل على البيانات السابقة
+Object.assign(WBState, {
+  zoom: 1,
+  panX: 0,
+  panY: 0,
+  spacePressed: false,
+  snapToGrid: true,
+  gridSize: 32,
+  showMinimap: true,
+  smartShapeRecognition: true,
+  connectorType: "curved", // curved | straight | elbow | dashed | double
+  lineStyle: "solid", // solid | dashed | dotted
+  fillMode: "solid", // solid | gradient | glass
+  shadowEnabled: true,
+  opacity: 1,
+  showRuler: false,
+  showProtractor: false,
+  rulerPos: { x: 220, y: 380, w: 420 },
+  protractorPos: { x: 520, y: 260, r: 110 },
+  redoStack: [],
+  versions: OSProStore.get("wb2_versions", []),
+  slides: OSProStore.get("wb2_slides", []),
+  activeSlideIdx: -1,
+  presentationMode: false,
+  spotlightMode: false,
+  mouseWorld: { x: 400, y: 250 },
+  activeSideDrawer: null // null | "layers" | "ai" | "slides"
+});
+
+function injectWB2StudioStyles() {
+  if (document.getElementById("wb2-studio-pro-styles")) return;
+  const st = document.createElement("style");
+  st.id = "wb2-studio-pro-styles";
+  st.textContent = `
+    .wb2-workspace-wrap {
+      position: relative;
+      width: 100%;
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+    .wb2-side-drawer {
+      width: 295px;
+      min-width: 295px;
+      max-height: 520px;
+      background: rgba(11, 16, 29, 0.97);
+      border: 1px solid rgba(212, 167, 44, 0.4);
+      border-radius: 16px;
+      padding: 12px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .wb-studio-fullscreen .wb2-side-drawer {
+      max-height: calc(100vh - 185px) !important;
+    }
+    .wb2-layer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .wb2-layer-row.active {
+      border-color: var(--gold-primary);
+      background: rgba(212, 167, 44, 0.14);
+    }
+    .wb2-floating-hud {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      background: rgba(9, 13, 25, 0.92);
+      border: 1px solid rgba(212, 167, 44, 0.4);
+      padding: 5px 10px;
+      border-radius: 99px;
+      z-index: 10;
+      font-size: 0.75rem;
+    }
+    /* وضع المحاضرات والعرض التقديمي (Presentation Mode) */
+    .wb-presentation-active .wb-studio-toolbar,
+    .wb-presentation-active .modal-header {
+      display: none !important;
+    }
+    .wb-presentation-active .whiteboard-canvas-box {
+      height: calc(100vh - 50px) !important;
+    }
+  `;
+  document.head.appendChild(st);
+}
+
+// دالة حفظ واسترجاع اللوحة تلقائياً (Autosave & Recovery)
+function autoSaveWB2Board() {
+  try {
+    const cleanNodes = (WBState.nodes || []).map(n => ({ ...n }));
+    const cleanStrokes = (WBState.strokes || []).slice(-300);
+    OSProStore.set("wb2_autosave_board", {
+      nodes: cleanNodes,
+      strokes: cleanStrokes,
+      bgMode: WBState.bgMode,
+      connectorType: WBState.connectorType
+    });
+  } catch (e) {}
+}
+
+function loadAutoSavedWB2Board() {
+  const saved = OSProStore.get("wb2_autosave_board", null);
+  if (saved && Array.isArray(saved.nodes) && saved.nodes.length) {
+    WBState.nodes = saved.nodes;
+    WBState.strokes = saved.strokes || [];
+    WBState.bgMode = saved.bgMode || "grid";
+    WBState.connectorType = saved.connectorType || "curved";
+  }
+}
+loadAutoSavedWB2Board();
+
+function pushWB2Undo() {
+  WBState.undoStack.push(JSON.stringify({
+    nodes: WBState.nodes,
+    strokes: WBState.strokes
+  }));
+  if (WBState.undoStack.length > 35) WBState.undoStack.shift();
+  WBState.redoStack = [];
+  autoSaveWB2Board();
+}
+
+// خوارزمية الترتيب التلقائي للفروع والمخططات (Auto-Layout: Tree, Radial, Horizontal, Vertical)
+function applyWB2AutoLayout(mode = "tree", canvasW = 1000, canvasH = 540) {
+  if (!WBState.nodes.length) return;
+  pushWB2Undo();
+
+  const roots = WBState.nodes.filter(n => !n.parentId || !WBState.nodes.some(p => p.id === n.parentId));
+  if (mode === "radial") {
+    const cx = canvasW / 2;
+    const cy = canvasH / 2;
+    const main = roots[0] || WBState.nodes[0];
+    main.x = cx;
+    main.y = cy;
+    const others = WBState.nodes.filter(n => n.id !== main.id);
+    others.forEach((nd, i) => {
+      const angle = (2 * Math.PI * i) / Math.max(1, others.length);
+      const radius = nd.parentId === main.id ? 175 : 290;
+      nd.x = Math.round(cx + Math.cos(angle) * radius);
+      nd.y = Math.round(cy + Math.sin(angle) * radius);
+    });
+  } else if (mode === "horizontal") {
+    const levels = {};
+    const getDepth = (n, d = 0) => {
+      if (!n.parentId || d > 8) return d;
+      const p = WBState.nodes.find(x => x.id === n.parentId);
+      return p ? getDepth(p, d + 1) : d;
+    };
+    WBState.nodes.forEach(n => {
+      const lv = getDepth(n);
+      levels[lv] = levels[lv] || [];
+      levels[lv].push(n);
+    });
+    Object.entries(levels).forEach(([lv, list]) => {
+      const x = 140 + Number(lv) * 240;
+      const stepY = Math.max(70, (canvasH - 80) / Math.max(1, list.length));
+      list.forEach((nd, idx) => {
+        nd.x = x;
+        nd.y = Math.round(60 + idx * stepY + stepY / 2);
+      });
+    });
+  } else {
+    // Tree Vertical Hierarchy
+    const levels = {};
+    const getDepth = (n, d = 0) => {
+      if (!n.parentId || d > 8) return d;
+      const p = WBState.nodes.find(x => x.id === n.parentId);
+      return p ? getDepth(p, d + 1) : d;
+    };
+    WBState.nodes.forEach(n => {
+      const lv = getDepth(n);
+      levels[lv] = levels[lv] || [];
+      levels[lv].push(n);
+    });
+    Object.entries(levels).forEach(([lv, list]) => {
+      const y = 75 + Number(lv) * 120;
+      const stepX = Math.max(175, (canvasW - 100) / Math.max(1, list.length));
+      list.forEach((nd, idx) => {
+        nd.x = Math.round(50 + idx * stepX + stepX / 2);
+        nd.y = y;
+      });
+    });
+  }
+  toast(`✨ تم ترتيب المخطط تلقائياً بنمط (${mode.toUpperCase()}) بدون أي تداخل!`);
+}
+
+// الترقية الشاملة لدالة فتح السبورة الهندسية 2.0
+openSmartWhiteboardModal = function(autoStartPrivateRecord = false) {
+  injectWB2StudioStyles();
+  document.body.classList.add("wb-fullscreen-mode");
+
+  B().openFormModal("🎨 استوديو السبورة الهندسية الذكية 2.0 (Infinite Engineering, Circuits, Logic & AI Studio)", `
+    <!-- الشريط الأول: التنقل اللانهائي + أقلام الرسم + الأشكال الذكية + المسح -->
+    <div class="wb-studio-toolbar">
+      <div class="filters-row" style="gap:4px;">
+        <button type="button" class="wb-tool-btn ${WBState.tool === "select" ? "active" : ""}" data-wb-tool="select" title="تحديد وتحريك العناصر (اختصار: V)"><i class="fa-solid fa-arrow-pointer"></i> تحديد (V)</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "pan" ? "active" : ""}" data-wb-tool="pan" title="تحريك اللوحة اللانهائية (أو Space + سحب)"><i class="fa-solid fa-hand"></i> تحريك اللوحة</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "pen" ? "active" : ""}" data-wb-tool="pen" title="قلم رسم ناعم + تحويل تلقائي للأشكال (P)"><i class="fa-solid fa-pen"></i> قلم (P)</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "tech_pen" ? "active" : ""}" data-wb-tool="tech_pen" title="قلم هندسي تقني دقيق"><i class="fa-solid fa-pen-nib"></i> قلم هندسي</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "highlight" ? "active" : ""}" data-wb-tool="highlight"><i class="fa-solid fa-highlighter"></i> ماركر</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "laser" ? "active" : ""}" data-wb-tool="laser"><i class="fa-solid fa-wand-magic-sparkles"></i> ليزر</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "arrow" ? "active" : ""}" data-wb-tool="arrow"><i class="fa-solid fa-arrow-trend-up"></i> سهم</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "dimension" ? "active" : ""}" data-wb-tool="dimension" title="خط قياس أبعاد هندسي يحسب المسافة بالملليمتر والـ px تلقائياً"><i class="fa-solid fa-ruler-horizontal gold-text"></i> خط أبعاد قياسي</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "rect" ? "active" : ""}" data-wb-tool="rect"><i class="fa-regular fa-square"></i> مستطيل (R)</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "circle" ? "active" : ""}" data-wb-tool="circle"><i class="fa-regular fa-circle"></i> دائرة (C)</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "text" ? "active" : ""}" data-wb-tool="text"><i class="fa-solid fa-font"></i> نص (T)</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "eraser" ? "active" : ""}" data-wb-tool="eraser" title="ممحاة (E)"><i class="fa-solid fa-eraser"></i> ممحاة</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "obj_eraser" ? "active" : ""}" data-wb-tool="obj_eraser" title="ممحاة عناصر ذكية: اضغط على أي خط أو شكل لحذفه فوراً"><i class="fa-solid fa-trash-can text-danger"></i> مسح عنصر</button>
+      </div>
+
+      <div class="filters-row" style="gap:5px;">
+        <input type="color" id="wb-color" value="${WBState.color}" style="width:34px; height:30px; padding:1px; cursor:pointer;" title="اللون" />
+        <input type="range" id="wb-size" min="2" max="18" value="${WBState.size}" style="width:65px;" title="السمك" />
+        <select id="wb-linestyle-select" class="select-sm" style="min-width:90px; padding:4px 6px;" title="نوع الخط">
+          <option value="solid" ${WBState.lineStyle === "solid" ? "selected" : ""}>─── متصل</option>
+          <option value="dashed" ${WBState.lineStyle === "dashed" ? "selected" : ""}>- - - متقطع</option>
+          <option value="dotted" ${WBState.lineStyle === "dotted" ? "selected" : ""}>•••• منقط</option>
+        </select>
+        <select id="wb-bg-select" class="select-sm" style="min-width:125px; padding:4px 6px;" title="نوع شبكة الخلفية">
+          <option value="grid" ${WBState.bgMode === "grid" ? "selected" : ""}>📐 شبكة مربعات</option>
+          <option value="eng" ${WBState.bgMode === "eng" ? "selected" : ""}>📏 شبكة هندسية دقيقة</option>
+          <option value="iso" ${WBState.bgMode === "iso" ? "selected" : ""}>🧊 شبكة أيزومترك 3D</option>
+          <option value="polar" ${WBState.bgMode === "polar" ? "selected" : ""}>🎯 شبكة قطبية دائرية</option>
+          <option value="dots" ${WBState.bgMode === "dots" ? "selected" : ""}>⠿ نقاط رقمية</option>
+          <option value="dark" ${WBState.bgMode === "dark" ? "selected" : ""}>🌑 كحلي سادة</option>
+          <option value="white" ${WBState.bgMode === "white" ? "selected" : ""}>⬜ سبورة بيضاء</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- الشريط الثاني: الأدوات الهندسية المتخصصة (كهرباء، منطق رقمي، رياضيات، فيزياء، مسطرة ومنقلة) + القوالب والـ AI -->
+    <div class="wb-studio-toolbar" style="background:rgba(14, 21, 38, 0.96);">
+      <div class="filters-row" style="gap:5px;">
+        <!-- مكتبة الرموز الهندسية والكهربائية والمنطقية والأشكال ثلاثية الأبعاد -->
+        <select id="wb2-eng-symbol-picker" class="select-sm" style="min-width:175px; padding:5px 8px; border-color:var(--gold-primary);">
+          <option value="">⚡ أدرج رمزاً هندسياً / منطقياً / 3D...</option>
+          <optgroup label="🔌 هندسة كهربائية وإلكترونيات">
+            <option value="elec_res">〰️ مقاومة كهربائية (Resistor Ω)</option>
+            <option value="elec_cap">╣╠ مكثف كهربائي (Capacitor μF)</option>
+            <option value="elec_ind">➿ ملف حثي (Inductor mH)</option>
+            <option value="elec_diode">▶️| دايود موحد (Diode)</option>
+            <option value="elec_led">💡 دايود ضوئي (LED)</option>
+            <option value="elec_trans"> transistor ترانزستور (NPN / MOSFET)</option>
+            <option value="elec_dc">🔋 مصدر جهد مستمر (DC Voltage)</option>
+            <option value="elec_ac">〰️ مصدر تيار متردد (AC Source)</option>
+            <option value="elec_gnd">⏚ أرضي مشترك (Ground GND)</option>
+            <option value="elec_sw">_/ _ مفتاح قاطع (Switch)</option>
+          </optgroup>
+          <optgroup label="🔢 بوابات منطقية (Digital Logic Design)">
+            <option value="gate_and">D بوابة AND المنطقية</option>
+            <option value="gate_or">☽ بوابة OR المنطقية</option>
+            <option value="gate_not">▷o بوابة العاكس NOT</option>
+            <option value="gate_nand">Do بوابة NAND</option>
+            <option value="gate_xor">⊕ بوابة XOR</option>
+            <option value="gate_ff">🎛️ قلاب D / JK Flip-Flop</option>
+            <option value="truth_table">📋 إدراج جدول حقيقة (Truth Table)</option>
+          </optgroup>
+          <optgroup label="🧊 أشكال 3D وملاحظات وبلوكات كود">
+            <option value="sticky">🟨 ملاحظة لاصقة (Sticky Note)</option>
+            <option value="code_block">💻 بلوك كود برمجي (Code Block)</option>
+            <option value="cube">🧊 مكعب ثلاثي الأبعاد (3D Cube)</option>
+            <option value="cylinder">🛢️ أسطوانة / قاعدة بيانات (Cylinder)</option>
+            <option value="pyramid">🔺 هرم هندسي (Pyramid)</option>
+            <option value="hexagon">⬢ سداسي (Hexagon Node)</option>
+            <option value="star">⭐ نجمة (Star)</option>
+          </optgroup>
+          <optgroup label="📐 رياضيات وفيزياء وموجات">
+            <option value="math_plot">📈 رسم دالة رياضية f(x) على المحاور</option>
+            <option value="math_eq">∑ معادلة رياضية / فيزيائية (LaTeX)</option>
+            <option value="phys_vec">↗️ متجه قوة (Force Vector FBD)</option>
+            <option value="phys_wave">〰️ موجة جيبية / مربعة (Waveform)</option>
+          </optgroup>
+        </select>
+
+        <button type="button" id="btn-wb2-ruler" class="wb-tool-btn ${WBState.showRuler ? "active" : ""}" title="إظهار/إخفاء المسطرة الهندسية المدرجة"><i class="fa-solid fa-ruler"></i> مسطرة</button>
+        <button type="button" id="btn-wb2-protractor" class="wb-tool-btn ${WBState.showProtractor ? "active" : ""}" title="إظهار/إخفاء المنقلة الهندسية لقياس الزوايا"><i class="fa-solid fa-compass-drafting"></i> منقلة</button>
+
+        <!-- نوع الروابط والترتيب التلقائي -->
+        <select id="wb2-connector-select" class="select-sm" style="min-width:115px; padding:4px 6px;" title="شكل خطوط الربط بين الفروع">
+          <option value="curved" ${WBState.connectorType === "curved" ? "selected" : ""}>↪️ رابط منحني</option>
+          <option value="elbow" ${WBState.connectorType === "elbow" ? "selected" : ""}> orthogonal رابط زاوية قائمة</option>
+          <option value="straight" ${WBState.connectorType === "straight" ? "selected" : ""}>╱ رابط مستقيم</option>
+          <option value="dashed" ${WBState.connectorType === "dashed" ? "selected" : ""}>┅ رابط متقطع</option>
+        </select>
+
+        <select id="wb2-autolayout-select" class="select-sm" style="min-width:125px; padding:4px 6px;" title="ترتيب المخطط تلقائياً بدون تداخل">
+          <option value="">✨ ترتيب تلقائي (Auto-Layout)...</option>
+          <option value="tree">🌳 تخطيط شجري رأسي (Tree)</option>
+          <option value="horizontal">➡️ تخطيط أفقي متسلسل (Flow)</option>
+          <option value="radial">☀️ تخطيط ذهني دائري (Radial)</option>
+        </select>
+
+        <!-- قوالب جاهزة -->
+        <select id="wb2-template-select" class="select-sm" style="min-width:130px; padding:4px 6px;" title="تحميل قالب هندسي أو برمجي جاهز">
+          <option value="">📋 مكتبة القوالب الجاهزة...</option>
+          <option value="elec_rectifier">⚡ دائرة توحيد كهربائية</option>
+          <option value="logic_adder">🔌 دائرة Full-Adder منطقية</option>
+          <option value="cyber_soc">🛡️ معمارية SOC والأمن السيبراني</option>
+          <option value="swe_arch">💻 معمارية نظام Full-Stack</option>
+        </select>
+      </div>
+
+      <div class="filters-row" style="gap:5px;">
+        <button type="button" id="btn-wb-spawn-branches" class="btn btn-xs btn-gold" style="background:linear-gradient(135deg,#19B889,#059669)!important; color:#05070e!important;">
+          <i class="fa-solid fa-code-branch"></i> + فرّع من المحدد
+        </button>
+        <button type="button" id="btn-wb2-ai-drawer" class="btn btn-xs btn-gold">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> مساعد السبورة AI
+        </button>
+        <button type="button" id="btn-wb2-layers-drawer" class="btn btn-xs btn-outline">
+          <i class="fa-solid fa-layer-group gold-text"></i> الطبقات (${WBState.nodes.length + WBState.strokes.length})
+        </button>
+        <button type="button" id="btn-wb2-present-mode" class="btn btn-xs btn-outline" title="وضع الشرح والمحاضرات بدون قوائم">
+          <i class="fa-solid fa-person-chalkboard gold-text"></i> وضع المحاضرة
+        </button>
+      </div>
+    </div>
+
+    <!-- الشريط الثالث: التحكم في العناصر + الاستيراد والتصدير الاحترافي (PNG, SVG, PDF, JSON, MP4) -->
+    <div class="wb-studio-toolbar" style="background:rgba(10, 14, 26, 0.95); padding:7px 12px;">
+      <div class="filters-row" style="gap:4px;">
+        <button type="button" id="btn-wb-add-root" class="btn btn-xs btn-outline">+ عقدة</button>
+        <button type="button" id="btn-wb-toggle-shape" class="btn btn-xs btn-outline">تغيير الشكل</button>
+        <button type="button" id="btn-wb-edit-node" class="btn btn-xs btn-outline">تعديل النص/القيمة</button>
+        <button type="button" id="btn-wb2-duplicate" class="btn btn-xs btn-outline" title="تكرار العنصر المحدد (Ctrl+D)"><i class="fa-regular fa-clone gold-text"></i> تكرار</button>
+        <button type="button" id="btn-wb2-rotate" class="btn btn-xs btn-outline" title="تدوير العنصر المحدد 45°"><i class="fa-solid fa-rotate-right gold-text"></i> تدوير</button>
+        <button type="button" id="btn-wb2-lock" class="btn btn-xs btn-outline" title="قفل/فك قفل العنصر"><i class="fa-solid fa-lock gold-text"></i> قفل</button>
+        <button type="button" id="btn-wb-scale-up" class="btn btn-xs btn-outline" title="تكبير العنصر"><i class="fa-solid fa-plus"></i></button>
+        <button type="button" id="btn-wb-scale-down" class="btn btn-xs btn-outline" title="تصغير العنصر"><i class="fa-solid fa-minus"></i></button>
+        <label class="btn btn-xs btn-outline" style="cursor:pointer; margin:0;">
+          <i class="fa-regular fa-image gold-text"></i> + صورة
+          <input type="file" id="wb-img-upload-inp" accept="image/*" class="hidden" />
+        </label>
+        <button type="button" id="btn-wb-del-node" class="btn btn-xs btn-outline text-danger"><i class="fa-solid fa-xmark"></i> حذف</button>
+      </div>
+
+      <div class="filters-row" style="gap:4px;">
+        <button type="button" id="btn-wb-undo" class="btn btn-xs btn-outline" title="Ctrl+Z"><i class="fa-solid fa-rotate-left"></i></button>
+        <button type="button" id="btn-wb2-redo" class="btn btn-xs btn-outline" title="Ctrl+Y"><i class="fa-solid fa-rotate-right"></i></button>
+        <button type="button" id="btn-wb2-save-version" class="btn btn-xs btn-outline" title="حفظ نسخة مسماة في السجل"><i class="fa-solid fa-clock-rotate-left gold-text"></i> حفظ إصدار</button>
+        <select id="wb2-export-select" class="select-sm" style="min-width:130px; padding:4px 6px; border-color:#19B889;">
+          <option value="">📥 تصدير واستيراد...</option>
+          <option value="png">📸 صورة عالية الدقة (PNG)</option>
+          <option value="png_trans">✨ صورة شفافة بدون خلفية (PNG)</option>
+          <option value="svg">📐 ملف متجهي قياسي (SVG)</option>
+          <option value="pdf">📄 مستند جاهز للطباعة (PDF)</option>
+          <option value="json">💾 حفظ كمشروع قابل للتعديل (.JSON)</option>
+          <option value="import_json">📂 فتح مشروع محفوظ (.JSON)</option>
+        </select>
+        <input type="file" id="wb2-import-json-inp" accept=".json" class="hidden" />
+        <button type="button" id="btn-wb-rec-mp4" class="btn btn-xs btn-outline" style="border-color:#19B889;">
+          <i class="fa-solid fa-video gold-text"></i> <span id="wb-rec-btn-lbl">MP4 🔒</span>
+        </button>
+        <button type="button" id="btn-wb-clear" class="btn btn-xs btn-danger"><i class="fa-solid fa-trash"></i></button>
+        <button type="button" id="btn-wb-fullscreen" class="btn btn-xs btn-gold"><i class="fa-solid fa-expand"></i> ملء الشاشة</button>
+      </div>
+    </div>
+
+    <!-- منطقة العمل: الكانفاس اللانهائي + الدرج الجانبي الذكي (الطبقات أو الـ AI) -->
+    <div class="wb2-workspace-wrap">
+      <div style="flex:1; position:relative; overflow:hidden;">
+        <canvas id="smart-whiteboard-canvas" class="whiteboard-canvas-box"></canvas>
+
+        <!-- شريط التحكم العائم في الزووم والـ Infinite Canvas والشرائح -->
+        <div class="wb2-floating-hud">
+          <button type="button" id="btn-wb2-zoom-out" class="btn-icon-xs" title="تصغير اللوحة"><i class="fa-solid fa-minus"></i></button>
+          <strong id="wb2-zoom-lbl" class="gold-text" style="min-width:42px; text-align:center;">${Math.round(WBState.zoom * 100)}%</strong>
+          <button type="button" id="btn-wb2-zoom-in" class="btn-icon-xs" title="تكبير اللوحة"><i class="fa-solid fa-plus"></i></button>
+          <button type="button" id="btn-wb2-zoom-fit" class="btn-icon-xs" title="توسيط وإظهار كل اللوحة"><i class="fa-solid fa-compress"></i></button>
+          <label style="display:inline-flex; align-items:center; gap:4px; margin:0 6px; cursor:pointer;">
+            <input type="checkbox" id="wb2-snap-chk" ${WBState.snapToGrid ? "checked" : ""} style="width:14px; height:14px;" />
+            <span>Snap</span>
+          </label>
+          <label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer;" title="تحويل الدوائر والمربعات المرسومة باليد تلقائياً لأشكال هندسية منتظمة">
+            <input type="checkbox" id="wb2-autoshape-chk" ${WBState.smartShapeRecognition ? "checked" : ""} style="width:14px; height:14px;" />
+            <span>Auto-Shape</span>
+          </label>
+          <button type="button" id="btn-wb2-add-slide" class="btn btn-xs btn-outline" style="padding:2px 8px;">+ شريحة عرض (${WBState.slides.length})</button>
+          ${WBState.slides.length ? `<button type="button" id="btn-wb2-next-slide" class="btn btn-xs btn-gold" style="padding:2px 8px;">الشريحة التالية ➔</button>` : ""}
+        </div>
+      </div>
+
+      <!-- الدرج الجانبي (يظهر عند فتح مساعد السبورة AI أو مدير الطبقات Layers) -->
+      <div id="wb2-side-drawer" class="wb2-side-drawer ${WBState.activeSideDrawer ? "" : "hidden"}"></div>
+    </div>
+
+    <div class="flex-between mt-1 small-muted">
+      <span>⌨️ <strong>اختصارات سريعة:</strong> (V) تحديد • (P) قلم • (E) ممحاة • (R) مستطيل • (C) دائرة • (T) نص • (Space + سحب) تحريك اللوحة اللانهائية • (Ctrl+Z / Ctrl+Y) تراجع وإعادة • (Ctrl+D) تكرار</span>
+      <span id="wb-selected-node-indicator" class="gold-text">المحدد: جاهز للرسم الهندسي</span>
+    </div>
+  `, async () => {});
+
+  const modalCard = document.querySelector("#universal-modal .modal-card");
+  modalCard?.classList.add("wide-lab-modal");
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  const closeBtn = document.getElementById("btn-close-modal");
+  const origClose = closeBtn?.onclick;
+  if (closeBtn) {
+    closeBtn.onclick = (e) => {
+      autoSaveWB2Board();
+      document.body.classList.remove("wb-fullscreen-mode");
+      modalCard?.classList.remove("wb-studio-fullscreen", "wb-presentation-active");
+      if (origClose) origClose(e);
+    };
+  }
+
+  const canvas = document.getElementById("smart-whiteboard-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  const redraw = () => renderWhiteboardScene(ctx, canvas.width, canvas.height);
+  const resizeBoard = () => {
+    canvas.width = canvas.clientWidth || 960;
+    canvas.height = canvas.clientHeight || 520;
+    redraw();
+  };
+  setTimeout(resizeBoard, 40);
+
+  // تحويل إحداثيات الشاشة إلى إحداثيات اللوحة اللانهائية (Infinite World Coordinates)
+  const screenToWorld = (sx, sy) => ({
+    x: (sx - WBState.panX) / WBState.zoom,
+    y: (sy - WBState.panY) / WBState.zoom
+  });
+
+  const snapVal = (v) => WBState.snapToGrid ? Math.round(v / WBState.gridSize) * WBState.gridSize : v;
+
+  let isDraggingNode = null;
+  let isDraggingImg = null;
+  let isResizingImg = null;
+  let isDraggingStroke = null;
+  let isDraggingRuler = false;
+  let isDraggingProtractor = false;
+  let isPanningBoard = false;
+  let panStartX = 0, panStartY = 0;
+  let dragOffsetX = 0, dragOffsetY = 0;
+  let isDrawingStroke = false;
+  let currentStroke = null;
+
+  const getRawPos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const cx = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0].clientX);
+    const cy = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0].clientY);
+    const sx = cx - r.left;
+    const sy = cy - r.top;
+    const w = screenToWorld(sx, sy);
+    return { sx, sy, x: w.x, y: w.y };
+  };
+
+  const findNodeAt = (x, y) => {
+    for (let i = WBState.nodes.length - 1; i >= 0; i--) {
+      const nd = WBState.nodes[i];
+      if (nd.hidden) continue;
+      if (x >= nd.x - nd.w / 2 && x <= nd.x + nd.w / 2 && y >= nd.y - nd.h / 2 && y <= nd.y + nd.h / 2) {
+        return nd;
+      }
+    }
+    return null;
+  };
+
+  const findImgAt = (x, y) => {
+    for (let i = WBState.images.length - 1; i >= 0; i--) {
+      const im = WBState.images[i];
+      if (x >= im.x + im.w - 22 && x <= im.x + im.w + 12 && y >= im.y + im.h - 22 && y <= im.y + im.h + 12) {
+        return { img: im, resize: true };
+      }
+      if (x >= im.x && x <= im.x + im.w && y >= im.y && y <= im.y + im.h) {
+        return { img: im, resize: false };
+      }
+    }
+    return null;
+  };
+
+  const findStrokeAt = (x, y) => {
+    for (let i = WBState.strokes.length - 1; i >= 0; i--) {
+      const s = WBState.strokes[i];
+      if (s.hidden) continue;
+      if (s.type === "text") {
+        const w = Math.max(60, (s.text || "").length * (s.size * 2.6));
+        const h = Math.max(28, s.size * 5);
+        if (x >= s.x - 10 && x <= s.x + w + 10 && y >= s.y - h && y <= s.y + 12) return { stroke: s, idx: i };
+      } else if (s.type === "rect" || s.type === "dimension" || s.type === "line" || s.type === "arrow") {
+        const minX = Math.min(s.x1, s.x2) - 10, maxX = Math.max(s.x1, s.x2) + 10;
+        const minY = Math.min(s.y1, s.y2) - 10, maxY = Math.max(s.y1, s.y2) + 10;
+        if (x >= minX && x <= maxX && y >= minY && y <= maxY) return { stroke: s, idx: i };
+      } else if (s.type === "circle") {
+        const r = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+        if (Math.hypot(x - s.x1, y - s.y1) <= r + 10) return { stroke: s, idx: i };
+      } else if (s.points && s.points.length) {
+        if (s.points.some(pt => Math.hypot(pt.x - x, pt.y - y) <= 14)) return { stroke: s, idx: i };
+      }
+    }
+    return null;
+  };
+
+  canvas.onmousedown = (e) => {
+    const { sx, sy, x, y } = getRawPos(e);
+    WBState.color = document.getElementById("wb-color")?.value || "#D4A72C";
+    WBState.size = Number(document.getElementById("wb-size")?.value || 4);
+
+    // القفز السريع من داخل الـ Minimap
+    if (WBState.showMinimap && sx >= canvas.width - 175 && sy >= canvas.height - 125) {
+      const mmX = sx - (canvas.width - 165);
+      const mmY = sy - (canvas.height - 115);
+      WBState.panX = -(mmX / 150) * 2000 * WBState.zoom + canvas.width / 2;
+      WBState.panY = -(mmY / 100) * 1400 * WBState.zoom + canvas.height / 2;
+      redraw();
+      return;
+    }
+
+    // تحريك المسطرة أو المنقلة الهندسية إن كانت ظاهرة
+    if (WBState.showRuler && x >= WBState.rulerPos.x && x <= WBState.rulerPos.x + WBState.rulerPos.w && y >= WBState.rulerPos.y && y <= WBState.rulerPos.y + 45) {
+      isDraggingRuler = true;
+      dragOffsetX = x - WBState.rulerPos.x;
+      dragOffsetY = y - WBState.rulerPos.y;
+      return;
+    }
+    if (WBState.showProtractor && Math.hypot(x - WBState.protractorPos.x, y - WBState.protractorPos.y) <= WBState.protractorPos.r && y <= WBState.protractorPos.y + 10) {
+      isDraggingProtractor = true;
+      dragOffsetX = x - WBState.protractorPos.x;
+      dragOffsetY = y - WBState.protractorPos.y;
+      return;
+    }
+
+    // تحريك اللوحة اللانهائية (Pan)
+    if (WBState.tool === "pan" || WBState.spacePressed || e.button === 1) {
+      isPanningBoard = true;
+      panStartX = sx - WBState.panX;
+      panStartY = sy - WBState.panY;
+      return;
+    }
+
+    // ممحاة العناصر الذكية (Object Eraser)
+    if (WBState.tool === "obj_eraser") {
+      const hitN = findNodeAt(x, y);
+      if (hitN && !hitN.locked) {
+        pushWB2Undo();
+        WBState.nodes = WBState.nodes.filter(n => n.id !== hitN.id);
+        redraw();
+        return;
+      }
+      const hitS = findStrokeAt(x, y);
+      if (hitS) {
+        pushWB2Undo();
+        WBState.strokes.splice(hitS.idx, 1);
+        redraw();
+      }
+      return;
+    }
+
+    if (WBState.tool === "select" || e.shiftKey) {
+      const hitNode = findNodeAt(x, y);
+      if (hitNode) {
+        WBState.selectedNodeId = hitNode.id;
+        WBState.selectedImgId = null;
+        WBState.selectedStrokeIdx = null;
+        if (!hitNode.locked) {
+          isDraggingNode = hitNode;
+          dragOffsetX = x - hitNode.x;
+          dragOffsetY = y - hitNode.y;
+        }
+        document.getElementById("wb-selected-node-indicator").textContent = `المحدد: ${hitNode.text} ${hitNode.val ? "(" + hitNode.val + ")" : ""}`;
+        if (WBState.activeSideDrawer === "layers") renderWB2SideDrawer(ctx, canvas);
+        redraw();
+        return;
+      }
+
+      const hitImgObj = findImgAt(x, y);
+      if (hitImgObj) {
+        WBState.selectedImgId = hitImgObj.img.id;
+        WBState.selectedNodeId = null;
+        WBState.selectedStrokeIdx = null;
+        if (hitImgObj.resize) isResizingImg = hitImgObj.img;
+        else {
+          isDraggingImg = hitImgObj.img;
+          dragOffsetX = x - hitImgObj.img.x;
+          dragOffsetY = y - hitImgObj.img.y;
+        }
+        redraw();
+        return;
+      }
+
+      const hitSt = findStrokeAt(x, y);
+      if (hitSt) {
+        WBState.selectedStrokeIdx = hitSt.idx;
+        WBState.selectedNodeId = null;
+        WBState.selectedImgId = null;
+        isDraggingStroke = hitSt.stroke;
+        dragOffsetX = x;
+        dragOffsetY = y;
+        redraw();
+        return;
+      }
+      return;
+    }
+
+    if (WBState.tool === "text") {
+      const txt = prompt("✍️ اكتب النص (قابل للتحريك والتكبير):");
+      if (txt && txt.trim()) {
+        pushWB2Undo();
+        WBState.strokes.push({
+          type: "text",
+          text: txt.trim(),
+          x: snapVal(x),
+          y: snapVal(y),
+          color: WBState.color,
+          size: WBState.size,
+          lineStyle: WBState.lineStyle
+        });
+        redraw();
+      }
+      return;
+    }
+
+    if (WBState.tool === "laser") {
+      isDrawingStroke = true;
+      WBState.laserPoints = [{ x, y }];
+      return;
+    }
+
+    pushWB2Undo();
+    isDrawingStroke = true;
+    currentStroke = {
+      type: WBState.tool,
+      color: WBState.color,
+      size: WBState.tool === "tech_pen" ? 2 : WBState.size,
+      lineStyle: WBState.lineStyle,
+      points: [{ x, y }],
+      x1: snapVal(x),
+      y1: snapVal(y),
+      x2: snapVal(x),
+      y2: snapVal(y),
+      innerText: ""
+    };
+    WBState.strokes.push(currentStroke);
+  };
+
+  canvas.onmousemove = (e) => {
+    const { sx, sy, x, y } = getRawPos(e);
+    WBState.mouseWorld = { x, y };
+
+    if (isPanningBoard) {
+      WBState.panX = sx - panStartX;
+      WBState.panY = sy - panStartY;
+      redraw();
+      return;
+    }
+    if (isDraggingRuler) {
+      WBState.rulerPos.x = x - dragOffsetX;
+      WBState.rulerPos.y = y - dragOffsetY;
+      redraw();
+      return;
+    }
+    if (isDraggingProtractor) {
+      WBState.protractorPos.x = x - dragOffsetX;
+      WBState.protractorPos.y = y - dragOffsetY;
+      redraw();
+      return;
+    }
+    if (isDraggingNode) {
+      // التئام ومحاذاة تلقائية مع المسطرة الهندسية إذا كانت قريبة منها
+      let nextY = snapVal(y - dragOffsetY);
+      if (WBState.showRuler && Math.abs(nextY - WBState.rulerPos.y) < 18) {
+        nextY = WBState.rulerPos.y - isDraggingNode.h / 2;
+      }
+      isDraggingNode.x = snapVal(x - dragOffsetX);
+      isDraggingNode.y = nextY;
+      redraw();
+      return;
+    }
+    if (isResizingImg) {
+      isResizingImg.w = Math.max(50, x - isResizingImg.x);
+      isResizingImg.h = Math.max(50, y - isResizingImg.y);
+      redraw();
+      return;
+    }
+    if (isDraggingImg) {
+      isDraggingImg.x = snapVal(x - dragOffsetX);
+      isDraggingImg.y = snapVal(y - dragOffsetY);
+      redraw();
+      return;
+    }
+    if (isDraggingStroke) {
+      const dx = x - dragOffsetX;
+      const dy = y - dragOffsetY;
+      dragOffsetX = x;
+      dragOffsetY = y;
+      if (isDraggingStroke.type === "text") {
+        isDraggingStroke.x += dx;
+        isDraggingStroke.y += dy;
+      } else if (isDraggingStroke.points && isDraggingStroke.points.length > 1) {
+        isDraggingStroke.points.forEach(pt => { pt.x += dx; pt.y += dy; });
+      } else {
+        isDraggingStroke.x1 += dx;
+        isDraggingStroke.y1 += dy;
+        isDraggingStroke.x2 += dx;
+        isDraggingStroke.y2 += dy;
+      }
+      redraw();
+      return;
+    }
+
+    if (WBState.spotlightMode) {
+      redraw();
+    }
+
+    if (!isDrawingStroke) return;
+
+    if (WBState.tool === "laser") {
+      WBState.laserPoints.push({ x, y });
+      if (WBState.laserPoints.length > 28) WBState.laserPoints.shift();
+      redraw();
+      return;
+    }
+
+    if (!currentStroke) return;
+    if (["pen", "tech_pen", "highlight", "eraser"].includes(currentStroke.type)) {
+      let targetY = y;
+      // إذا كان المستخدم يرسم بجوار حافة المسطرة الهندسية، يستقيم الخط مع المسطرة!
+      if (WBState.showRuler && Math.abs(y - WBState.rulerPos.y) < 15 && x >= WBState.rulerPos.x && x <= WBState.rulerPos.x + WBState.rulerPos.w) {
+        targetY = WBState.rulerPos.y;
+      }
+      currentStroke.points.push({ x, y: targetY });
+    } else {
+      currentStroke.x2 = snapVal(x);
+      currentStroke.y2 = snapVal(y);
+    }
+    redraw();
+  };
+
+  window.addEventListener("mouseup", () => {
+    // 1. ميزة التعرف الذكي على الأشكال المرسومة باليد (Smart Shape Recognition)
+    if (isDrawingStroke && currentStroke && currentStroke.type === "pen" && WBState.smartShapeRecognition && currentStroke.points.length > 14) {
+      const pts = currentStroke.points;
+      const first = pts[0];
+      const last = pts[pts.length - 1];
+      const closeDist = Math.hypot(last.x - first.x, last.y - first.y);
+      const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+      const minX = Math.min(...xs), maxX = Math.max(...xs);
+      const minY = Math.min(...ys), maxY = Math.max(...ys);
+      const w = maxX - minX, h = maxY - minY;
+
+      if (closeDist < 42 && w > 35 && h > 35) {
+        const aspect = w / h;
+        if (aspect > 0.75 && aspect < 1.3) {
+          currentStroke.type = "circle";
+          currentStroke.x1 = minX + w / 2;
+          currentStroke.y1 = minY + h / 2;
+          currentStroke.x2 = maxX;
+          currentStroke.y2 = minY + h / 2;
+          toast("✨ التعرف الذكي: تم تحويل رسمة اليد إلى دائرة هندسية منتظمة!");
+        } else {
+          currentStroke.type = "rect";
+          currentStroke.x1 = minX;
+          currentStroke.y1 = minY;
+          currentStroke.x2 = maxX;
+          currentStroke.y2 = maxY;
+          toast("✨ التعرف الذكي: تم تحويل رسمة اليد إلى مستطيل هندسي منتظم!");
+        }
+      }
+    }
+
+    // 2. سؤال المستخدم عن نص داخل المستطيل أو الدائرة الجديدة
+    if (isDrawingStroke && currentStroke && (currentStroke.type === "rect" || currentStroke.type === "circle")) {
+      const dist = Math.hypot(currentStroke.x2 - currentStroke.x1, currentStroke.y2 - currentStroke.y1);
+      if (dist > 35 && !currentStroke.innerText) {
+        const insideTxt = prompt("✍️ اكتب نصاً داخل هذا الشكل (أو اتركه فارغاً):", "");
+        if (insideTxt && insideTxt.trim()) currentStroke.innerText = insideTxt.trim();
+      }
+    }
+
+    isPanningBoard = false;
+    isDraggingRuler = false;
+    isDraggingProtractor = false;
+    isDraggingNode = null;
+    isDraggingImg = null;
+    isResizingImg = null;
+    isDraggingStroke = null;
+    isDrawingStroke = false;
+    currentStroke = null;
+    WBState.laserPoints = [];
+    autoSaveWB2Board();
+    redraw();
+  });
+
+  // دبل كليك لتعديل النص أو القيمة الهندسية (مثل قيمة المقاومة 10kΩ أو المعادلة)
+  canvas.ondblclick = (e) => {
+    const { x, y } = getRawPos(e);
+    const hitNode = findNodeAt(x, y);
+    if (hitNode) {
+      WBState.selectedNodeId = hitNode.id;
+      const newTxt = prompt("✏️ تعديل اسم/عنوان العنصر:", hitNode.text);
+      if (newTxt !== null && newTxt.trim()) hitNode.text = newTxt.trim();
+      if (hitNode.val !== undefined) {
+        const newVal = prompt("📐 تعديل القيمة الهندسية / المعادلة / الملاحظة الفرعية:", hitNode.val);
+        if (newVal !== null) hitNode.val = newVal.trim();
+      }
+      hitNode.w = Math.max(125, hitNode.text.length * 9 + 42);
+      autoSaveWB2Board();
+      redraw();
+      return;
+    }
+
+    const hitSt = findStrokeAt(x, y);
+    if (hitSt) {
+      const s = hitSt.stroke;
+      const cur = s.type === "text" ? s.text : (s.innerText || "");
+      const next = prompt("✏️ تعديل النص:", cur);
+      if (next !== null) {
+        if (s.type === "text") s.text = next.trim();
+        else s.innerText = next.trim();
+        autoSaveWB2Board();
+        redraw();
+      }
+    }
+  };
+
+  // زووم اللوحة اللانهائية بعجلة الماوس أو تكبير العنصر المحدد
+  canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.12 : 0.89;
+
+    // إذا كان يضغط Shift نكبر العنصر المحدد، وإلا نكبر/نصغر اللوحة اللانهائية نحو الماوس
+    if (e.shiftKey && WBState.selectedImgId) {
+      const im = WBState.images.find(i => i.id === WBState.selectedImgId);
+      if (im) { im.w = Math.max(50, im.w * factor); im.h = Math.max(50, im.h * factor); redraw(); }
+      return;
+    }
+
+    const r = canvas.getBoundingClientRect();
+    const mx = e.clientX - r.left;
+    const my = e.clientY - r.top;
+    const wx = (mx - WBState.panX) / WBState.zoom;
+    const wy = (my - WBState.panY) / WBState.zoom;
+
+    const newZoom = Math.min(3.5, Math.max(0.25, WBState.zoom * factor));
+    WBState.panX = mx - wx * newZoom;
+    WBState.panY = my - wy * newZoom;
+    WBState.zoom = newZoom;
+    const zLbl = document.getElementById("wb2-zoom-lbl");
+    if (zLbl) zLbl.textContent = `${Math.round(WBState.zoom * 100)}%`;
+    redraw();
+  }, { passive: false });
+
+  // ربط جميع أزرار الـ Studio 2.0
+  bindWB2ToolbarActions(ctx, canvas, modalCard, redraw, resizeBoard);
+
+  if (autoStartPrivateRecord) {
+    setTimeout(() => document.getElementById("btn-wb-rec-mp4")?.click(), 350);
+  }
+};
+
+function bindWB2ToolbarActions(ctx, canvas, modalCard, redraw, resizeBoard) {
+  document.querySelectorAll("[data-wb-tool]").forEach(btn => {
+    btn.onclick = () => {
+      WBState.tool = btn.dataset.wbTool;
+      document.querySelectorAll("[data-wb-tool]").forEach(b => b.classList.toggle("active", b === btn));
+      canvas.style.cursor = WBState.tool === "pan" ? "grab" : WBState.tool === "select" ? "default" : "crosshair";
+    };
+  });
+
+  document.getElementById("wb-linestyle-select").onchange = (e) => { WBState.lineStyle = e.target.value; };
+  document.getElementById("wb-bg-select").onchange = (e) => { WBState.bgMode = e.target.value; autoSaveWB2Board(); redraw(); };
+  document.getElementById("wb2-connector-select").onchange = (e) => { WBState.connectorType = e.target.value; autoSaveWB2Board(); redraw(); };
+
+  document.getElementById("wb2-autolayout-select").onchange = (e) => {
+    if (!e.target.value) return;
+    applyWB2AutoLayout(e.target.value, canvas.width, canvas.height);
+    e.target.value = "";
+    redraw();
+  };
+
+  document.getElementById("wb2-template-select").onchange = (e) => {
+    const key = e.target.value;
+    if (!key || !WB2Templates[key]) return;
+    pushWB2Undo();
+    const tpl = WB2Templates[key];
+    WBState.bgMode = tpl.bgMode || "grid";
+    WBState.nodes = JSON.parse(JSON.stringify(tpl.nodes));
+    WBState.selectedNodeId = WBState.nodes[0]?.id || null;
+    e.target.value = "";
+    redraw();
+    toast(`📋 تم تحميل قالب: ${tpl.name}`);
+  };
+
+  // إدراج أي رمز هندسي / كهربائي / منطقي / رياضي على اللوحة
+  document.getElementById("wb2-eng-symbol-picker").onchange = (e) => {
+    const sym = e.target.value;
+    if (!sym) return;
+    e.target.value = "";
+    pushWB2Undo();
+
+    const cx = (canvas.width / 2 - WBState.panX) / WBState.zoom;
+    const cy = (canvas.height / 2 - WBState.panY) / WBState.zoom;
+    const col = document.getElementById("wb-color")?.value || "#D4A72C";
+
+    if (sym === "math_plot") {
+      const fnStr = prompt("📈 اكتب الدالة الرياضية بدلالة x (مثال: Math.sin(x) أو x*x/4 أو Math.cos(x)*2):", "Math.sin(x)");
+      if (!fnStr) return;
+      WBState.nodes.push({
+        id: "nd_" + Date.now(),
+        text: `f(x) = ${fnStr}`,
+        val: fnStr,
+        shape: "math_plot",
+        x: cx,
+        y: cy,
+        w: 220,
+        h: 150,
+        color: col,
+        parentId: null
+      });
+      redraw();
+      return;
+    }
+
+    if (sym === "truth_table") {
+      const gateType = prompt("📋 اكتب نوع البوابة لجدول الحقيقة (AND / OR / XOR / NAND):", "XOR") || "XOR";
+      WBState.nodes.push({
+        id: "nd_" + Date.now(),
+        text: `Truth Table (${gateType.toUpperCase()})`,
+        val: gateType.toUpperCase(),
+        shape: "truth_table",
+        x: cx,
+        y: cy,
+        w: 190,
+        h: 135,
+        color: col,
+        parentId: null
+      });
+      redraw();
+      return;
+    }
+
+    const defaultLabels = {
+      elec_res: ["Resistor R", "10kΩ"],
+      elec_cap: ["Capacitor C", "100μF"],
+      elec_ind: ["Inductor L", "10mH"],
+      elec_diode: ["Diode D", "1N4007"],
+      elec_led: ["LED", "Red 2V"],
+      elec_trans: ["MOSFET / BJT", "IRFZ44N"],
+      elec_dc: ["DC Source", "12V DC"],
+      elec_ac: ["AC Source", "220V 50Hz"],
+      elec_gnd: ["GND", "0V"],
+      elec_sw: ["Switch S1", "NO"],
+      gate_and: ["AND Gate", "Y = A · B"],
+      gate_or: ["OR Gate", "Y = A + B"],
+      gate_not: ["NOT Gate", "Y = A'"],
+      gate_nand: ["NAND Gate", "Y = (A·B)'"],
+      gate_xor: ["XOR Gate", "Y = A ⊕ B"],
+      gate_ff: ["D Flip-Flop", "CLK ➔ Q"],
+      sticky: ["ملاحظة سريعة 📌", "اكتب تفاصيل الملاحظة هنا"],
+      code_block: ["Code Snippet 💻", "function solve() { return true; }"],
+      cube: ["3D Cube Module", "Layer 1"],
+      cylinder: ["Database / Storage", "PostgreSQL"],
+      pyramid: ["Hierarchy Pyramid", "Core"],
+      hexagon: ["Microservice Node", "Port 8080"],
+      star: ["Key Milestone ⭐", "Target"],
+      math_eq: ["∫ f(x) dx = F(b) - F(a)", "Calculus Formula"],
+      phys_vec: ["Force F = 50N", "θ = 30°"],
+      phys_wave: ["Sine Wave 50Hz", "Vpp = 10V"]
+    };
+
+    const [defTitle, defVal] = defaultLabels[sym] || ["Element", ""];
+    const title = prompt("اسم العنصر أو المعادلة:", defTitle) || defTitle;
+    const val = prompt("القيمة أو التفاصيل الفرعية (اختياري):", defVal) ?? defVal;
+
+    WBState.nodes.push({
+      id: "nd_" + Date.now(),
+      text: title,
+      val,
+      shape: sym,
+      x: cx + (Math.random() - 0.5) * 60,
+      y: cy + (Math.random() - 0.5) * 60,
+      w: sym === "sticky" ? 175 : sym === "code_block" ? 230 : Math.max(125, title.length * 8.5 + 40),
+      h: sym === "sticky" ? 115 : sym === "code_block" ? 85 : 58,
+      color: sym === "sticky" ? "#FBBF24" : col,
+      parentId: WBState.selectedNodeId || null
+    });
+    redraw();
+  };
+
+  document.getElementById("btn-wb2-ruler").onclick = (e) => {
+    WBState.showRuler = !WBState.showRuler;
+    e.currentTarget.classList.toggle("active", WBState.showRuler);
+    redraw();
+  };
+
+  document.getElementById("btn-wb2-protractor").onclick = (e) => {
+    WBState.showProtractor = !WBState.showProtractor;
+    e.currentTarget.classList.toggle("active", WBState.showProtractor);
+    redraw();
+  };
+
+  // أزرار الزووم والـ Snap والـ Auto-Shape والشرائح
+  document.getElementById("btn-wb2-zoom-in").onclick = () => {
+    WBState.zoom = Math.min(3.5, WBState.zoom + 0.15);
+    document.getElementById("wb2-zoom-lbl").textContent = `${Math.round(WBState.zoom * 100)}%`;
+    redraw();
+  };
+  document.getElementById("btn-wb2-zoom-out").onclick = () => {
+    WBState.zoom = Math.max(0.25, WBState.zoom - 0.15);
+    document.getElementById("wb2-zoom-lbl").textContent = `${Math.round(WBState.zoom * 100)}%`;
+    redraw();
+  };
+  document.getElementById("btn-wb2-zoom-fit").onclick = () => {
+    WBState.zoom = 1;
+    WBState.panX = 0;
+    WBState.panY = 0;
+    document.getElementById("wb2-zoom-lbl").textContent = "100%";
+    redraw();
+  };
+  document.getElementById("wb2-snap-chk").onchange = (e) => { WBState.snapToGrid = e.target.checked; };
+  document.getElementById("wb2-autoshape-chk").onchange = (e) => { WBState.smartShapeRecognition = e.target.checked; };
+
+  // إضافة شريحة عرض والتنقل بينها (Presentation Slides)
+  document.getElementById("btn-wb2-add-slide").onclick = () => {
+    const title = prompt("🎬 اسم الشريحة الحالية (مثال: الشريحة 1 — مقدمة الدائرة):", `الشريحة ${WBState.slides.length + 1}`);
+    if (!title) return;
+    WBState.slides.push({
+      title,
+      panX: WBState.panX,
+      panY: WBState.panY,
+      zoom: WBState.zoom
+    });
+    OSProStore.set("wb2_slides", WBState.slides);
+    toast(`تم حفظ "${title}" في شرائح العرض التقديمي! 🎬`);
+    openSmartWhiteboardModal(false);
+  };
+
+  document.getElementById("btn-wb2-next-slide")?.addEventListener("click", () => {
+    if (!WBState.slides.length) return;
+    WBState.activeSlideIdx = (WBState.activeSlideIdx + 1) % WBState.slides.length;
+    const sl = WBState.slides[WBState.activeSlideIdx];
+    WBState.panX = sl.panX;
+    WBState.panY = sl.panY;
+    WBState.zoom = sl.zoom;
+    document.getElementById("wb2-zoom-lbl").textContent = `${Math.round(WBState.zoom * 100)}%`;
+    redraw();
+    toast(`🎬 عرض: ${sl.title}`);
+  });
+
+  document.getElementById("btn-wb2-present-mode").onclick = () => {
+    WBState.presentationMode = !WBState.presentationMode;
+    WBState.spotlightMode = WBState.presentationMode;
+    modalCard?.classList.toggle("wb-studio-fullscreen", true);
+    modalCard?.classList.toggle("wb-presentation-active", WBState.presentationMode);
+    setTimeout(resizeBoard, 60);
+    toast(WBState.presentationMode ? "🎤 وضع المحاضرة والعرض نشط (اضغط ESC للعودة لأدوات التحرير)" : "تم إظهار أدوات التحرير");
+  };
+
+  // التكرار، التدوير، القفل، التراجع والإعادة، وحفظ الإصدارات
+  document.getElementById("btn-wb2-duplicate").onclick = () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (!nd) return;
+    pushWB2Undo();
+    const copyId = "nd_" + Date.now();
+    WBState.nodes.push({ ...nd, id: copyId, x: nd.x + 36, y: nd.y + 36 });
+    WBState.selectedNodeId = copyId;
+    redraw();
+  };
+
+  document.getElementById("btn-wb2-rotate").onclick = () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (nd) {
+      nd.rotation = ((nd.rotation || 0) + 45) % 360;
+      redraw();
+    }
+  };
+
+  document.getElementById("btn-wb2-lock").onclick = () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (nd) {
+      nd.locked = !nd.locked;
+      toast(nd.locked ? `🔒 تم قفل "${nd.text}" ضد التحريك` : `🔓 تم فك قفل "${nd.text}"`);
+      redraw();
+    }
+  };
+
+  document.getElementById("btn-wb-undo").onclick = () => {
+    const last = WBState.undoStack.pop();
+    if (last) {
+      WBState.redoStack.push(JSON.stringify({ nodes: WBState.nodes, strokes: WBState.strokes }));
+      const parsed = JSON.parse(last);
+      WBState.nodes = parsed.nodes || [];
+      WBState.strokes = parsed.strokes || [];
+      redraw();
+    }
+  };
+
+  document.getElementById("btn-wb2-redo").onclick = () => {
+    const next = WBState.redoStack.pop();
+    if (next) {
+      WBState.undoStack.push(JSON.stringify({ nodes: WBState.nodes, strokes: WBState.strokes }));
+      const parsed = JSON.parse(next);
+      WBState.nodes = parsed.nodes || [];
+      WBState.strokes = parsed.strokes || [];
+      redraw();
+    }
+  };
+
+  document.getElementById("btn-wb2-save-version").onclick = () => {
+    const vName = prompt("💾 اكتب اسماً لحفظ هذه النسخة في سجل الإصدارات (Version History):", `إصدار ${WBState.versions.length + 1} (${new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })})`);
+    if (!vName) return;
+    WBState.versions.unshift({
+      name: vName,
+      nodes: JSON.parse(JSON.stringify(WBState.nodes)),
+      strokes: JSON.parse(JSON.stringify(WBState.strokes))
+    });
+    OSProStore.set("wb2_versions", WBState.versions.slice(0, 15));
+    toast(`تم حفظ الإصدار "${vName}" بنجاح! يمكنك استرجاعه من لوحة الطبقات 🕰️`);
+  };
+
+  // مركز التصدير والاستيراد الشامل (PNG, Transparent PNG, SVG, PDF, JSON)
+  const jsonFileInp = document.getElementById("wb2-import-json-inp");
+  document.getElementById("wb2-export-select").onchange = async (e) => {
+    const mode = e.target.value;
+    if (!mode) return;
+    e.target.value = "";
+
+    if (mode === "png") {
+      const a = document.createElement("a");
+      a.download = `Engineering-Board-${today()}.png`;
+      a.href = canvas.toDataURL("image/png");
+      a.click();
+    } else if (mode === "png_trans") {
+      const prevBg = WBState.bgMode;
+      WBState.bgMode = "transparent";
+      redraw();
+      const a = document.createElement("a");
+      a.download = `Transparent-Diagram-${today()}.png`;
+      a.href = canvas.toDataURL("image/png");
+      a.click();
+      WBState.bgMode = prevBg;
+      redraw();
+    } else if (mode === "svg") {
+      let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}" style="background:#080D1A; font-family:sans-serif;">`;
+      WBState.nodes.forEach(n => {
+        svg += `<rect x="${n.x - n.w/2}" y="${n.y - n.h/2}" width="${n.w}" height="${n.h}" rx="10" fill="#11192E" stroke="${n.color || "#D4A72C"}" stroke-width="2"/>`;
+        svg += `<text x="${n.x}" y="${n.y + 5}" fill="#FFFFFF" font-size="13" font-weight="bold" text-anchor="middle">${esc(n.text)}</text>`;
+      });
+      svg += `</svg>`;
+      const blob = new Blob([svg], { type: "image/svg+xml" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `Vector-Diagram-${today()}.svg`;
+      a.click();
+      toast("تم تصدير اللوحة كملف متجهي SVG! 📐✅");
+    } else if (mode === "pdf") {
+      const imgData = canvas.toDataURL("image/jpeg", 0.92);
+      selectedPdfImages = [imgData];
+      openImageToPdfConverterModal();
+    } else if (mode === "json") {
+      const proj = { nodes: WBState.nodes, strokes: WBState.strokes, bgMode: WBState.bgMode, exportedAt: today() };
+      const blob = new Blob([JSON.stringify(proj, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `Whiteboard-Project-${today()}.json`;
+      a.click();
+      toast("تم حفظ المشروع القابل للتعديل بصيغة .JSON! 💾");
+    } else if (mode === "import_json") {
+      jsonFileInp?.click();
+    }
+  };
+
+  if (jsonFileInp) {
+    jsonFileInp.onchange = async (e) => {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      try {
+        const parsed = JSON.parse(await f.text());
+        if (parsed.nodes) {
+          pushWB2Undo();
+          WBState.nodes = parsed.nodes;
+          WBState.strokes = parsed.strokes || [];
+          redraw();
+          toast("تم فتح المشروع واستعادة جميع الفروع والرسومات للتعديل! 📂✅");
+        }
+      } catch (err) {
+        toast("ملف JSON غير صالح", "error");
+      }
+    };
+  }
+
+  // فتح الدرج الجانبي (المساعد الذكي للسبورة AI أو مدير الطبقات والإصدارات)
+  document.getElementById("btn-wb2-ai-drawer").onclick = () => {
+    WBState.activeSideDrawer = WBState.activeSideDrawer === "ai" ? null : "ai";
+    renderWB2SideDrawer(ctx, canvas);
+  };
+  document.getElementById("btn-wb2-layers-drawer").onclick = () => {
+    WBState.activeSideDrawer = WBState.activeSideDrawer === "layers" ? null : "layers";
+    renderWB2SideDrawer(ctx, canvas);
+  };
+
+  // rebind basic buttons from V1 to ensure smooth operation
+  document.getElementById("btn-wb-add-root").onclick = () => {
+    const title = prompt("🌟 اكتب النص داخل الشكل الجديد:", "عنصر رئيسي جديد");
+    if (!title || !title.trim()) return;
+    pushWB2Undo();
+    const id = "nd_" + Date.now();
+    const c = document.getElementById("wb-color")?.value || "#D4A72C";
+    const cx = (canvas.width / 2 - WBState.panX) / WBState.zoom;
+    const cy = (120 - WBState.panY) / WBState.zoom;
+    WBState.nodes.push({
+      id, text: title.trim(), shape: "rect", x: cx, y: cy,
+      w: Math.max(140, title.trim().length * 9 + 42), h: 48, color: c, parentId: null
+    });
+    WBState.selectedNodeId = id;
+    redraw();
+  };
+
+  document.getElementById("btn-wb-toggle-shape").onclick = () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (!nd) return;
+    const shapes = ["rect", "round_rect", "circle", "diamond", "hexagon", "cylinder", "cube", "sticky"];
+    nd.shape = shapes[(shapes.indexOf(nd.shape || "rect") + 1) % shapes.length];
+    redraw();
+  };
+
+  document.getElementById("btn-wb-spawn-branches").onclick = () => {
+    const parent = WBState.nodes.find(n => n.id === WBState.selectedNodeId) || WBState.nodes[0];
+    if (!parent) return;
+    const raw = prompt(`🌿 تفريع من (${parent.text}):\nاكتب أسماء الفروع مفصولة بفاصلة ( , ):`, "فرع 1, فرع 2, فرع 3");
+    if (!raw || !raw.trim()) return;
+    const parts = raw.split(/[،,]/).map(s => s.trim()).filter(Boolean);
+    pushWB2Undo();
+    const c = document.getElementById("wb-color")?.value || "#19B889";
+    const spreadW = parts.length * 190;
+    const startX = parent.x - spreadW / 2 + 95;
+    parts.forEach((txt, idx) => {
+      WBState.nodes.push({
+        id: "nd_" + Date.now() + "_" + idx,
+        text: txt, shape: "round_rect",
+        x: parts.length === 1 ? parent.x : startX + idx * 190,
+        y: parent.y + 125,
+        w: Math.max(130, txt.length * 9 + 36), h: 44, color: c, parentId: parent.id
+      });
+    });
+    redraw();
+  };
+
+  document.getElementById("btn-wb-edit-node").onclick = () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (!nd) return;
+    const txt = prompt("✏️ تعديل النص:", nd.text);
+    if (txt !== null && txt.trim()) { nd.text = txt.trim(); nd.w = Math.max(130, nd.text.length * 9 + 36); }
+    const val = prompt("📐 تعديل القيمة الفرعية / الملاحظة:", nd.val || "");
+    if (val !== null) nd.val = val.trim();
+    redraw();
+  };
+
+  document.getElementById("btn-wb-scale-up").onclick = () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (nd) { nd.w = Math.round(nd.w * 1.15); nd.h = Math.round(nd.h * 1.15); redraw(); }
+  };
+  document.getElementById("btn-wb-scale-down").onclick = () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (nd) { nd.w = Math.max(80, Math.round(nd.w * 0.86)); nd.h = Math.max(36, Math.round(nd.h * 0.86)); redraw(); }
+  };
+  document.getElementById("btn-wb-del-node").onclick = () => {
+    pushWB2Undo();
+    if (WBState.selectedImgId) { WBState.images = WBState.images.filter(i => i.id !== WBState.selectedImgId); WBState.selectedImgId = null; }
+    else if (WBState.selectedStrokeIdx !== null) { WBState.strokes.splice(WBState.selectedStrokeIdx, 1); WBState.selectedStrokeIdx = null; }
+    else if (WBState.selectedNodeId) {
+      const id = WBState.selectedNodeId;
+      WBState.nodes = WBState.nodes.filter(n => n.id !== id && n.parentId !== id);
+      WBState.selectedNodeId = WBState.nodes[0]?.id || null;
+    }
+    redraw();
+  };
+  document.getElementById("btn-wb-clear").onclick = () => {
+    if (!confirm("مسح السبورة بالكامل؟")) return;
+    pushWB2Undo();
+    WBState.nodes = [];
+    WBState.strokes = [];
+    WBState.images = [];
+    redraw();
+  };
+  document.getElementById("btn-wb-download").onclick = () => {
+    const a = document.createElement("a");
+    a.download = `Engineering-Whiteboard-${today()}.png`;
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+  };
+  document.getElementById("btn-wb-fullscreen").onclick = () => {
+    modalCard?.classList.toggle("wb-studio-fullscreen");
+    setTimeout(resizeBoard, 60);
+  };
+}
+
+/* ============================================================================
+   SIDE DRAWER: BOARD-AWARE AI ASSISTANT & LAYERS / VERSION CONTROL MANAGER
+   ============================================================================ */
+function renderWB2SideDrawer(ctx, canvas) {
+  const drawer = document.getElementById("wb2-side-drawer");
+  if (!drawer) return;
+  if (!WBState.activeSideDrawer) {
+    drawer.classList.add("hidden");
+    return;
+  }
+  drawer.classList.remove("hidden");
+
+  if (WBState.activeSideDrawer === "ai") {
+    drawer.innerHTML = `
+      <div class="flex-between">
+        <strong class="gold-text"><i class="fa-solid fa-robot"></i> مساعد السبورة الذكي AI</strong>
+        <button type="button" class="btn-icon-xs" id="btn-close-wb2-drawer"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <small class="small-muted">يفهم كل العناصر والدوائر المرسومة على سبورتك حالياً أو يبني لك مخططاً كاملاً بالـ AI:</small>
+
+      <div class="dossier-section-box" style="padding:10px;">
+        <label class="small-muted d-block mb-1">1. توليد مخطط أو دائرة بالـ AI على السبورة:</label>
+        <input type="text" id="wb2-ai-gen-topic" placeholder="مثال: OSI 7 Layers / دائرة مكبر صوت / مراحل SQL Injection..." />
+        <button type="button" id="btn-wb2-ai-generate-map" class="btn btn-xs btn-gold btn-block mt-1">
+          <i class="fa-solid fa-sitemap"></i> ولّد المخطط على السبورة الآن
+        </button>
+      </div>
+
+      <div class="dossier-section-box" style="padding:10px;">
+        <label class="small-muted d-block mb-1">2. اسأل الـ AI عن المرسوم حالياً على اللوحة:</label>
+        <div class="cert-pill-row mb-1">
+          <button type="button" class="chip" data-wb2-ai-q="اشرح لي هذا المخطط بالتفصيل الممل">اشرح المخطط</button>
+          <button type="button" class="chip" data-wb2-ai-q="راجع التوصيلات واقترح تحسينات هندسية">فحص التوصيلات</button>
+          <button type="button" class="chip" data-wb2-ai-q="ولّد 5 أسئلة امتحان ومقابلات من هذه اللوحة">أسئلة اختبار</button>
+        </div>
+        <div id="wb2-ai-response-box" class="small-muted" style="white-space:pre-line; max-height:210px; overflow-y:auto; background:rgba(0,0,0,0.35); padding:8px; border-radius:8px;">
+          اختر سؤالاً أو ولّد مخططاً ليظهر الشرح هنا...
+        </div>
+      </div>
+    `;
+
+    document.getElementById("btn-close-wb2-drawer").onclick = () => {
+      WBState.activeSideDrawer = null;
+      drawer.classList.add("hidden");
+    };
+
+    // توليد خريطة ذهنية أو مخطط هندسي كامل بالـ AI ووضعه على السبورة فوراً
+    document.getElementById("btn-wb2-ai-generate-map").onclick = async () => {
+      const topic = document.getElementById("wb2-ai-gen-topic")?.value.trim();
+      if (!topic) return;
+      const out = document.getElementById("wb2-ai-response-box");
+      out.textContent = `⏳ جاري تصميم مخطط (${topic}) وتوزيع عقدة الرئيسية وفروعه...`;
+      const reply = await B().askAI?.(`قسّم الموضوع الهندسي/التعليمي التالي (${topic}) إلى 6 محطات أو مكونات رئيسية قصيرة جداً، اكتب كل محطة في سطر مستقل بدون ترقيم معقد.`);
+      const lines = String(reply || "").split("\n").map(l => l.replace(/^[-*0-9.)]+\s*/, "").trim()).filter(Boolean).slice(0, 6);
+
+      pushWB2Undo();
+      const rootId = "ai_root_" + Date.now();
+      WBState.nodes = [{
+        id: rootId,
+        text: `🌟 ${topic.slice(0, 28)}`,
+        val: "AI Generated",
+        shape: "hexagon",
+        x: 500,
+        y: 80,
+        w: 220,
+        h: 52,
+        color: "#D4A72C",
+        parentId: null
+      }];
+
+      lines.forEach((lineTxt, i) => {
+        const shortTxt = lineTxt.split(":")[0].slice(0, 32);
+        const subVal = lineTxt.split(":")[1]?.slice(0, 35) || `Stage ${i + 1}`;
+        WBState.nodes.push({
+          id: `ai_nd_${Date.now()}_${i}`,
+          text: shortTxt,
+          val: subVal.trim(),
+          shape: i % 2 === 0 ? "round_rect" : "diamond",
+          x: 160 + (i % 3) * 320,
+          y: i < 3 ? 230 : 380,
+          w: Math.max(145, shortTxt.length * 8.5 + 36),
+          h: 50,
+          color: i < 3 ? "#19B889" : "#38BDF8",
+          parentId: rootId
+        });
+      });
+
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      out.textContent = `✅ تم رسم مخطط (${topic}) على السبورة بنجاح!\n\n${reply}`;
+    };
+
+    // سؤال الـ AI عن المحتوى الفعلي المرسوم على اللوحة
+    drawer.querySelectorAll("[data-wb2-ai-q]").forEach(btn => {
+      btn.onclick = async () => {
+        const q = btn.dataset.wb2AiQ;
+        const out = document.getElementById("wb2-ai-response-box");
+        const boardSummary = WBState.nodes.map(n => `[${n.text} ${n.val ? "(" + n.val + ")" : ""} - الشكل: ${n.shape}]`).join(" ➔ ");
+        out.textContent = "⏳ جاري قراءة وتحليل عناصر السبورة الحالية...";
+        const reply = await B().askAI?.(`المستخدم يرسم على السبورة الهندسية العناصر المترابطة التالية:\n${boardSummary || "لوحة حرة"}\nالمطلوب: ${q}`);
+        out.textContent = reply;
+      };
+    });
+    return;
+  }
+
+  // لوحة إدارة الطبقات والعناصر وسجل الإصدارات (Layers & Version History)
+  drawer.innerHTML = `
+    <div class="flex-between">
+      <strong class="gold-text"><i class="fa-solid fa-layer-group"></i> الطبقات والعناصر (${WBState.nodes.length})</strong>
+      <button type="button" class="btn-icon-xs" id="btn-close-wb2-drawer"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:5px; max-height:240px; overflow-y:auto;">
+      ${WBState.nodes.map((nd, idx) => `
+        <div class="wb2-layer-row ${nd.id === WBState.selectedNodeId ? "active" : ""}" data-layer-node="${nd.id}">
+          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${idx + 1}. ${esc(nd.text)}</span>
+          <div class="filters-row" style="gap:3px;">
+            <button type="button" class="btn-icon-xs" data-layer-hide="${nd.id}" title="إظهار/إخفاء"><i class="fa-regular ${nd.hidden ? "fa-eye-slash text-danger" : "fa-eye"}"></i></button>
+            <button type="button" class="btn-icon-xs" data-layer-lock="${nd.id}" title="قفل/فك"><i class="fa-solid ${nd.locked ? "fa-lock gold-text" : "fa-lock-open"}"></i></button>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+
+    <hr class="divider" />
+    <strong class="gold-text" style="font-size:0.82rem;"><i class="fa-solid fa-clock-rotate-left"></i> الإصدارات المحفوظة (${WBState.versions.length})</strong>
+    <div style="display:flex; flex-direction:column; gap:5px;">
+      ${WBState.versions.length ? WBState.versions.map((v, i) => `
+        <div class="wb2-layer-row">
+          <span>${esc(v.name)}</span>
+          <button type="button" class="btn btn-xs btn-gold" data-restore-ver="${i}">استرجاع</button>
+        </div>
+      `).join("") : `<small class="small-muted">اضغط "حفظ إصدار" لحفظ لقطة من اللوحة.</small>`}
+    </div>
+  `;
+
+  document.getElementById("btn-close-wb2-drawer").onclick = () => {
+    WBState.activeSideDrawer = null;
+    drawer.classList.add("hidden");
+  };
+
+  drawer.querySelectorAll("[data-layer-node]").forEach(row => {
+    row.onclick = (e) => {
+      if (e.target.closest("button")) return;
+      WBState.selectedNodeId = row.dataset.layerNode;
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      renderWB2SideDrawer(ctx, canvas);
+    };
+  });
+
+  drawer.querySelectorAll("[data-layer-hide]").forEach(btn => {
+    btn.onclick = () => {
+      const nd = WBState.nodes.find(n => n.id === btn.dataset.layerHide);
+      if (nd) nd.hidden = !nd.hidden;
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      renderWB2SideDrawer(ctx, canvas);
+    };
+  });
+
+  drawer.querySelectorAll("[data-layer-lock]").forEach(btn => {
+    btn.onclick = () => {
+      const nd = WBState.nodes.find(n => n.id === btn.dataset.layerLock);
+      if (nd) nd.locked = !nd.locked;
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      renderWB2SideDrawer(ctx, canvas);
+    };
+  });
+
+  drawer.querySelectorAll("[data-restore-ver]").forEach(btn => {
+    btn.onclick = () => {
+      const ver = WBState.versions[Number(btn.dataset.restoreVer)];
+      if (!ver) return;
+      pushWB2Undo();
+      WBState.nodes = JSON.parse(JSON.stringify(ver.nodes));
+      WBState.strokes = JSON.parse(JSON.stringify(ver.strokes));
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      toast(`تم استرجاع "${ver.name}" بنجاح! 🕰️✅`);
+    };
+  });
+}
+
+/* ============================================================================
+   INFINITE CANVAS RENDER ENGINE (7 GRIDS, ELECTRICAL/LOGIC SYMBOLS, 3D, MINIMAP)
+   ============================================================================ */
+renderWhiteboardScene = function(ctx, W, H) {
+  ctx.clearRect(0, 0, W, H);
+
+  const isWhite = WBState.bgMode === "white";
+  if (WBState.bgMode !== "transparent") {
+    ctx.fillStyle = isWhite ? "#F8FAFC" : "#080D1A";
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  ctx.save();
+  ctx.translate(WBState.panX, WBState.panY);
+  ctx.scale(WBState.zoom, WBState.zoom);
+
+  const step = WBState.gridSize || 32;
+  const startX = Math.floor((-WBState.panX / WBState.zoom) / step) * step - step;
+  const endX = startX + (W / WBState.zoom) + step * 2;
+  const startY = Math.floor((-WBState.panY / WBState.zoom) / step) * step - step;
+  const endY = startY + (H / WBState.zoom) + step * 2;
+
+  // 1. رسم الشبكات الهندسية الـ 7 على اللوحة اللانهائية
+  if (WBState.bgMode === "grid" || WBState.bgMode === "eng") {
+    ctx.strokeStyle = isWhite ? "rgba(15, 23, 42, 0.08)" : "rgba(212, 167, 44, 0.08)";
+    ctx.lineWidth = 1;
+    for (let x = startX; x < endX; x += step) {
+      ctx.beginPath(); ctx.moveTo(x, startY); ctx.lineTo(x, endY); ctx.stroke();
+    }
+    for (let y = startY; y < endY; y += step) {
+      ctx.beginPath(); ctx.moveTo(startX, y); ctx.lineTo(endX, y); ctx.stroke();
+    }
+    if (WBState.bgMode === "eng") {
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.14)";
+      ctx.lineWidth = 1.6;
+      for (let x = startX; x < endX; x += step * 5) {
+        ctx.beginPath(); ctx.moveTo(x, startY); ctx.lineTo(x, endY); ctx.stroke();
+      }
+      for (let y = startY; y < endY; y += step * 5) {
+        ctx.beginPath(); ctx.moveTo(startX, y); ctx.lineTo(endX, y); ctx.stroke();
+      }
+    }
+  } else if (WBState.bgMode === "dots") {
+    ctx.fillStyle = "rgba(148, 163, 184, 0.28)";
+    for (let x = startX; x < endX; x += step) {
+      for (let y = startY; y < endY; y += step) {
+        ctx.beginPath(); ctx.arc(x, y, 1.4, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  } else if (WBState.bgMode === "iso") {
+    ctx.strokeStyle = "rgba(33, 197, 197, 0.09)";
+    ctx.lineWidth = 1;
+    for (let x = startX - 600; x < endX + 600; x += step * 1.5) {
+      ctx.beginPath(); ctx.moveTo(x, startY); ctx.lineTo(x + 800, startY + 460); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, startY + 460); ctx.lineTo(x + 800, startY); ctx.stroke();
+    }
+  } else if (WBState.bgMode === "polar") {
+    const cx = 500, cy = 270;
+    ctx.strokeStyle = "rgba(212, 167, 44, 0.12)";
+    for (let r = 50; r <= 550; r += 60) {
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
+  // 2. رسم الصور المدرجة مع مقبض تغيير الحجم
+  WBState.images.forEach(im => {
+    ctx.drawImage(im.imgEl, im.x, im.y, im.w, im.h);
+    const isSel = im.id === WBState.selectedImgId;
+    ctx.strokeStyle = isSel ? "#19B889" : "rgba(212, 167, 44, 0.5)";
+    ctx.lineWidth = isSel ? 3 : 1.5;
+    ctx.strokeRect(im.x, im.y, im.w, im.h);
+    ctx.fillStyle = "#D4A72C";
+    ctx.fillRect(im.x + im.w - 14, im.y + im.h - 14, 16, 16);
+  });
+
+  // 3. رسم الخطوط والأشكال وخطوط الأبعاد القياسية (Dimension Lines)
+  WBState.strokes.forEach((s, idx) => {
+    if (s.hidden) return;
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = s.type === "highlight" ? s.size * 3.2 : s.size;
+    ctx.strokeStyle = s.type === "eraser" ? (isWhite ? "#F8FAFC" : "#080D1A") : s.color;
+    ctx.fillStyle = s.color;
+    if (s.lineStyle === "dashed") ctx.setLineDash([10, 6]);
+    else if (s.lineStyle === "dotted") ctx.setLineDash([3, 6]);
+    if (s.type === "highlight") ctx.globalAlpha = 0.32;
+
+    if (idx === WBState.selectedStrokeIdx) {
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = "#19B889";
+    }
+
+    if (["pen", "tech_pen", "highlight", "eraser"].includes(s.type)) {
+      if (s.points.length > 0) {
+        ctx.beginPath();
+        ctx.moveTo(s.points[0].x, s.points[0].y);
+        s.points.forEach(pt => ctx.lineTo(pt.x, pt.y));
+        ctx.stroke();
+      }
+    } else if (s.type === "line") {
+      ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+    } else if (s.type === "arrow") {
+      drawArrowOnCtx(ctx, s.x1, s.y1, s.x2, s.y2, s.color, s.size);
+    } else if (s.type === "dimension") {
+      // خط أبعاد هندسي يحسب المسافة والزاوية تلقائياً!
+      drawArrowOnCtx(ctx, s.x1, s.y1, s.x2, s.y2, s.color, 2);
+      drawArrowOnCtx(ctx, s.x2, s.y2, s.x1, s.y1, s.color, 2);
+      const distPx = Math.round(Math.hypot(s.x2 - s.x1, s.y2 - s.y1));
+      const distCm = (distPx / 37.8).toFixed(1);
+      const midX = (s.x1 + s.x2) / 2;
+      const midY = (s.y1 + s.y2) / 2 - 10;
+      ctx.font = "bold 12px Inter, sans-serif";
+      ctx.fillStyle = "#19B889";
+      ctx.textAlign = "center";
+      ctx.fillText(`📏 ${distCm} cm (${distPx}px)`, midX, midY);
+    } else if (s.type === "rect") {
+      const rw = s.x2 - s.x1, rh = s.y2 - s.y1;
+      ctx.strokeRect(s.x1, s.y1, rw, rh);
+      if (s.innerText) {
+        ctx.font = `bold ${Math.max(14, s.size * 3.2)}px Alexandria, Cairo, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(s.innerText, s.x1 + rw / 2, s.y1 + rh / 2);
+      }
+    } else if (s.type === "circle") {
+      const r = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+      ctx.beginPath(); ctx.arc(s.x1, s.y1, r, 0, Math.PI * 2); ctx.stroke();
+      if (s.innerText) {
+        ctx.font = `bold ${Math.max(14, s.size * 3.2)}px Alexandria, Cairo, sans-serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(s.innerText, s.x1, s.y1);
+      }
+    } else if (s.type === "text") {
+      ctx.font = `bold ${Math.max(16, s.size * 4.2)}px Alexandria, Cairo, sans-serif`;
+      ctx.fillText(s.text, s.x, s.y);
+    }
+    ctx.restore();
+  });
+
+  // 4. رسم الروابط الذكية بين العناصر (Smart Connectors: Curved, Elbow, Straight, Dashed)
+  WBState.nodes.forEach(nd => {
+    if (nd.hidden || !nd.parentId) return;
+    const parent = WBState.nodes.find(p => p.id === nd.parentId && !p.hidden);
+    if (!parent) return;
+
+    ctx.save();
+    ctx.strokeStyle = nd.color || "#19B889";
+    ctx.lineWidth = 2.5;
+    if (WBState.connectorType === "dashed") ctx.setLineDash([8, 6]);
+
+    const sx = parent.x, sy = parent.y + parent.h / 2;
+    const ex = nd.x, ey = nd.y - nd.h / 2;
+    const midY = (sy + ey) / 2;
+
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    if (WBState.connectorType === "straight") {
+      ctx.lineTo(ex, ey);
+    } else if (WBState.connectorType === "elbow") {
+      ctx.lineTo(sx, midY);
+      ctx.lineTo(ex, midY);
+      ctx.lineTo(ex, ey);
+    } else {
+      ctx.bezierCurveTo(sx, midY, ex, midY, ex, ey);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = nd.color || "#19B889";
+    ctx.beginPath(); ctx.arc(ex, ey, 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  });
+
+  // 5. رسم العقد والأشكال الهندسية والرموز الكهربائية والبوابات المنطقية والدوال الرياضية
+  WBState.nodes.forEach(nd => {
+    if (nd.hidden) return;
+    drawWB2SmartNode(ctx, nd, isWhite);
+  });
+
+  // 6. رسم المسطرة والمنقلة الهندسية التفاعلية على اللوحة
+  if (WBState.showRuler) drawInteractiveRuler(ctx, WBState.rulerPos);
+  if (WBState.showProtractor) drawInteractiveProtractor(ctx, WBState.protractorPos);
+
+  // 7. رسم مؤشر الليزر
+  if (WBState.laserPoints.length > 1) {
+    ctx.save();
+    ctx.strokeStyle = "#EF4444"; ctx.shadowBlur = 16; ctx.shadowColor = "#EF4444"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(WBState.laserPoints[0].x, WBState.laserPoints[0].y);
+    WBState.laserPoints.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.restore();
+
+  // 8. تأثير كشاف المحاضرات (Presentation Spotlight)
+  if (WBState.spotlightMode) {
+    const sx = WBState.mouseWorld.x * WBState.zoom + WBState.panX;
+    const sy = WBState.mouseWorld.y * WBState.zoom + WBState.panY;
+    ctx.save();
+    const grad = ctx.createRadialGradient(sx, sy, 65, sx, sy, 240);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(1, "rgba(0,0,0,0.72)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  // 9. رسم الخريطة المصغرة (Minimap) في الركن السفلي الأيمن
+  if (WBState.showMinimap) {
+    drawWB2Minimap(ctx, W, H);
+  }
+};
+
+function drawWB2SmartNode(ctx, nd, isWhite) {
+  const isSel = nd.id === WBState.selectedNodeId;
+  ctx.save();
+  ctx.translate(nd.x, nd.y);
+  if (nd.rotation) ctx.rotate((nd.rotation * Math.PI) / 180);
+
+  const hw = nd.w / 2;
+  const hh = nd.h / 2;
+  const col = nd.color || "#D4A72C";
+
+  if (isSel) {
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = col;
+  }
+
+  // رسم خاص للدالة الرياضية f(x)
+  if (nd.shape === "math_plot") {
+    ctx.fillStyle = "rgba(11, 17, 32, 0.94)";
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(-hw, -hh, nd.w, nd.h, 12); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,0.2)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-hw + 10, 0); ctx.lineTo(hw - 10, 0); ctx.moveTo(0, -hh + 10); ctx.lineTo(0, hh - 10); ctx.stroke();
+
+    ctx.strokeStyle = "#19B889"; ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    let started = false;
+    for (let px = -hw + 14; px <= hw - 14; px += 3) {
+      const xVal = px / 18;
+      try {
+        const yVal = Function("x", `"use strict"; return (${nd.val || "Math.sin(x)"});`)(xVal);
+        const py = Math.max(-hh + 12, Math.min(hh - 12, -yVal * 22));
+        if (!started) { ctx.moveTo(px, py); started = true; }
+        else ctx.lineTo(px, py);
+      } catch (e) {}
+    }
+    ctx.stroke();
+    ctx.fillStyle = "#F8FAFC"; ctx.font = "bold 11px Inter, sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(nd.text, 0, -hh + 14);
+    ctx.restore();
+    return;
+  }
+
+  // رسم خاص لجدول الحقيقة المنطقي (Truth Table)
+  if (nd.shape === "truth_table") {
+    ctx.fillStyle = "rgba(11, 17, 32, 0.96)";
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(-hw, -hh, nd.w, nd.h, 10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = col; ctx.font = "bold 12px Inter, sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(nd.text, 0, -hh + 18);
+    const g = (nd.val || "XOR").toUpperCase();
+    const rows = [
+      ["A", "B", "OUT"],
+      ["0", "0", g === "NAND" || g === "NOR" ? "1" : "0"],
+      ["0", "1", g === "OR" || g === "XOR" || g === "NAND" ? "1" : "0"],
+      ["1", "0", g === "OR" || g === "XOR" || g === "NAND" ? "1" : "0"],
+      ["1", "1", g === "AND" || g === "OR" ? "1" : "0"]
+    ];
+    ctx.fillStyle = "#F8FAFC"; ctx.font = "11px monospace";
+    rows.forEach((r, idx) => {
+      ctx.fillText(`${r[0]}   |   ${r[1]}   |   ${r[2]}`, 0, -hh + 40 + idx * 19);
+    });
+    ctx.restore();
+    return;
+  }
+
+  // رسم الملاحظة اللاصقة (Sticky Note)
+  if (nd.shape === "sticky") {
+    ctx.fillStyle = "#FEF08A";
+    ctx.strokeStyle = "#CA8A04";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(-hw, -hh, nd.w, nd.h, 6); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#0F172A";
+    ctx.font = "bold 13px Alexandria, Cairo, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(nd.text, 0, -10);
+    if (nd.val) {
+      ctx.font = "11.5px Alexandria, Cairo, sans-serif";
+      ctx.fillText(nd.val, 0, 16);
+    }
+    ctx.restore();
+    return;
+  }
+
+  // الصندوق القياسي أو الهندسي أو الرمز الكهربائي/المنطقي
+  ctx.fillStyle = isWhite ? "#FFFFFF" : "#11192E";
+  ctx.strokeStyle = isSel ? "#19B889" : col;
+  ctx.lineWidth = isSel ? 3.2 : 2.2;
+
+  ctx.beginPath();
+  if (nd.shape === "circle" || nd.shape === "elec_ac" || nd.shape === "elec_dc") {
+    ctx.arc(0, 0, Math.max(hw, hh), 0, Math.PI * 2);
+  } else if (nd.shape === "diamond") {
+    ctx.moveTo(0, -hh - 8); ctx.lineTo(hw + 12, 0); ctx.lineTo(0, hh + 8); ctx.lineTo(-hw - 12, 0); ctx.closePath();
+  } else if (nd.shape === "hexagon") {
+    ctx.moveTo(-hw + 16, -hh); ctx.lineTo(hw - 16, -hh); ctx.lineTo(hw + 8, 0);
+    ctx.lineTo(hw - 16, hh); ctx.lineTo(-hw + 16, hh); ctx.lineTo(-hw - 8, 0); ctx.closePath();
+  } else if (nd.shape === "round_rect") {
+    ctx.roundRect(-hw, -hh, nd.w, nd.h, 22);
+  } else {
+    ctx.roundRect(-hw, -hh, nd.w, nd.h, 10);
+  }
+  ctx.fill();
+  ctx.stroke();
+
+  // رسم الرمز الهندسي بداخل البطاقة (مثل سنون المقاومة الكهربائيه أو المكثف أو البوابة)
+  ctx.shadowBlur = 0;
+  if (nd.shape === "elec_res") {
+    ctx.strokeStyle = "#F59E0B"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-36, -12); ctx.lineTo(-24, -20); ctx.lineTo(-12, -4); ctx.lineTo(0, -20); ctx.lineTo(12, -4); ctx.lineTo(24, -20); ctx.lineTo(36, -12); ctx.stroke();
+  } else if (nd.shape === "elec_cap") {
+    ctx.strokeStyle = "#38BDF8"; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(-6, -22); ctx.lineTo(-6, -6); ctx.moveTo(6, -22); ctx.lineTo(6, -6); ctx.stroke();
+  } else if (nd.shape === "phys_wave") {
+    ctx.strokeStyle = "#19B889"; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = -40; i <= 40; i += 2) {
+      const wy = -14 + Math.sin(i * 0.2) * 7;
+      if (i === -40) ctx.moveTo(i, wy); else ctx.lineTo(i, wy);
+    }
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = isWhite ? "#0F172A" : "#F8FAFC";
+  ctx.font = nd.shape === "code_block" ? "bold 12px monospace" : "bold 13px Alexandria, Cairo, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText((nd.locked ? "🔒 " : "") + nd.text, 0, nd.val ? -6 : 0);
+
+  if (nd.val) {
+    ctx.fillStyle = col;
+    ctx.font = "bold 11px Inter, Alexandria, sans-serif";
+    ctx.fillText(nd.val, 0, 14);
+  }
+
+  ctx.restore();
+}
+
+function drawInteractiveRuler(ctx, r) {
+  ctx.save();
+  ctx.fillStyle = "rgba(212, 167, 44, 0.18)";
+  ctx.strokeStyle = "#D4A72C";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(r.x, r.y, r.w, 42, 6);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#F8FAFC";
+  ctx.font = "10px Inter, monospace";
+  ctx.textAlign = "center";
+  for (let i = 0; i <= r.w; i += 10) {
+    const isMajor = i % 50 === 0;
+    ctx.beginPath();
+    ctx.moveTo(r.x + i, r.y);
+    ctx.lineTo(r.x + i, r.y + (isMajor ? 15 : 8));
+    ctx.stroke();
+    if (isMajor && i > 0 && i < r.w) {
+      ctx.fillText(`${i / 10}cm`, r.x + i, r.y + 28);
+    }
+  }
+  ctx.restore();
+}
+
+function drawInteractiveProtractor(ctx, p) {
+  ctx.save();
+  ctx.fillStyle = "rgba(56, 189, 248, 0.14)";
+  ctx.strokeStyle = "#38BDF8";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, p.r, Math.PI, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#F8FAFC";
+  ctx.font = "9.5px Inter, monospace";
+  ctx.textAlign = "center";
+  for (let deg = 0; deg <= 180; deg += 15) {
+    const rad = Math.PI + (deg * Math.PI) / 180;
+    const x1 = p.x + Math.cos(rad) * (p.r - 10);
+    const y1 = p.y + Math.sin(rad) * (p.r - 10);
+    const x2 = p.x + Math.cos(rad) * p.r;
+    const y2 = p.y + Math.sin(rad) * p.r;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    if (deg % 30 === 0) {
+      const tx = p.x + Math.cos(rad) * (p.r - 22);
+      const ty = p.y + Math.sin(rad) * (p.r - 22);
+      ctx.fillText(`${deg}°`, tx, ty);
+    }
+  }
+  ctx.restore();
+}
+
+function drawWB2Minimap(ctx, W, H) {
+  const mmW = 150, mmH = 95;
+  const mmX = W - mmW - 14, mmY = H - mmH - 14;
+  ctx.save();
+  ctx.fillStyle = "rgba(7, 10, 20, 0.88)";
+  ctx.strokeStyle = "rgba(212, 167, 44, 0.5)";
+  ctx.lineWidth = 1.5;
+  ctx.fillRect(mmX, mmY, mmW, mmH);
+  ctx.strokeRect(mmX, mmY, mmW, mmH);
+
+  WBState.nodes.forEach(n => {
+    if (n.hidden) return;
+    const nx = mmX + Math.max(4, Math.min(mmW - 8, (n.x / 1600) * mmW));
+    const ny = mmY + Math.max(4, Math.min(mmH - 8, (n.y / 1000) * mmH));
+    ctx.fillStyle = n.color || "#D4A72C";
+    ctx.fillRect(nx, ny, 6, 4);
+  });
+
+  ctx.strokeStyle = "#19B889";
+  ctx.lineWidth = 1.2;
+  const vx = mmX + Math.max(0, Math.min(mmW - 35, (-WBState.panX / 1600) * mmW));
+  const vy = mmY + Math.max(0, Math.min(mmH - 25, (-WBState.panY / 1000) * mmH));
+  ctx.strokeRect(vx, vy, 35 / WBState.zoom, 24 / WBState.zoom);
+  ctx.restore();
+}
+
+// اختصارات الكيبورد الاحترافية للسبورة الهندسية 2.0
+window.addEventListener("keydown", (e) => {
+  const canvas = document.getElementById("smart-whiteboard-canvas");
+  if (!canvas || ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
+
+  if (e.code === "Space") {
+    WBState.spacePressed = true;
+    canvas.style.cursor = "grab";
+  }
+
+  const k = e.key.toLowerCase();
+  if (!e.ctrlKey && !e.metaKey) {
+    const map = { v: "select", p: "pen", e: "eraser", t: "text", l: "line", r: "rect", c: "circle" };
+    if (map[k]) {
+      document.querySelector(`[data-wb-tool="${map[k]}"]`)?.click();
+    } else if (e.key === "Delete" || e.key === "Backspace") {
+      document.getElementById("btn-wb-del-node")?.click();
+    } else if (e.key === "Escape" && WBState.presentationMode) {
+      document.getElementById("btn-wb2-present-mode")?.click();
+    }
+  } else {
+    if (k === "z") { e.preventDefault(); document.getElementById("btn-wb-undo")?.click(); }
+    else if (k === "y") { e.preventDefault(); document.getElementById("btn-wb2-redo")?.click(); }
+    else if (k === "d") { e.preventDefault(); document.getElementById("btn-wb2-duplicate")?.click(); }
+  }
+});
+
+window.addEventListener("keyup", (e) => {
+  if (e.code === "Space") {
+    WBState.spacePressed = false;
+  }
+});
