@@ -286,10 +286,32 @@ function injectOSProVisualStyles() {
   document.head.appendChild(st);
 }
 
+/* ============================================================================
+   SUPER TOPBAR DOCK + PRO ENGINEERING WHITEBOARD (MINDMAP BRANCHES + IMAGES)
+   + PRIVATE .MP4 VIDEO RECORDER STUDIO
+   ============================================================================ */
 let topbarScreenRecStream = null;
 let topbarScreenRecorder = null;
 let topbarScreenChunks = [];
 let topbarRadioPlaying = false;
+
+// دالة اختيار أفضل ترميز فيديو MP4 مدعوم في المتصفح ليعمل على كل الأجهزة
+function getBestMP4MimeType() {
+  const types = [
+    "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+    "video/mp4;codecs=h264,aac",
+    "video/mp4",
+    "video/webm;codecs=h264",
+    "video/webm;codecs=vp9,opus",
+    "video/webm"
+  ];
+  for (const t of types) {
+    if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(t)) {
+      return t;
+    }
+  }
+  return "";
+}
 
 function initThemeAndSidebarSystem() {
   injectOSProVisualStyles();
@@ -329,38 +351,33 @@ function initThemeAndSidebarSystem() {
     topbarEnd.prepend(qcBtn);
   }
 
-  // حقن شريط الأدوات الخارق في المساحة الفارغة بالشريط العلوي
+  // شريط الأدوات العلوي الاحترافي النقي (بدون أيقونة المياه)
   if (topbarEnd && !document.getElementById("os-super-topbar-dock")) {
     const dock = document.createElement("div");
     dock.id = "os-super-topbar-dock";
     dock.className = "os-super-topbar-dock";
 
-    const gymProf = OSProStore.get("gym_profile_v4", { waterCups: 6 });
-
     dock.innerHTML = `
-      <button type="button" id="btn-top-cairo-radio" class="super-dock-pill" title="تشغيل/إيقاف إذاعة القرآن الكريم من القاهرة في الخلفية مباشرة">
+      <button type="button" id="btn-top-cairo-radio" class="super-dock-pill" title="تشغيل/إيقاف إذاعة القرآن الكريم من القاهرة في الخلفية">
         <i class="fa-solid fa-radio gold-text"></i>
         <span>إذاعة القاهرة</span>
       </button>
 
-      <button type="button" id="btn-top-whiteboard" class="btn-icon gold-glow" title="السبورة الهندسية الذكية للرسم والتخطيط الحر (Whiteboard)">
-        <i class="fa-solid fa-chalkboard-user"></i>
+      <button type="button" id="btn-top-whiteboard" class="super-dock-pill" title="استوديو السبورة الهندسية والشرح الشجري المتفرع والصور">
+        <i class="fa-solid fa-diagram-project gold-text"></i>
+        <span>السبورة والتفريع</span>
+      </button>
+
+      <button type="button" id="btn-top-screen-rec" class="super-dock-pill" title="تسجيل فيديو MP4 بخصوصية تامة">
+        <i class="fa-solid fa-video gold-text"></i>
+        <span id="top-rec-label">تسجيل MP4</span>
       </button>
 
       <button type="button" id="btn-top-sci-calc" class="btn-icon" title="الآلة الحاسبة العلمية والبرمجية السريعة">
         <i class="fa-solid fa-calculator"></i>
       </button>
 
-      <button type="button" id="btn-top-screen-rec" class="btn-icon" title="تسجيل الشاشة فيديو بضغطة واحدة (Screen Recorder)">
-        <i class="fa-solid fa-video"></i>
-      </button>
-
-      <button type="button" id="btn-top-water-quick" class="super-dock-pill" title="اضغط لتسجيل شرب كوب مياه جديد فوراً">
-        <span>💧</span>
-        <strong id="top-water-count-lbl">${gymProf.waterCups || 6}/10</strong>
-      </button>
-
-      <button type="button" id="btn-top-telemetry" class="super-dock-pill" title="رادار حالة الجهاز والبطارية وسرعة الاتصال">
+      <button type="button" id="btn-top-telemetry" class="super-dock-pill" title="رادار حالة الجهاز والبطارية">
         <i class="fa-solid fa-microchip gold-text"></i>
         <span id="top-battery-lbl">⚡ 100%</span>
       </button>
@@ -372,7 +389,7 @@ function initThemeAndSidebarSystem() {
 
   const themeBtn = document.getElementById("btn-theme-toggle");
   if (themeBtn) {
-    themeBtn.title = "اختيار الثيم (Midnight Gold / Pure Light / Pure Black / Forest)";
+    themeBtn.title = "اختيار الثيم أو تصميم ثيمك الخاص";
     themeBtn.onclick = openThemeSelectorModal;
   }
 
@@ -395,8 +412,8 @@ function injectSuperTopbarStyles() {
       gap: 7px;
       padding: 4px 10px;
       border-radius: 99px;
-      background: rgba(15, 22, 38, 0.55);
-      border: 1px solid rgba(212, 167, 44, 0.28);
+      background: rgba(15, 22, 38, 0.65);
+      border: 1px solid rgba(212, 167, 44, 0.3);
       margin-inline-end: 6px;
     }
     html[data-theme="pure-light"] .os-super-topbar-dock,
@@ -408,7 +425,7 @@ function injectSuperTopbarStyles() {
       background: rgba(255, 255, 255, 0.06);
       border: 1px solid rgba(255, 255, 255, 0.12);
       color: var(--text-primary);
-      padding: 5px 11px;
+      padding: 5px 12px;
       border-radius: 99px;
       font-family: inherit;
       font-size: 0.76rem;
@@ -436,29 +453,73 @@ function injectSuperTopbarStyles() {
       color: #19B889 !important;
       box-shadow: 0 0 15px rgba(25, 184, 137, 0.3);
     }
-    .btn-icon.rec-active {
+    .super-dock-pill.rec-active {
       background: rgba(239, 68, 68, 0.22) !important;
       border-color: #ef4444 !important;
-      color: #ef4444 !important;
+      color: #fca5a5 !important;
       animation: blinkDot 1s infinite;
     }
-    /* إصلاح وضوح نصوص البانر الترحيبي في الثيم النهاري الفاتح */
-    html[data-theme="pure-light"] .welcome-banner,
-    html[data-theme="light"] .welcome-banner {
-      color: #f8fafc !important;
+
+    /* استوديو السبورة الهندسية والتفريع الشجري الاحترافي */
+    .wb-studio-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(9, 13, 25, 0.95);
+      border: 1px solid rgba(212, 167, 44, 0.35);
+      border-radius: 14px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
     }
-    html[data-theme="pure-light"] .welcome-banner .briefing-content,
-    html[data-theme="light"] .welcome-banner .briefing-content {
-      color: #e2e8f0 !important;
+    .wb-tool-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-primary);
+      padding: 6px 11px;
+      border-radius: 9px;
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.18s ease;
+    }
+    .wb-tool-btn:hover {
+      border-color: var(--gold-primary);
+    }
+    .wb-tool-btn.active {
+      background: var(--gold-primary);
+      color: #05070e;
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 14px rgba(212, 167, 44, 0.4);
     }
     .whiteboard-canvas-box {
       width: 100%;
-      height: 410px;
-      background: #0b101e;
+      height: 520px;
+      background: #080d1a;
       border: 2px solid var(--gold-primary);
       border-radius: 16px;
       cursor: crosshair;
       touch-action: none;
+      display: block;
+    }
+    .wb-studio-fullscreen {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: 100vw !important;
+      max-height: 100vh !important;
+      z-index: 999999 !important;
+      border-radius: 0 !important;
+      padding: 16px 24px !important;
+    }
+    .wb-studio-fullscreen .whiteboard-canvas-box {
+      height: calc(100vh - 195px) !important;
     }
     .calc-grid-buttons {
       display: grid;
@@ -476,7 +537,6 @@ function injectSuperTopbarStyles() {
       font-size: 1rem;
       font-weight: 700;
       cursor: pointer;
-      transition: all 0.15s ease;
     }
     .calc-btn:hover {
       border-color: var(--gold-primary);
@@ -487,7 +547,7 @@ function injectSuperTopbarStyles() {
 }
 
 function bindSuperTopbarDockEvents() {
-  // 1. تشغيل وإيقاف إذاعة القرآن الكريم من القاهرة مباشرة من الشريط العلوي
+  // 1. إذاعة القرآن الكريم من القاهرة
   const radioBtn = document.getElementById("btn-top-cairo-radio");
   if (radioBtn) {
     radioBtn.onclick = () => {
@@ -508,61 +568,29 @@ function bindSuperTopbarDockEvents() {
     };
   }
 
-  // 2. السبورة الهندسية الذكية (Interactive Whiteboard)
-  document.getElementById("btn-top-whiteboard")?.addEventListener("click", openSmartWhiteboardModal);
+  // 2. فتح استوديو السبورة الهندسية والشرح المتفرع
+  document.getElementById("btn-top-whiteboard")?.addEventListener("click", () => openSmartWhiteboardModal());
 
-  // 3. الآلة الحاسبة العلمية والبرمجية السريعة
+  // 3. الآلة الحاسبة العلمية
   document.getElementById("btn-top-sci-calc")?.addEventListener("click", openScientificCalcModal);
 
-  // 4. مسجل الشاشة الفوري (Screen Video Recorder)
+  // 4. استوديو تسجيل الفيديو MP4 بخصوصية تامة
   const recBtn = document.getElementById("btn-top-screen-rec");
   if (recBtn) {
-    recBtn.onclick = async () => {
+    recBtn.onclick = () => {
       if (topbarScreenRecorder && topbarScreenRecorder.state === "recording") {
         topbarScreenRecorder.stop();
         topbarScreenRecStream?.getTracks().forEach(t => t.stop());
         recBtn.classList.remove("rec-active");
+        const lbl = document.getElementById("top-rec-label");
+        if (lbl) lbl.textContent = "تسجيل MP4";
         return;
       }
-      try {
-        topbarScreenRecStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-        topbarScreenRecorder = new MediaRecorder(topbarScreenRecStream);
-        topbarScreenChunks = [];
-        topbarScreenRecorder.ondataavailable = e => {
-          if (e.data.size > 0) topbarScreenChunks.push(e.data);
-        };
-        topbarScreenRecorder.onstop = () => {
-          const blob = new Blob(topbarScreenChunks, { type: "video/webm" });
-          const a = document.createElement("a");
-          a.href = URL.createObjectURL(blob);
-          a.download = `my-life-os-screen-record-${today()}.webm`;
-          a.click();
-          recBtn.classList.remove("rec-active");
-          toast("تم حفظ وتحميل تسجيل الشاشة بنجاح! 🎥✅");
-        };
-        topbarScreenRecorder.start();
-        recBtn.classList.add("rec-active");
-        toast("🔴 بدأ تسجيل الشاشة! اضغط على أيقونة الكاميرا مرة أخرى للإيقاف والحفظ", "info");
-      } catch (err) {
-        toast("تم إلغاء مشاركة الشاشة", "info");
-      }
+      openPrivateMP4RecorderModal();
     };
   }
 
-  // 5. عداد المياه السريع بضغطة واحدة
-  document.getElementById("btn-top-water-quick")?.addEventListener("click", () => {
-    const prof = OSProStore.get("gym_profile_v4", { waterCups: 6 });
-    prof.waterCups = ((Number(prof.waterCups) || 0) % 12) + 1;
-    OSProStore.set("gym_profile_v4", prof);
-    const lbl = document.getElementById("top-water-count-lbl");
-    if (lbl) lbl.textContent = `${prof.waterCups}/10`;
-    if (document.getElementById("view-health")?.classList.contains("active")) {
-      renderHealthView();
-    }
-    toast(`بالهنا والشفا! شربت ${prof.waterCups} أكواب مياه اليوم 💧`);
-  });
-
-  // 6. رادار حالة الجهاز والبطارية (Live System Telemetry)
+  // 5. رادار البطارية والأداء
   if ("getBattery" in navigator) {
     navigator.getBattery().then(bat => {
       const updateBat = () => {
@@ -604,81 +632,713 @@ function bindSuperTopbarDockEvents() {
   });
 }
 
-// نافذة السبورة الهندسية التفاعلية (Smart Whiteboard)
-function openSmartWhiteboardModal() {
-  B().openFormModal("🎨 السبورة الهندسية الذكية للرسم والشرح الحر (Smart Whiteboard)", `
-    <div class="flex-between mb-2" style="flex-wrap:wrap; gap:8px;">
-      <div class="filters-row">
-        <label class="small-muted">لون القلم:</label>
-        <input type="color" id="wb-color" value="#D4A72C" style="width:42px; height:32px; padding:2px; cursor:pointer;" />
-        <label class="small-muted">السمك:</label>
-        <input type="range" id="wb-size" min="2" max="18" value="4" style="width:90px;" />
-        <button type="button" id="btn-wb-eraser" class="btn btn-xs btn-outline"><i class="fa-solid fa-eraser"></i> ممحاة</button>
+/* ============================================================================
+   PRIVACY-FIRST .MP4 VIDEO RECORDER STUDIO (INTERNAL CANVAS OR SCREEN)
+   ============================================================================ */
+function openPrivateMP4RecorderModal() {
+  B().openFormModal("🎥 استوديو تسجيل الفيديو بصيغة (.MP4) — خصوصية كاملة", `
+    <p class="small-muted mb-2">اختر طريقة التسجيل المناسبة لك (يتم تصدير الفيديو بصيغة <strong>.mp4</strong> مباشرة لترسله لأي شخص بسهولة):</p>
+
+    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap: 14px;">
+      <div class="item-card" style="border-color:#19B889!important;">
+        <div>
+          <span class="badge badge-emerald">🔒 خصوصية 100% (موصى به للشرح)</span>
+          <h4 class="mt-2 gold-text">1. تسجيل السبورة التفاعلية فقط + صوتك</h4>
+          <p class="small-muted mt-1">يسجل لوحة الشرح والرسومات والفروع مباشرة من داخل الموقع <strong>بدون فتح نافذة مشاركة المتصفح وبدون إظهار اسم حسابك على GitHub أو التابات المفتوحة نهائياً!</strong></p>
+        </div>
+        <button type="button" id="btn-rec-internal-wb" class="btn btn-gold btn-sm btn-block mt-2">
+          <i class="fa-solid fa-chalkboard-user"></i> افتح السبورة وابدأ تسجيل MP4 خاص
+        </button>
       </div>
-      <div class="filters-row">
-        <button type="button" id="btn-wb-clear" class="btn btn-xs btn-danger"><i class="fa-solid fa-trash"></i> مسح السبورة</button>
-        <button type="button" id="btn-wb-download" class="btn btn-xs btn-gold"><i class="fa-solid fa-download"></i> حفظ كصورة PNG</button>
+
+      <div class="item-card">
+        <div>
+          <span class="badge badge-gold">🖥️ تسجيل نافذة أو شاشة كاملة</span>
+          <h4 class="mt-2">2. تسجيل شاشة الجهاز بصيغة MP4</h4>
+          <p class="small-muted mt-1">يسجل أي نافذة أو برنامج على جهازك مع الصوت ويحفظه كملف <strong>.mp4</strong> قياسي (يستخدم نافذة اختيار الشاشة الخاصة بالمتصفح).</p>
+        </div>
+        <button type="button" id="btn-rec-display-mp4" class="btn btn-outline btn-sm btn-block mt-2">
+          <i class="fa-solid fa-desktop gold-text"></i> تسجيل الشاشة بصيغة MP4
+        </button>
       </div>
     </div>
-    <canvas id="smart-whiteboard-canvas" class="whiteboard-canvas-box"></canvas>
   `, async () => {});
 
-  document.querySelector("#universal-modal .modal-card")?.classList.add("wide-lab-modal");
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  // الخيار 1: فتح السبورة وبدء التسجيل الداخلي الخاص 100% بدون نافذة المتصفح
+  document.getElementById("btn-rec-internal-wb")?.addEventListener("click", () => {
+    openSmartWhiteboardModal(true);
+  });
+
+  // الخيار 2: تسجيل الشاشة بصيغة MP4 مع إخفاء التاب الحالي من الاقتراحات المزعجة
+  document.getElementById("btn-rec-display-mp4")?.addEventListener("click", async () => {
+    document.getElementById("universal-modal")?.classList.add("hidden");
+    const recBtn = document.getElementById("btn-top-screen-rec");
+    const lbl = document.getElementById("top-rec-label");
+    try {
+      topbarScreenRecStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          displaySurface: "monitor",
+          selfBrowserSurface: "exclude"
+        },
+        audio: true
+      });
+      const mime = getBestMP4MimeType();
+      topbarScreenRecorder = mime
+        ? new MediaRecorder(topbarScreenRecStream, { mimeType: mime })
+        : new MediaRecorder(topbarScreenRecStream);
+
+      topbarScreenChunks = [];
+      topbarScreenRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) topbarScreenChunks.push(e.data);
+      };
+      topbarScreenRecorder.onstop = () => {
+        const blob = new Blob(topbarScreenChunks, { type: "video/mp4" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `Explanation-Video-${today()}.mp4`;
+        a.click();
+        recBtn?.classList.remove("rec-active");
+        if (lbl) lbl.textContent = "تسجيل MP4";
+        toast("تم حفظ وتصدير الفيديو بصيغة .MP4 بنجاح! 🎬✅");
+      };
+      topbarScreenRecorder.start(200);
+      recBtn?.classList.add("rec-active");
+      if (lbl) lbl.textContent = "إيقاف وحفظ MP4 🔴";
+      toast("🔴 بدأ التسجيل! اضغط على (إيقاف وحفظ MP4) في الشريط العلوي عند الانتهاء", "info");
+    } catch (err) {
+      toast("تم إلغاء بدء التسجيل", "info");
+    }
+  });
+}
+
+/* ============================================================================
+   ULTIMATE ENGINEERING WHITEBOARD, IMAGE ANNOTATOR & MULTI-BRANCH TREE STUDIO
+   ============================================================================ */
+const WBState = {
+  tool: "select", // select | pen | highlight | line | arrow | rect | circle | text | eraser
+  bgMode: "grid", // grid | dots | dark | white
+  color: "#D4A72C",
+  size: 4,
+  strokes: [],
+  nodes: [
+    { id: "n_root", text: "🌟 الموضوع الرئيسي للشرح", x: 430, y: 80, w: 210, h: 46, color: "#D4A72C", parentId: null }
+  ],
+  images: [],
+  selectedNodeId: "n_root",
+  selectedImgId: null,
+  undoStack: [],
+  isRecordingCanvas: false,
+  canvasRecorder: null,
+  canvasRecChunks: [],
+  micStream: null
+};
+
+function pushWBUndoSnapshot() {
+  WBState.undoStack.push(JSON.stringify({
+    strokes: WBState.strokes,
+    nodes: WBState.nodes
+  }));
+  if (WBState.undoStack.length > 25) WBState.undoStack.shift();
+}
+
+function openSmartWhiteboardModal(autoStartPrivateRecord = false) {
+  B().openFormModal("🎨 استوديو السبورة الهندسية، الخرائط المتفرعة، والشرح على الصور", `
+    <!-- شريط الأدوات الهندسي الشامل -->
+    <div class="wb-studio-toolbar">
+      <div class="filters-row" style="gap:5px;">
+        <button type="button" class="wb-tool-btn ${WBState.tool === "select" ? "active" : ""}" data-wb-tool="select" title="تحديد وتحريك الفروع والصور"><i class="fa-solid fa-arrows-up-down-left-right"></i> تحريك</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "pen" ? "active" : ""}" data-wb-tool="pen"><i class="fa-solid fa-pen"></i> قلم</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "highlight" ? "active" : ""}" data-wb-tool="highlight"><i class="fa-solid fa-highlighter"></i> تظليل</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "arrow" ? "active" : ""}" data-wb-tool="arrow"><i class="fa-solid fa-arrow-trend-up"></i> سهم</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "line" ? "active" : ""}" data-wb-tool="line"><i class="fa-solid fa-slash"></i> خط</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "rect" ? "active" : ""}" data-wb-tool="rect"><i class="fa-regular fa-square"></i> صندوق</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "circle" ? "active" : ""}" data-wb-tool="circle"><i class="fa-regular fa-circle"></i> دائرة</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "text" ? "active" : ""}" data-wb-tool="text"><i class="fa-solid fa-font"></i> نص</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "eraser" ? "active" : ""}" data-wb-tool="eraser"><i class="fa-solid fa-eraser"></i> ممحاة</button>
+      </div>
+
+      <div class="filters-row" style="gap:6px;">
+        <input type="color" id="wb-color" value="${WBState.color}" style="width:36px; height:32px; padding:1px; cursor:pointer;" title="لون الرسم أو الفرع" />
+        <input type="range" id="wb-size" min="2" max="18" value="${WBState.size}" style="width:70px;" title="سمك الخط" />
+        <select id="wb-bg-select" class="select-sm" style="min-width:115px; padding:4px 8px;">
+          <option value="grid" ${WBState.bgMode === "grid" ? "selected" : ""}>📐 شبكة هندسية</option>
+          <option value="dots" ${WBState.bgMode === "dots" ? "selected" : ""}>⠿ نقاط رقمية</option>
+          <option value="dark" ${WBState.bgMode === "dark" ? "selected" : ""}>🌑 كحلي سادة</option>
+          <option value="white" ${WBState.bgMode === "white" ? "selected" : ""}>⬜ سبورة بيضاء</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- شريط التفريع الشجري اللانهائي وإدراج الصور وتصدير الفيديو MP4 -->
+    <div class="wb-studio-toolbar" style="background:rgba(15, 23, 42, 0.92);">
+      <div class="filters-row" style="gap:6px;">
+        <button type="button" id="btn-wb-add-root" class="btn btn-xs btn-gold" title="إضافة موضوع أو فرع رئيسي جديد">
+          <i class="fa-solid fa-sitemap"></i> + موضوع رئيسي
+        </button>
+        <button type="button" id="btn-wb-spawn-branches" class="btn btn-xs btn-gold" style="background:linear-gradient(135deg,#19B889,#059669)!important; color:#05070e!important;" title="توليد عدة فروع متشعبة من العقدة المحددة حالياً">
+          <i class="fa-solid fa-code-branch"></i> + فرّع عدة فروع من المحدد
+        </button>
+        <button type="button" id="btn-wb-edit-node" class="btn btn-xs btn-outline" title="تعديل نص العقدة المحددة أو دبل كليك عليها">
+          <i class="fa-solid fa-pen-to-square gold-text"></i> تعديل النص
+        </button>
+        <button type="button" id="btn-wb-del-node" class="btn btn-xs btn-outline text-danger" title="حذف العقدة المحددة">
+          <i class="fa-solid fa-xmark"></i> حذف الفرع
+        </button>
+        <label class="btn btn-xs btn-outline" style="cursor:pointer; margin:0;" title="إدراج صورة من جهازك للشرح والرسم عليها">
+          <i class="fa-regular fa-image gold-text"></i> إدراج صورة للشرح
+          <input type="file" id="wb-img-upload-inp" accept="image/*" class="hidden" />
+        </label>
+      </div>
+
+      <div class="filters-row" style="gap:6px;">
+        <button type="button" id="btn-wb-undo" class="btn btn-xs btn-outline" title="تراجع عن آخر خطوة"><i class="fa-solid fa-rotate-left"></i> تراجع</button>
+        <button type="button" id="btn-wb-clear" class="btn btn-xs btn-danger"><i class="fa-solid fa-trash"></i> مسح الكل</button>
+        <button type="button" id="btn-wb-rec-mp4" class="btn btn-xs btn-outline" style="border-color:#19B889;">
+          <i class="fa-solid fa-video gold-text"></i> <span id="wb-rec-btn-lbl">تسجيل الشرح MP4 (خاص 🔒)</span>
+        </button>
+        <button type="button" id="btn-wb-download" class="btn btn-xs btn-gold"><i class="fa-solid fa-download"></i> تصدير صورة الشرح PNG</button>
+        <button type="button" id="btn-wb-fullscreen" class="btn btn-xs btn-outline" title="ملء الشاشة"><i class="fa-solid fa-expand"></i></button>
+      </div>
+    </div>
+
+    <canvas id="smart-whiteboard-canvas" class="whiteboard-canvas-box"></canvas>
+    <div class="flex-between mt-1 small-muted">
+      <span>💡 <strong>كيف تفرّع الشجرة؟</strong> اضغط على أي صندوق في السبورة لتحديده، ثم اضغط <strong>(+ فرّع عدة فروع من المحدد)</strong> واكتب كل الفروع مفصولة بفاصلة! واسحب أي فرع بالماوس لتحريكه.</span>
+      <span id="wb-selected-node-indicator" class="gold-text">المحدد حالياً: الموضوع الرئيسي</span>
+    </div>
+  `, async () => {});
+
+  const modalCard = document.querySelector("#universal-modal .modal-card");
+  modalCard?.classList.add("wide-lab-modal");
   const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
   if (saveBtn) saveBtn.style.display = "none";
 
   const canvas = document.getElementById("smart-whiteboard-canvas");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  canvas.width = canvas.clientWidth || 860;
-  canvas.height = 410;
 
-  ctx.fillStyle = "#0b101e";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const resizeBoard = () => {
+    canvas.width = canvas.clientWidth || 920;
+    canvas.height = canvas.clientHeight || 520;
+    renderWhiteboardScene(ctx, canvas.width, canvas.height);
+  };
+  setTimeout(resizeBoard, 30);
 
-  let drawing = false;
-  let isEraser = false;
+  let isDraggingNode = null;
+  let isDraggingImg = null;
+  let dragOffsetX = 0;
+  let dragOffsetY = 0;
+  let isDrawingStroke = false;
+  let currentStroke = null;
 
   const getPos = (e) => {
     const r = canvas.getBoundingClientRect();
-    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0].clientY);
     return { x: clientX - r.left, y: clientY - r.top };
   };
 
-  canvas.onmousedown = (e) => {
-    drawing = true;
-    const { x, y } = getPos(e);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
+  const findNodeAt = (x, y) => {
+    for (let i = WBState.nodes.length - 1; i >= 0; i--) {
+      const nd = WBState.nodes[i];
+      if (x >= nd.x - nd.w / 2 && x <= nd.x + nd.w / 2 && y >= nd.y - nd.h / 2 && y <= nd.y + nd.h / 2) {
+        return nd;
+      }
+    }
+    return null;
   };
-  canvas.onmousemove = (e) => {
-    if (!drawing) return;
-    const { x, y } = getPos(e);
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.lineWidth = Number(document.getElementById("wb-size")?.value || 4);
-    ctx.strokeStyle = isEraser ? "#0b101e" : (document.getElementById("wb-color")?.value || "#D4A72C");
-    ctx.lineTo(x, y);
-    ctx.stroke();
-  };
-  window.addEventListener("mouseup", () => { drawing = false; });
 
-  document.getElementById("btn-wb-eraser").onclick = (e) => {
-    isEraser = !isEraser;
-    e.currentTarget.classList.toggle("btn-gold", isEraser);
+  const findImgAt = (x, y) => {
+    for (let i = WBState.images.length - 1; i >= 0; i--) {
+      const im = WBState.images[i];
+      if (x >= im.x && x <= im.x + im.w && y >= im.y && y <= im.y + im.h) {
+        return im;
+      }
+    }
+    return null;
   };
+
+  canvas.onmousedown = (e) => {
+    const { x, y } = getPos(e);
+    WBState.color = document.getElementById("wb-color")?.value || "#D4A72C";
+    WBState.size = Number(document.getElementById("wb-size")?.value || 4);
+
+    // فحص إذا ضغط المستخدم على عقدة شجرية لتحريكها أو تحديدها
+    const hitNode = findNodeAt(x, y);
+    if (hitNode && (WBState.tool === "select" || e.shiftKey)) {
+      WBState.selectedNodeId = hitNode.id;
+      isDraggingNode = hitNode;
+      dragOffsetX = x - hitNode.x;
+      dragOffsetY = y - hitNode.y;
+      const ind = document.getElementById("wb-selected-node-indicator");
+      if (ind) ind.textContent = `المحدد حالياً: ${hitNode.text}`;
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      return;
+    }
+
+    if (WBState.tool === "select") {
+      if (hitNode) {
+        WBState.selectedNodeId = hitNode.id;
+        isDraggingNode = hitNode;
+        dragOffsetX = x - hitNode.x;
+        dragOffsetY = y - hitNode.y;
+        renderWhiteboardScene(ctx, canvas.width, canvas.height);
+        return;
+      }
+      const hitImg = findImgAt(x, y);
+      if (hitImg) {
+        WBState.selectedImgId = hitImg.id;
+        isDraggingImg = hitImg;
+        dragOffsetX = x - hitImg.x;
+        dragOffsetY = y - hitImg.y;
+        renderWhiteboardScene(ctx, canvas.width, canvas.height);
+        return;
+      }
+      return;
+    }
+
+    if (WBState.tool === "text") {
+      const txt = prompt("✍️ اكتب النص المراد وضعه على السبورة:");
+      if (txt && txt.trim()) {
+        pushWBUndoSnapshot();
+        WBState.strokes.push({
+          type: "text",
+          text: txt.trim(),
+          x,
+          y,
+          color: WBState.color,
+          size: WBState.size
+        });
+        renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      }
+      return;
+    }
+
+    pushWBUndoSnapshot();
+    isDrawingStroke = true;
+    currentStroke = {
+      type: WBState.tool,
+      color: WBState.color,
+      size: WBState.size,
+      points: [{ x, y }],
+      x1: x,
+      y1: y,
+      x2: x,
+      y2: y
+    };
+    WBState.strokes.push(currentStroke);
+  };
+
+  canvas.onmousemove = (e) => {
+    const { x, y } = getPos(e);
+    if (isDraggingNode) {
+      isDraggingNode.x = x - dragOffsetX;
+      isDraggingNode.y = y - dragOffsetY;
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      return;
+    }
+    if (isDraggingImg) {
+      isDraggingImg.x = x - dragOffsetX;
+      isDraggingImg.y = y - dragOffsetY;
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      return;
+    }
+    if (!isDrawingStroke || !currentStroke) return;
+
+    if (currentStroke.type === "pen" || currentStroke.type === "highlight" || currentStroke.type === "eraser") {
+      currentStroke.points.push({ x, y });
+    } else {
+      currentStroke.x2 = x;
+      currentStroke.y2 = y;
+    }
+    renderWhiteboardScene(ctx, canvas.width, canvas.height);
+  };
+
+  window.addEventListener("mouseup", () => {
+    isDraggingNode = null;
+    isDraggingImg = null;
+    isDrawingStroke = false;
+    currentStroke = null;
+  });
+
+  // دبل كليك على أي عقدة لتعديل اسمها أو تفريعها فوراً
+  canvas.ondblclick = (e) => {
+    const { x, y } = getPos(e);
+    const hitNode = findNodeAt(x, y);
+    if (hitNode) {
+      WBState.selectedNodeId = hitNode.id;
+      const newTxt = prompt("✏️ تعديل عنوان الفرع:", hitNode.text);
+      if (newTxt && newTxt.trim()) {
+        pushWBUndoSnapshot();
+        hitNode.text = newTxt.trim();
+        hitNode.w = Math.max(130, hitNode.text.length * 9 + 36);
+        renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      }
+    }
+  };
+
+  // أزرار اختيار الأداة
+  document.querySelectorAll("[data-wb-tool]").forEach(btn => {
+    btn.onclick = () => {
+      WBState.tool = btn.dataset.wbTool;
+      document.querySelectorAll("[data-wb-tool]").forEach(b => b.classList.toggle("active", b === btn));
+      canvas.style.cursor = WBState.tool === "select" ? "grab" : "crosshair";
+    };
+  });
+
+  document.getElementById("wb-bg-select").onchange = (e) => {
+    WBState.bgMode = e.target.value;
+    renderWhiteboardScene(ctx, canvas.width, canvas.height);
+  };
+
+  // إضافة موضوع رئيسي جديد
+  document.getElementById("btn-wb-add-root").onclick = () => {
+    const title = prompt("🌟 اكتب عنوان الموضوع أو الفرع الرئيسي الجديد:", "موضوع رئيسي جديد");
+    if (!title || !title.trim()) return;
+    pushWBUndoSnapshot();
+    const id = "nd_" + Date.now();
+    const c = document.getElementById("wb-color")?.value || "#D4A72C";
+    WBState.nodes.push({
+      id,
+      text: title.trim(),
+      x: canvas.width / 2,
+      y: 90 + (WBState.nodes.length % 4) * 55,
+      w: Math.max(150, title.trim().length * 9 + 40),
+      h: 44,
+      color: c,
+      parentId: null
+    });
+    WBState.selectedNodeId = id;
+    WBState.tool = "select";
+    document.querySelectorAll("[data-wb-tool]").forEach(b => b.classList.toggle("active", b.dataset.wbTool === "select"));
+    renderWhiteboardScene(ctx, canvas.width, canvas.height);
+  };
+
+  // تفريع عدة فروع متشعبة دفعة واحدة من العقدة المحددة!
+  document.getElementById("btn-wb-spawn-branches").onclick = () => {
+    const parent = WBState.nodes.find(n => n.id === WBState.selectedNodeId) || WBState.nodes[0];
+    if (!parent) {
+      toast("أضف موضوعاً رئيسياً أولاً!", "error");
+      return;
+    }
+    const raw = prompt(
+      `🌿 تفريع من (${parent.text}):\nاكتب أسماء الفروع المتفرعة وافصل بين كل فرع بفاصلة ( , ):`,
+      "الفرع الأول, الفرع الثاني, الفرع الثالث"
+    );
+    if (!raw || !raw.trim()) return;
+    const parts = raw.split(/[،,]/).map(s => s.trim()).filter(Boolean);
+    if (!parts.length) return;
+
+    pushWBUndoSnapshot();
+    const c = document.getElementById("wb-color")?.value || "#19B889";
+    const spreadW = Math.min(canvas.width - 120, parts.length * 190);
+    const startX = parent.x - spreadW / 2 + (spreadW / (parts.length * 2));
+    const stepX = parts.length > 1 ? spreadW / parts.length : 0;
+    const childY = Math.min(canvas.height - 55, parent.y + 115);
+
+    parts.forEach((txt, idx) => {
+      WBState.nodes.push({
+        id: "nd_" + Date.now() + "_" + idx,
+        text: txt,
+        x: Math.max(85, Math.min(canvas.width - 85, parts.length === 1 ? parent.x : startX + idx * stepX)),
+        y: childY,
+        w: Math.max(130, txt.length * 9 + 34),
+        h: 40,
+        color: c,
+        parentId: parent.id
+      });
+    });
+
+    WBState.tool = "select";
+    document.querySelectorAll("[data-wb-tool]").forEach(b => b.classList.toggle("active", b.dataset.wbTool === "select"));
+    renderWhiteboardScene(ctx, canvas.width, canvas.height);
+    toast(`تم توليد ${parts.length} فروع متشعبة من "${parent.text}"! اسحب أي فرع لترتيبه 🌿✨`);
+  };
+
+  document.getElementById("btn-wb-edit-node").onclick = () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (!nd) return;
+    const txt = prompt("✏️ تعديل نص الفرع:", nd.text);
+    if (txt && txt.trim()) {
+      pushWBUndoSnapshot();
+      nd.text = txt.trim();
+      nd.w = Math.max(130, nd.text.length * 9 + 36);
+      nd.color = document.getElementById("wb-color")?.value || nd.color;
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+    }
+  };
+
+  document.getElementById("btn-wb-del-node").onclick = () => {
+    if (!WBState.selectedNodeId) return;
+    pushWBUndoSnapshot();
+    const delId = WBState.selectedNodeId;
+    WBState.nodes = WBState.nodes.filter(n => n.id !== delId && n.parentId !== delId);
+    WBState.selectedNodeId = WBState.nodes[0]?.id || null;
+    renderWhiteboardScene(ctx, canvas.width, canvas.height);
+  };
+
+  // إدراج صورة من الجهاز للشرح عليها
+  document.getElementById("wb-img-upload-inp").onchange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const imgEl = new Image();
+      imgEl.onload = () => {
+        const maxW = 360;
+        const scale = Math.min(1, maxW / imgEl.width);
+        WBState.images.push({
+          id: "im_" + Date.now(),
+          imgEl,
+          x: 60,
+          y: 120,
+          w: Math.round(imgEl.width * scale),
+          h: Math.round(imgEl.height * scale)
+        });
+        renderWhiteboardScene(ctx, canvas.width, canvas.height);
+        toast("تم إدراج الصورة على السبورة! يمكنك تحريكها أو الرسم والتفريع فوقها 🖼️✨");
+      };
+      imgEl.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  document.getElementById("btn-wb-undo").onclick = () => {
+    const last = WBState.undoStack.pop();
+    if (last) {
+      const parsed = JSON.parse(last);
+      WBState.strokes = parsed.strokes || [];
+      WBState.nodes = parsed.nodes || [];
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+    }
+  };
+
   document.getElementById("btn-wb-clear").onclick = () => {
-    ctx.fillStyle = "#0b101e";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!confirm("هل تريد مسح السبورة بالكامل؟")) return;
+    pushWBUndoSnapshot();
+    WBState.strokes = [];
+    WBState.images = [];
+    WBState.nodes = [];
+    renderWhiteboardScene(ctx, canvas.width, canvas.height);
   };
+
   document.getElementById("btn-wb-download").onclick = () => {
     const a = document.createElement("a");
-    a.download = `whiteboard-sketch-${today()}.png`;
+    a.download = `Smart-Diagram-Explanation-${today()}.png`;
     a.href = canvas.toDataURL("image/png");
     a.click();
-    toast("تم تحميل رسمة السبورة كصورة PNG! 🎨");
+    toast("تم تصدير صورة الشرح والخريطة بجودة PNG عالية! 📸✅");
   };
+
+  document.getElementById("btn-wb-fullscreen").onclick = () => {
+    modalCard?.classList.toggle("wb-studio-fullscreen");
+    setTimeout(resizeBoard, 60);
+  };
+
+  // تسجيل السبورة مباشرة إلى ملف فيديو .MP4 بدون نافذة مشاركة الشاشة (خصوصية 100%)
+  const toggleCanvasPrivateRecording = async () => {
+    const recLbl = document.getElementById("wb-rec-btn-lbl");
+    const recBtn = document.getElementById("btn-wb-rec-mp4");
+
+    if (WBState.isRecordingCanvas && WBState.canvasRecorder) {
+      WBState.canvasRecorder.stop();
+      WBState.micStream?.getTracks().forEach(t => t.stop());
+      WBState.isRecordingCanvas = false;
+      if (recLbl) recLbl.textContent = "تسجيل الشرح MP4 (خاص 🔒)";
+      recBtn?.classList.remove("btn-danger");
+      return;
+    }
+
+    try {
+      const canvasStream = canvas.captureStream(30);
+      try {
+        WBState.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        WBState.micStream.getAudioTracks().forEach(track => canvasStream.addTrack(track));
+      } catch (micErr) {
+        // يكمل تسجيل فيديو السبورة حتى لو لم يكن هناك مايكروفون
+      }
+
+      const mime = getBestMP4MimeType();
+      WBState.canvasRecorder = mime
+        ? new MediaRecorder(canvasStream, { mimeType: mime })
+        : new MediaRecorder(canvasStream);
+
+      WBState.canvasRecChunks = [];
+      WBState.canvasRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) WBState.canvasRecChunks.push(e.data);
+      };
+      WBState.canvasRecorder.onstop = () => {
+        const blob = new Blob(WBState.canvasRecChunks, { type: "video/mp4" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `Whiteboard-Explanation-${today()}.mp4`;
+        a.click();
+        toast("تم حفظ فيديو الشرح بصيغة .MP4 بخصوصية تامة! 🎥✅");
+      };
+
+      WBState.canvasRecorder.start(200);
+      WBState.isRecordingCanvas = true;
+      if (recLbl) recLbl.textContent = "إيقاف وحفظ MP4 🔴";
+      recBtn?.classList.add("btn-danger");
+      toast("🔒 بدأ تسجيل السبورة وصوتك مباشرة بصيغة MP4 (بدون ظهور أي تابات أو اسم حسابك)!", "success");
+    } catch (e) {
+      toast("تعذر بدء تسجيل الكانفاس", "error");
+    }
+  };
+
+  document.getElementById("btn-wb-rec-mp4").onclick = toggleCanvasPrivateRecording;
+  if (autoStartPrivateRecord) {
+    setTimeout(toggleCanvasPrivateRecording, 350);
+  }
+}
+
+function renderWhiteboardScene(ctx, W, H) {
+  ctx.clearRect(0, 0, W, H);
+
+  // 1. رسم الخلفية الهندسية المختارة
+  const isWhite = WBState.bgMode === "white";
+  ctx.fillStyle = isWhite ? "#F8FAFC" : "#080D1A";
+  ctx.fillRect(0, 0, W, H);
+
+  if (WBState.bgMode === "grid") {
+    ctx.strokeStyle = "rgba(212, 167, 44, 0.07)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 32) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y < H; y += 32) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+  } else if (WBState.bgMode === "dots") {
+    ctx.fillStyle = "rgba(148, 163, 184, 0.22)";
+    for (let x = 24; x < W; x += 28) {
+      for (let y = 24; y < H; y += 28) {
+        ctx.beginPath(); ctx.arc(x, y, 1.3, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+
+  // 2. رسم الصور المدرجة للشرح عليها
+  WBState.images.forEach(im => {
+    ctx.drawImage(im.imgEl, im.x, im.y, im.w, im.h);
+    ctx.strokeStyle = "rgba(212, 167, 44, 0.6)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(im.x, im.y, im.w, im.h);
+  });
+
+  // 3. رسم الخطوط والأشكال المرسومة باليد
+  WBState.strokes.forEach(s => {
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = s.type === "highlight" ? s.size * 3.2 : s.size;
+    ctx.strokeStyle = s.type === "eraser" ? (isWhite ? "#F8FAFC" : "#080D1A") : s.color;
+    ctx.fillStyle = s.color;
+    if (s.type === "highlight") ctx.globalAlpha = 0.32;
+
+    if (s.type === "pen" || s.type === "highlight" || s.type === "eraser") {
+      if (s.points.length > 0) {
+        ctx.beginPath();
+        ctx.moveTo(s.points[0].x, s.points[0].y);
+        s.points.forEach(pt => ctx.lineTo(pt.x, pt.y));
+        ctx.stroke();
+      }
+    } else if (s.type === "line") {
+      ctx.beginPath();
+      ctx.moveTo(s.x1, s.y1);
+      ctx.lineTo(s.x2, s.y2);
+      ctx.stroke();
+    } else if (s.type === "arrow") {
+      drawArrowOnCtx(ctx, s.x1, s.y1, s.x2, s.y2, s.color, s.size);
+    } else if (s.type === "rect") {
+      ctx.strokeRect(s.x1, s.y1, s.x2 - s.x1, s.y2 - s.y1);
+    } else if (s.type === "circle") {
+      const r = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+      ctx.beginPath();
+      ctx.arc(s.x1, s.y1, r, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (s.type === "text") {
+      ctx.font = `bold ${Math.max(15, s.size * 4)}px Alexandria, Cairo, sans-serif`;
+      ctx.fillText(s.text, s.x, s.y);
+    }
+    ctx.restore();
+  });
+
+  // 4. رسم الروابط المنحنية بين الفروع الشجرية (Tree / Mindmap Curved Connectors)
+  WBState.nodes.forEach(nd => {
+    if (!nd.parentId) return;
+    const parent = WBState.nodes.find(p => p.id === nd.parentId);
+    if (!parent) return;
+
+    ctx.save();
+    ctx.strokeStyle = nd.color || "#19B889";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    const startX = parent.x;
+    const startY = parent.y + parent.h / 2;
+    const endX = nd.x;
+    const endY = nd.y - nd.h / 2;
+    const midY = (startY + endY) / 2;
+    ctx.moveTo(startX, startY);
+    ctx.bezierCurveTo(startX, midY, endX, midY, endX, endY);
+    ctx.stroke();
+
+    // رأس السهم عند الفرع الابن
+    ctx.fillStyle = nd.color || "#19B889";
+    ctx.beginPath();
+    ctx.arc(endX, endY, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // 5. رسم صناديق الفروع والعقد الشجرية
+  WBState.nodes.forEach(nd => {
+    const isSel = nd.id === WBState.selectedNodeId;
+    ctx.save();
+    const rx = nd.x - nd.w / 2;
+    const ry = nd.y - nd.h / 2;
+
+    if (isSel) {
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = nd.color || "#D4A72C";
+    }
+
+    ctx.fillStyle = isWhite ? "#FFFFFF" : "#11192E";
+    ctx.strokeStyle = isSel ? "#FFFFFF" : (nd.color || "#D4A72C");
+    ctx.lineWidth = isSel ? 3 : 2;
+
+    ctx.beginPath();
+    ctx.roundRect(rx, ry, nd.w, nd.h, 12);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = isWhite ? "#0F172A" : "#F8FAFC";
+    ctx.font = "bold 13.5px Alexandria, Cairo, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(nd.text, nd.x, nd.y);
+    ctx.restore();
+  });
+}
+
+function drawArrowOnCtx(ctx, x1, y1, x2, y2, color, size) {
+  const headlen = Math.max(10, size * 3);
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
+  ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
+  ctx.closePath();
+  ctx.fill();
 }
 
 // نافذة الآلة الحاسبة العلمية والبرمجية السريعة
