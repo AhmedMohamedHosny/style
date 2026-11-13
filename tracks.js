@@ -1418,6 +1418,7 @@ foundations: [
    ============================================================================ */
 const TracksState = {
   activeTrackId: localStorage.getItem("MY_LIFE_OS_ACTIVE_TRACK_V3") || "fullstack",
+  activeLevelFilter: "all", // "all" | "beginner" | "intermediate" | "advanced"
   activeRoleFilter: "all",
   selectedNodeId: null,
   zoom: 1,
@@ -1429,6 +1430,46 @@ const TracksState = {
   customNodesByTrack: SafeTrackStore.get("MY_LIFE_OS_CUSTOM_TRACK_NODES_V3", {}),
   userCustomPlans: SafeTrackStore.get("MY_LIFE_OS_USER_CUSTOM_PLANS_V3", {}),
   animFrame: null
+};
+
+// تحديد مستوى كل محطة برمجية (مبتدئ: المراحل 1-5 | متوسط: المراحل 6-10 | متقدم/تنين: المراحل 11-15)
+const BEGINNER_NODE_IDS = ["w_p1", "w_p2", "w_p3", "w_p4", "w_p5", "n_net", "n_lin", "n_win", "n_code", "n_secplus", "a_py", "a_math", "a_sql_bi"];
+const INTERMEDIATE_NODE_IDS = ["w_p6", "w_p7", "w_p8", "w_p9", "w_p10", "n_websec", "n_netpen", "n_siem", "n_cloudsec", "a_ml", "a_dl", "a_cv", "a_nlp"];
+
+function getNodeLearnerLevel(node) {
+  if (node.learnerLevel) return node.learnerLevel;
+  if (BEGINNER_NODE_IDS.includes(node.id)) return "beginner";
+  if (INTERMEDIATE_NODE_IDS.includes(node.id)) return "intermediate";
+  if (node.tier <= 1) return "beginner";
+  if (node.tier === 2) return "intermediate";
+  return "advanced";
+}
+
+const LEARNER_LEVELS_META = {
+  all: {
+    title: "🌐 الخريطة الكاملة (المستويات الثلاثة معاً: مبتدئ ➔ متوسط ➔ متقدم)",
+    badge: "عرض شامل",
+    color: "#D4A72C",
+    desc: "تعرض الخريطة الآن جميع المراحل مقسمة بصرياً إلى 3 مناطق. إذا كنت تبدأ من الصفر، اضغط على (🌱 المستوى الأول: مبتدئ) بالاعلى للتركيز على تأسيسك أولاً دون تشتت."
+  },
+  beginner: {
+    title: "🌱 المستوى الأول: مبتدئ (من الصفر المطلق لبناء أول واجهة تفاعلية — المراحل 1 إلى 5)",
+    badge: "مناسب لمن يبدأ من الصفر",
+    color: "#10B981",
+    desc: "هنا تبني أساسك الصلب خطوة بخطوة بدون أي تعقيد: تفهم كيف يعمل الإنترنت، تتقن HTML5 & CSS3 و JavaScript و Git/TypeScript، وتبني أول تطبيق واجهات بـ React (أو Vue). لا تشغل بالك بالسيرفرات أو السحابة الآن!"
+  },
+  intermediate: {
+    title: "⚡ المستوى الثاني: متوسط (الربط الشامل، الباك إند، قواعد البيانات والتوثيق — المراحل 6 إلى 10)",
+    badge: "مرحلة بناء الأنظمة الكاملة",
+    color: "#38BDF8",
+    desc: "بعد إتقانك للواجهات، تنتقل هنا لمستوى المهندس المتكامل: إدارة الحالة المتقدمة، Next.js SSR، برمجة الخوادم (سواء بـ Node.js أو PHP Laravel أو Python أو .NET)، هندسة قواعد البيانات SQL/NoSQL، وتأمين دخول المستخدمين JWT/OAuth."
+  },
+  advanced: {
+    title: "🐉 المستوى الثالث: متقدم / تنين المجرة (الأمن، الاختبارات، System Design، السحابة والـ SaaS — المراحل 11 إلى 15)",
+    badge: "مستوى الـ Senior ومعماري الأنظمة",
+    color: "#F43F5E",
+    desc: "هذا المستوى يفرق بين المبرمج العادي والمهندس التنين (Senior Architect): أتمتة الاختبارات، سد ثغرات الويب OWASP، تصميم الأنظمة الموزعة والطوابير، الحاويات Docker & CI/CD، وإطلاق منصة SaaS إنتاجية كاملة."
+  }
 };
 
 // التأكد أن المسار المختار ضمن الـ 3 مجالات المعتمدة
@@ -1587,23 +1628,30 @@ function renderCareerTracksEncyclopedia() {
       </div>
     </div>
 
-    <!-- 3. الخريطة الشبكية التفاعلية بعرض الشاشة الكامل 100% + الملف التفصيلي الكامل تحتها مباشرة -->
+<!-- 3. الخريطة الشبكية التفاعلية مقسمة لـ 3 مستويات (مبتدئ / متوسط / متقدم) -->
     <div id="network-graph-container" class="network-graph-shell ${TracksState.isFullscreenGraph ? "is-fullscreen" : ""}">
-      <div class="network-toolbar">
+      <!-- شريط اختيار مستوى المتعلم (مبتدئ / متوسط / متقدم) -->
+      <div class="network-toolbar" style="border-bottom:1px solid rgba(212,167,44,0.25); background:rgba(7,10,18,0.98);">
         <div class="filters-row">
-          <strong class="gold-text"><i class="fa-solid fa-circle-nodes"></i> الخريطة الشبكية التفاعلية (بعرض كامل):</strong>
-          <button type="button" class="chip ${TracksState.activeRoleFilter === "all" ? "btn-gold" : ""}" data-role-filter="all">🌐 كل المراحل (${track.nodes.length})</button>
-          ${track.nodes.some(n => n.role === "foundation") ? `<button type="button" class="chip ${TracksState.activeRoleFilter === "foundation" ? "btn-gold" : ""}" data-role-filter="foundation">🧱 الأساسيات</button>` : ""}
-          ${track.roles.map(r => `
-            <button type="button" class="chip ${TracksState.activeRoleFilter === r.id ? "btn-gold" : ""}" data-role-filter="${esc(r.id)}">
-              ${esc(r.title.split("(")[0].trim())}
-            </button>
-          `).join("")}
+          <strong class="gold-text"><i class="fa-solid fa-layer-group"></i> اختر مستواك في الشبكة:</strong>
+          <button type="button" class="btn btn-sm ${TracksState.activeLevelFilter === "all" ? "btn-gold" : "btn-outline"}" data-level-filter="all">
+            🌐 الخريطة الكاملة (${track.nodes.length})
+          </button>
+          <button type="button" class="btn btn-sm ${TracksState.activeLevelFilter === "beginner" ? "btn-gold" : "btn-outline"}" data-level-filter="beginner" style="border-color:#10B981;">
+            🌱 1. مستوى مبتدئ (${track.nodes.filter(n => getNodeLearnerLevel(n) === "beginner").length} مراحل)
+          </button>
+          <button type="button" class="btn btn-sm ${TracksState.activeLevelFilter === "intermediate" ? "btn-gold" : "btn-outline"}" data-level-filter="intermediate" style="border-color:#38BDF8;">
+            ⚡ 2. مستوى متوسط (${track.nodes.filter(n => getNodeLearnerLevel(n) === "intermediate").length} مراحل)
+          </button>
+          <button type="button" class="btn btn-sm ${TracksState.activeLevelFilter === "advanced" ? "btn-gold" : "btn-outline"}" data-level-filter="advanced" style="border-color:#F43F5E;">
+            🐉 3. مستوى متقدم / تنين (${track.nodes.filter(n => getNodeLearnerLevel(n) === "advanced").length} مراحل)
+          </button>
         </div>
+
         <div class="filters-row">
-          <button type="button" id="btn-net-zoom-in" class="btn btn-xs btn-outline" title="تكبير الشبكة"><i class="fa-solid fa-magnifying-glass-plus"></i> تكبير</button>
-          <button type="button" id="btn-net-zoom-out" class="btn btn-xs btn-outline" title="تصغير الشبكة"><i class="fa-solid fa-magnifying-glass-minus"></i> تصغير</button>
-          <button type="button" id="btn-net-reset" class="btn btn-xs btn-outline" title="توسيط وضبط الأبعاد"><i class="fa-solid fa-arrows-to-circle"></i> توسيط الشبكة</button>
+          <button type="button" id="btn-net-zoom-in" class="btn btn-xs btn-outline"><i class="fa-solid fa-magnifying-glass-plus"></i> تكبير</button>
+          <button type="button" id="btn-net-zoom-out" class="btn btn-xs btn-outline"><i class="fa-solid fa-magnifying-glass-minus"></i> تصغير</button>
+          <button type="button" id="btn-net-reset" class="btn btn-xs btn-outline"><i class="fa-solid fa-arrows-to-circle"></i> توسيط</button>
           <button type="button" id="btn-net-fullscreen" class="btn btn-xs btn-gold">
             <i class="fa-solid ${TracksState.isFullscreenGraph ? "fa-compress" : "fa-expand"}"></i>
             ${TracksState.isFullscreenGraph ? "إغلاق ملء الشاشة (ESC)" : "تكبير الشبكة بملء الشاشة"}
@@ -1611,16 +1659,38 @@ function renderCareerTracksEncyclopedia() {
         </div>
       </div>
 
+      <!-- بانر توجيهي يشرح للطالب طبيعة المستوى الذي يقف عليه حالياً -->
+      ${(() => {
+        const lvMeta = LEARNER_LEVELS_META[TracksState.activeLevelFilter] || LEARNER_LEVELS_META.all;
+        return `
+          <div style="background:rgba(15,23,42,0.95); border-bottom:2px solid ${lvMeta.color}; padding:12px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div>
+              <span class="badge" style="background:${lvMeta.color}22; color:${lvMeta.color}; border:1px solid ${lvMeta.color};">${esc(lvMeta.badge)}</span>
+              <strong style="color:${lvMeta.color}; font-size:0.95rem; margin-inline-start:8px;">${esc(lvMeta.title)}</strong>
+              <p class="small-muted mt-1" style="margin-bottom:0;">${esc(lvMeta.desc)}</p>
+            </div>
+            <div class="filters-row">
+              ${track.roles.map(r => `
+                <button type="button" class="chip ${TracksState.activeRoleFilter === r.id ? "btn-gold" : ""}" data-role-filter="${esc(r.id)}">
+                  ${esc(r.title.split("(")[0].trim())}
+                </button>
+              `).join("")}
+              ${TracksState.activeRoleFilter !== "all" ? `<button type="button" class="chip btn-danger" data-role-filter="all">إلغاء فلتر التخصص ✕</button>` : ""}
+            </div>
+          </div>
+        `;
+      })()}
+
       <!-- شريط إرشادات التحكم والتكبير بـ Ctrl + عجلة الماوس -->
       <div class="network-sub-legend-bar">
         <div>
-          <span>🟢 متقن (80%+)</span> &bull;
-          <span>🟡 جاري التعلم</span> &bull;
-          <span>⚪ لم يبدأ</span> &bull;
-          <span class="gold-text">🖱️ اضغط على أي عقدة لعرض جميع دروسها وبدائلها ومشروعها بالأسفل (أو اسحبها بالماوس)</span>
+          <span>🌱 أخضر: مبتدئ</span> &bull;
+          <span>⚡ سماوي: متوسط</span> &bull;
+          <span>🐉 قرمزي: متقدم (تنين)</span> &bull;
+          <span class="gold-text">🖱️ اضغط على أي محطة لعرض دروسها وبدائلها ومشروعها بالأسفل</span>
         </div>
         <div>
-          <span class="badge badge-gold">🔍 نصيحة: اضغط مع الاستمرار على زر CTRL وحرك بكرة الماوس لتكبير وتصغير الشبكة بحرية</span>
+          <span class="badge badge-gold">🔍 نصيحة: اضغط CTRL + بكرة الماوس للتكبير والتصغير</span>
         </div>
       </div>
 
@@ -2032,23 +2102,31 @@ function startInteractiveNetworkGraph(track) {
   canvas.width = cssW * dpr;
   canvas.height = cssH * dpr;
 
-  // ترك مسافة سفلية كبيرة (bottomPad = 115px) لضمان عدم اختفاء أو قطع أي كلمة تحت المهام السفلية أبداً!
-  const maxTier = Math.max(...track.nodes.map(n => n.tier), 1);
-  const maxRow = Math.max(...track.nodes.map(n => n.row), 3);
-  const padX = 125;
-  const topPad = 62;
+const visibleNodes = TracksState.activeLevelFilter === "all"
+    ? track.nodes
+    : track.nodes.filter(n => getNodeLearnerLevel(n) === TracksState.activeLevelFilter);
+
+  const uniqueTiers = [...new Set(visibleNodes.map(n => n.tier))].sort((a, b) => a - b);
+  const maxRow = Math.max(...visibleNodes.map(n => n.row), 3);
+  const padX = 135;
+  const topPad = 78;
   const bottomPad = 115;
   const usableW = Math.max(300, cssW - padX * 2);
   const usableH = Math.max(220, cssH - topPad - bottomPad);
 
-  graphNodesComputed = track.nodes.map(n => {
-    const xBase = padX + (n.tier / maxTier) * usableW;
+  graphNodesComputed = visibleNodes.map(n => {
+    const tierIdx = Math.max(0, uniqueTiers.indexOf(n.tier));
+    const tierDivisor = Math.max(1, uniqueTiers.length - 1);
+    const xBase = uniqueTiers.length === 1
+      ? cssW / 2
+      : padX + (tierIdx / tierDivisor) * usableW;
     const yBase = topPad + (n.row / maxRow) * usableH;
     return {
       ...n,
+      lvl: getNodeLearnerLevel(n),
       x: n._customX !== undefined ? n._customX : xBase,
       y: n._customY !== undefined ? n._customY : yBase,
-      r: 22
+      r: 23
     };
   });
 
@@ -2165,9 +2243,28 @@ function drawNetworkGraphFrame(ctx, W, H, dpr, track, pulseT) {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
   }
 
-  ctx.translate(TracksState.panX, TracksState.panY);
+ctx.translate(TracksState.panX, TracksState.panY);
   ctx.scale(TracksState.zoom, TracksState.zoom);
 
+  // رسم المناطق اللونية للمستويات الثلاثة (مبتدئ / متوسط / متقدم) في العرض الشامل
+  if (TracksState.activeLevelFilter === "all") {
+    const zones = [
+      { label: "🌱 منطقة المستوى المبتدئ (Beginner)", x: 20, w: W * 0.36 - 20, color: "rgba(16, 185, 129, 0.05)", border: "rgba(16, 185, 129, 0.28)", textCol: "#34D399" },
+      { label: "⚡ منطقة المستوى المتوسط (Intermediate)", x: W * 0.36 + 6, w: W * 0.32 - 12, color: "rgba(56, 189, 248, 0.05)", border: "rgba(56, 189, 248, 0.28)", textCol: "#38BDF8" },
+      { label: "🐉 منطقة المستوى المتقدم / التنين (Advanced)", x: W * 0.68 + 6, w: W * 0.32 - 26, color: "rgba(244, 63, 94, 0.05)", border: "rgba(244, 63, 94, 0.28)", textCol: "#FB7185" }
+    ];
+    zones.forEach(z => {
+      ctx.fillStyle = z.color;
+      ctx.strokeStyle = z.border;
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(z.x, 14, z.w, H - 30);
+      ctx.strokeRect(z.x, 14, z.w, H - 30);
+      ctx.fillStyle = z.textCol;
+      ctx.font = "bold 12.5px Alexandria, Cairo, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(z.label, z.x + z.w / 2, 34);
+    });
+  }
   const filter = TracksState.activeRoleFilter;
   const isNodeHighlighted = (nd) => filter === "all" || nd.role === filter || nd.role === "foundation";
 
@@ -2363,6 +2460,20 @@ function bindCareerTracksEvents(track) {
       TracksState.panX = 0;
       TracksState.panY = 0;
       localStorage.setItem("MY_LIFE_OS_ACTIVE_TRACK_V3", TracksState.activeTrackId);
+      renderCareerTracksEncyclopedia();
+    };
+  });
+
+sec.querySelectorAll("[data-level-filter]").forEach(btn => {
+    btn.onclick = () => {
+      TracksState.activeLevelFilter = btn.dataset.levelFilter;
+      TracksState.zoom = 1;
+      TracksState.panX = 0;
+      TracksState.panY = 0;
+      const visible = TracksState.activeLevelFilter === "all"
+        ? track.nodes
+        : track.nodes.filter(n => getNodeLearnerLevel(n) === TracksState.activeLevelFilter);
+      if (visible.length) TracksState.selectedNodeId = visible[0].id;
       renderCareerTracksEncyclopedia();
     };
   });
