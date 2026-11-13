@@ -8151,15 +8151,22 @@ window.addEventListener("keyup", (e) => {
   }
 });
 /* ============================================================================
-   ULTIMATE WHITEBOARD STUDIO 3.0 — LECTURE DOCK, SPOTLIGHT SWITCH,
-   SPLIT-SCREEN (50/50 RESIZABLE) & FULL-BOARD PDF/FILE ANNOTATION ENGINE
+   ULTIMATE WHITEBOARD STUDIO 3.0 (FIXED & SELF-CONTAINED)
+   - يفتح في شاشة كاملة منعزلة 100% فور الضغط على "السبورة والتفريع"
+   - إضاءة كاملة موحدة افتراضياً ☀️ مع زر تبديل لكشاف الماوس 🔦 في أي وقت
+   - فتح سلس لملفات (PDF / صور / أكواد) مع التبديل الفوري بين:
+     1) فرد الملف بالكامل داخل السبورة للكتابة والتحديد عليه
+     2) تقسيم الشاشة 50/50 بجانب السبورة مع شريط تحكم حي في حجم الملف
+   - وضع المحاضرة الشامل مع شريط أقلام المحاضر العائم بالأسفل
    ============================================================================ */
 
 Object.assign(WBState, {
-  lightingMode: "full", // "full" (سبورة مضيئة بالكامل) | "spotlight" (إضاءة مكان الماوس فقط)
-  spotlightRadius: 190,
-  docMode: "none", // "none" | "split" (تقسيم بجانب السبورة) | "canvas" (مفرود داخل السبورة للشرح عليه)
-  splitRatio: 50, // نسبة حجم الملف في وضع التقسيم (من 20% إلى 75%)
+  lightingMode: "full", // "full" (سبورة مضيئة بالكامل) | "spotlight" (كشاف مكان الماوس فقط)
+  spotlightMode: false,
+  spotlightRadius: 210,
+  docMode: "none", // "none" | "split" (تقسيم 50/50) | "canvas" (مفرود داخل السبورة)
+  splitRatio: 50,
+  splitZoom: 100,
   pdfDoc: null,
   pdfPageNum: 1,
   pdfTotalPages: 0,
@@ -8175,29 +8182,63 @@ function injectWB3ProDesignStyles() {
   const st = document.createElement("style");
   st.id = "wb3-pro-design-styles";
   st.textContent = `
-    /* تنسيق كبسولات الأدوات الفخم والمنظم (Sleek Pro Ribbon) */
+    /* فتح السبورة في شاشة كاملة منعزلة 100% بدون أي حواف أو قوائم خلفية */
+    .modal-overlay:has(.wb3-isolated-fullscreen) {
+      padding: 0 !important;
+      background: #060913 !important;
+    }
+    .modal-card.wb3-isolated-fullscreen {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      max-width: 100vw !important;
+      height: 100vh !important;
+      max-height: 100vh !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      border: none !important;
+      padding: 10px 16px !important;
+      background: #070b16 !important;
+      z-index: 999999 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+    }
+    .modal-card.wb3-isolated-fullscreen .modal-header {
+      margin-bottom: 6px !important;
+      padding-bottom: 6px !important;
+    }
+    .modal-card.wb3-isolated-fullscreen #universal-modal-form {
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+
+    /* تنسيق كبسولات الأدوات الاحترافي */
     .wb3-ribbon-bar {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 6px 10px;
-      background: linear-gradient(180deg, rgba(14, 20, 36, 0.98), rgba(9, 13, 24, 0.98));
+      background: linear-gradient(180deg, rgba(15, 22, 40, 0.98), rgba(9, 13, 25, 0.98));
       border: 1px solid rgba(212, 167, 44, 0.35);
-      border-radius: 14px;
-      padding: 7px 11px;
-      margin-bottom: 7px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      border-radius: 12px;
+      padding: 6px 10px;
+      margin-bottom: 6px;
+      flex-shrink: 0;
     }
     .wb3-pill-group {
       display: inline-flex;
       flex-wrap: wrap;
       align-items: center;
       gap: 4px;
-      background: rgba(255, 255, 255, 0.035);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.09);
       padding: 3px 6px;
-      border-radius: 10px;
+      border-radius: 9px;
     }
     .wb3-pill-group .wb-tool-btn {
       padding: 5px 9px;
@@ -8205,14 +8246,39 @@ function injectWB3ProDesignStyles() {
       border-radius: 7px;
     }
 
-    /* حاوية التقسيم التفاعلي (Split View 50/50 Resizable) */
+    /* منطقة العمل المرنة وتقسيم الشاشة 50/50 */
+    .wb2-workspace-wrap {
+      flex: 1 !important;
+      min-height: 0 !important;
+      display: flex !important;
+      gap: 10px !important;
+      align-items: stretch !important;
+      position: relative !important;
+    }
     .wb3-split-container {
       display: flex;
       width: 100%;
-      gap: 8px;
+      height: 100%;
+      gap: 10px;
       align-items: stretch;
-      position: relative;
+      min-height: 0;
     }
+    .wb3-canvas-holder {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 260px;
+      height: 100%;
+    }
+    .modal-card.wb3-isolated-fullscreen .whiteboard-canvas-box {
+      width: 100% !important;
+      height: calc(100vh - 175px) !important;
+      flex: 1 !important;
+    }
+
+    /* عارض الملفات التفاعلي المقسوم بجانب السبورة */
     .wb3-file-split-pane {
       background: #0b101e;
       border: 2px solid #19B889;
@@ -8220,23 +8286,21 @@ function injectWB3ProDesignStyles() {
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      height: 525px;
-      transition: width 0.1s ease;
-    }
-    .wb-studio-fullscreen .wb3-file-split-pane,
-    .wb-presentation-active .wb3-file-split-pane {
-      height: calc(100vh - 85px) !important;
+      height: calc(100vh - 175px);
+      min-width: 240px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.7);
     }
     .wb3-file-pane-header {
       background: rgba(16, 24, 44, 0.98);
       border-bottom: 1px solid rgba(25, 184, 137, 0.35);
-      padding: 7px 12px;
+      padding: 8px 12px;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 6px;
+      gap: 8px;
       font-size: 0.78rem;
+      flex-shrink: 0;
     }
     .wb3-file-pane-body {
       flex: 1;
@@ -8246,7 +8310,7 @@ function injectWB3ProDesignStyles() {
       align-items: flex-start;
       justify-content: center;
       background: #070a14;
-      padding: 10px;
+      padding: 12px;
     }
     .wb3-file-pane-body canvas,
     .wb3-file-pane-body img {
@@ -8254,35 +8318,39 @@ function injectWB3ProDesignStyles() {
       height: auto;
       border-radius: 8px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.65);
+      transition: width 0.15s ease;
     }
     .wb3-file-pane-body pre {
       width: 100%;
-      color: #e2e8f0;
+      color: #f8fafc;
       font-family: 'Inter', monospace;
-      font-size: 0.85rem;
-      line-height: 1.65;
+      font-size: 0.88rem;
+      line-height: 1.7;
       white-space: pre-wrap;
       direction: ltr;
       text-align: left;
-      padding: 12px;
+      padding: 14px;
+      background: #0b1120;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1);
     }
 
-    /* شريط المحاضر العائم أسفل وضع المحاضرة (Floating Lecture Control Dock) */
+    /* شريط المحاضر العائم أسفل وضع المحاضرة */
     .wb3-lecture-floating-dock {
       display: none;
       position: fixed;
-      bottom: 16px;
+      bottom: 14px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 1000010;
-      background: rgba(8, 12, 24, 0.94);
+      z-index: 1000020;
+      background: rgba(8, 12, 24, 0.96);
       border: 1.5px solid var(--gold-primary);
       border-radius: 99px;
       padding: 7px 16px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 25px rgba(212, 167, 44, 0.3);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.92), 0 0 25px rgba(212, 167, 44, 0.3);
       backdrop-filter: blur(16px);
       align-items: center;
-      gap: 7px;
+      gap: 6px;
       flex-wrap: wrap;
       max-width: 96vw;
       justify-content: center;
@@ -8295,32 +8363,34 @@ function injectWB3ProDesignStyles() {
     .wb-presentation-active .wb-bottom-hint {
       display: none !important;
     }
-    .wb-presentation-active .whiteboard-canvas-box {
-      height: calc(100vh - 28px) !important;
+    .wb-presentation-active .whiteboard-canvas-box,
+    .wb-presentation-active .wb3-file-split-pane {
+      height: calc(100vh - 24px) !important;
     }
 
-    /* شريط التنقل بين صفحات الملف المفرود داخل السبورة */
+    /* شريط التحكم العائم للملف المفرود داخل السبورة */
     .wb3-canvas-doc-bar {
       position: absolute;
       top: 12px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 15;
-      background: rgba(11, 17, 32, 0.92);
-      border: 1px solid #19B889;
+      z-index: 25;
+      background: rgba(11, 17, 32, 0.95);
+      border: 1.5px solid #19B889;
       border-radius: 99px;
-      padding: 5px 14px;
+      padding: 6px 16px;
       display: inline-flex;
       align-items: center;
       gap: 8px;
       font-size: 0.78rem;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.8);
+      white-space: nowrap;
     }
   `;
   document.head.appendChild(st);
 }
 
-// تحميل مكتبة PDF.js تلقائياً وبأمان تام لفتح ملفات PDF بدون أي أخطاء
+// تحميل مكتبة PDF.js تلقائياً وبأمان
 async function ensurePdfJsLoaded() {
   if (window.pdfjsLib) return window.pdfjsLib;
   await new Promise((resolve, reject) => {
@@ -8334,8 +8404,7 @@ async function ensurePdfJsLoaded() {
   return window.pdfjsLib;
 }
 
-// تحويل صفحة PDF أو ملف نصي إلى صورة عالية الدقة لوضعها داخل السبورة والشرح عليها
-async function renderCurrentPdfPageToDataUrl(scale = 1.6) {
+async function renderCurrentPdfPageToDataUrl(scale = 1.65) {
   if (!WBState.pdfDoc) return null;
   const page = await WBState.pdfDoc.getPage(WBState.pdfPageNum);
   const viewport = page.getViewport({ scale });
@@ -8353,8 +8422,8 @@ async function renderCurrentPdfPageToDataUrl(scale = 1.6) {
 
 function renderTextFileToDataUrl(title, textContent) {
   const offCanvas = document.createElement("canvas");
-  offCanvas.width = 820;
-  offCanvas.height = 1040;
+  offCanvas.width = 860;
+  offCanvas.height = 1080;
   const c = offCanvas.getContext("2d");
   c.fillStyle = "#0d1324";
   c.fillRect(0, 0, offCanvas.width, offCanvas.height);
@@ -8368,20 +8437,20 @@ function renderTextFileToDataUrl(title, textContent) {
 
   c.fillStyle = "#f8fafc";
   c.font = "15px Inter, Cairo, monospace";
-  const lines = String(textContent || "").split("\n").slice(0, 42);
+  const lines = String(textContent || "").split("\n").slice(0, 44);
   lines.forEach((ln, idx) => {
-    c.fillText(ln.slice(0, 95), 35, 88 + idx * 22);
+    c.fillText(ln.slice(0, 98), 35, 88 + idx * 22);
   });
-  return { dataUrl: offCanvas.toDataURL("image/png"), w: 620, h: 780 };
+  return { dataUrl: offCanvas.toDataURL("image/png"), w: 680, h: 850 };
 }
 
-// وضع الصفحة الحالية من الملف داخل السبورة مباشرة للرسم والتحديد عليها
+// فرد الصفحة الحالية من الملف داخل السبورة مباشرة للشرح والتحديد عليها
 async function placeActiveFileOnWhiteboardCanvas(ctx, canvas) {
   let imgInfo = null;
   if (WBState.activeFileType === "pdf" && WBState.pdfDoc) {
-    imgInfo = await renderCurrentPdfPageToDataUrl(1.5);
+    imgInfo = await renderCurrentPdfPageToDataUrl(1.6);
   } else if (WBState.activeFileType === "image" && WBState.activeFileUrl) {
-    imgInfo = { dataUrl: WBState.activeFileUrl, w: 680, h: 480 };
+    imgInfo = { dataUrl: WBState.activeFileUrl, w: 720, h: 520 };
   } else if (WBState.activeFileType === "text") {
     imgInfo = renderTextFileToDataUrl(WBState.activeFileName, WBState.activeTextContent);
   }
@@ -8389,9 +8458,15 @@ async function placeActiveFileOnWhiteboardCanvas(ctx, canvas) {
 
   const imgEl = new Image();
   imgEl.onload = () => {
-    const targetW = Math.min(canvas.width * 0.78, 760);
-    const ratio = imgEl.height / Math.max(1, imgEl.width);
-    const targetH = Math.round(targetW * ratio);
+    const availH = Math.max(420, canvas.height - 70);
+    const ratio = (imgEl.width || 700) / Math.max(1, imgEl.height || 500);
+    let targetH = availH;
+    let targetW = Math.round(targetH * ratio);
+    if (targetW > canvas.width * 0.85) {
+      targetW = Math.round(canvas.width * 0.85);
+      targetH = Math.round(targetW / ratio);
+    }
+
     const docId = WBState.canvasDocImageId || ("doc_sheet_" + Date.now());
     WBState.canvasDocImageId = docId;
 
@@ -8399,9 +8474,9 @@ async function placeActiveFileOnWhiteboardCanvas(ctx, canvas) {
     const newImgObj = {
       id: docId,
       imgEl,
-      x: Math.max(40, Math.round((canvas.width - targetW) / 2)),
-      y: 45,
-      w: Math.round(targetW),
+      x: Math.max(30, Math.round((canvas.width - targetW) / 2)),
+      y: 42,
+      w: targetW,
       h: targetH,
       isDocumentSheet: true
     };
@@ -8412,26 +8487,30 @@ async function placeActiveFileOnWhiteboardCanvas(ctx, canvas) {
     WBState.panX = 0;
     WBState.panY = 0;
     WBState.zoom = 1;
+    const zLbl = document.getElementById("wb2-zoom-lbl");
+    if (zLbl) zLbl.textContent = "100%";
+
     renderWhiteboardScene(ctx, canvas.width, canvas.height);
     updateDocBarsUI(ctx, canvas);
   };
   imgEl.src = imgInfo.dataUrl;
 }
 
-// تحديث واجهة عرض الملف المقسوم 50/50 أو شريط صفحات الملف المفرود داخل السبورة
 async function updateDocBarsUI(ctx, canvas) {
   const splitPane = document.getElementById("wb3-file-split-pane");
   const canvasDocBar = document.getElementById("wb3-canvas-doc-bar");
   const splitBody = document.getElementById("wb3-file-pane-body");
   const pageLbl1 = document.getElementById("wb3-split-page-lbl");
   const pageLbl2 = document.getElementById("wb3-canvas-page-lbl");
+  const modeSelect = document.getElementById("wb3-doc-mode-select");
 
   const pageText = WBState.activeFileType === "pdf"
-    ? `صفحة ${WBState.pdfPageNum} من ${WBState.pdfTotalPages}`
-    : WBState.activeFileName || "ملف مفتوح";
+    ? `${WBState.activeFileName.slice(0, 18)} • صفحة ${WBState.pdfPageNum} / ${WBState.pdfTotalPages}`
+    : (WBState.activeFileName || "ملف الشرح");
 
   if (pageLbl1) pageLbl1.textContent = pageText;
   if (pageLbl2) pageLbl2.textContent = pageText;
+  if (modeSelect && WBState.docMode !== "none") modeSelect.value = WBState.docMode;
 
   if (WBState.docMode === "split" && splitPane) {
     splitPane.classList.remove("hidden");
@@ -8441,16 +8520,16 @@ async function updateDocBarsUI(ctx, canvas) {
     if (splitBody) {
       if (WBState.activeFileType === "pdf" && WBState.pdfDoc) {
         const page = await WBState.pdfDoc.getPage(WBState.pdfPageNum);
-        const vp = page.getViewport({ scale: 1.35 });
+        const vp = page.getViewport({ scale: (WBState.splitZoom / 100) * 1.35 });
         splitBody.innerHTML = `<canvas id="wb3-pdf-split-canvas"></canvas>`;
         const pdfCanv = document.getElementById("wb3-pdf-split-canvas");
         pdfCanv.width = vp.width;
         pdfCanv.height = vp.height;
         await page.render({ canvasContext: pdfCanv.getContext("2d"), viewport: vp }).promise;
       } else if (WBState.activeFileType === "image") {
-        splitBody.innerHTML = `<img src="${WBState.activeFileUrl}" alt="File" />`;
+        splitBody.innerHTML = `<img src="${WBState.activeFileUrl}" style="width:${WBState.splitZoom}%;" alt="File" />`;
       } else if (WBState.activeFileType === "text") {
-        splitBody.innerHTML = `<pre>${esc(WBState.activeTextContent)}</pre>`;
+        splitBody.innerHTML = `<pre style="font-size:${Math.round(14 * (WBState.splitZoom / 100))}px;">${esc(WBState.activeTextContent)}</pre>`;
       }
     }
   } else if (WBState.docMode === "canvas") {
@@ -8463,19 +8542,20 @@ async function updateDocBarsUI(ctx, canvas) {
 
   setTimeout(() => {
     if (canvas) {
-      canvas.width = canvas.clientWidth || 800;
+      canvas.width = canvas.clientWidth || 960;
+      canvas.height = canvas.clientHeight || 540;
       renderWhiteboardScene(ctx, canvas.width, canvas.height);
     }
-  }, 50);
+  }, 55);
 }
 
-// نافذة اختيار طريقة فتح الملف (داخل السبورة بالكامل أو تقسيم الشاشة 50/50)
+// معالج رفع الملفات السلس (PDF / صورة / كود) مع سؤال المستخدم أو فتحه مباشرة
 async function handleWB3FileUpload(file, ctx, canvas) {
   if (!file) return;
   WBState.activeFileName = file.name;
   const ext = file.name.split(".").pop().toLowerCase();
 
-  toast(`⏳ جاري فتح الملف (${file.name}) بسلاسة...`, "info");
+  toast(`⏳ جاري فتح الملف (${file.name})...`, "info");
 
   try {
     if (ext === "pdf" || file.type === "application/pdf") {
@@ -8487,71 +8567,70 @@ async function handleWB3FileUpload(file, ctx, canvas) {
       WBState.pdfTotalPages = WBState.pdfDoc.numPages;
     } else if (file.type.startsWith("image/") || ["png", "jpg", "jpeg", "webp", "gif", "svg"].includes(ext)) {
       WBState.activeFileType = "image";
-      WBState.activeFileUrl = await compressGoalImageFile(file);
+      WBState.activeFileUrl = await new Promise((res) => {
+        const r = new FileReader();
+        r.onload = (ev) => res(ev.target.result);
+        r.readAsDataURL(file);
+      });
     } else {
       WBState.activeFileType = "text";
       WBState.activeTextContent = await file.text();
     }
 
-    // سؤال المستخدم بطريقة واضحة وسريعة عن وضع العرض المفضل
-    const modeChoice = document.getElementById("wb3-doc-mode-select")?.value || "ask";
-    if (modeChoice === "split") {
-      WBState.docMode = "split";
-      await updateDocBarsUI(ctx, canvas);
-    } else if (modeChoice === "canvas") {
+    // نافذة اختيار أنيقة أو سؤال فوري بين (تقسيم 50/50) و (فرد داخل السبورة)
+    const choice = confirm(
+      `📂 تم تحميل الملف بنجاح: (${file.name})\n\n` +
+      `• اضغط (موافق OK) لفرد الملف بالكامل داخل السبورة للكتابة والتظليل والشرح عليه مباشرة ✍️\n` +
+      `• أو اضغط (إلغاء Cancel) لفتحه في شاشة مقسومة (50/50) بجانب السبورة مع التحكم في حجمه ⚖️`
+    );
+
+    if (choice) {
       WBState.docMode = "canvas";
       await placeActiveFileOnWhiteboardCanvas(ctx, canvas);
+      toast(`✍️ تم فرد "${file.name}" داخل السبورة! استخدم القلم أو قلم التحديد للشرح عليه مباشرة`);
     } else {
-      const openFullInsideBoard = confirm(
-        `📂 تم تجهيز الملف: (${file.name})\n\n` +
-        `• اضغط (موافق OK) لفتح الملف بالكامل داخل السبورة للشرح والتحديد والكتابة عليه مباشرة ✍️\n` +
-        `• أو اضغط (إلغاء Cancel) لفتحه في شاشة مقسومة (50/50) بجانب السبورة مع التحكم في حجمه ⚖️`
-      );
-      if (openFullInsideBoard) {
-        WBState.docMode = "canvas";
-        await placeActiveFileOnWhiteboardCanvas(ctx, canvas);
-      } else {
-        WBState.docMode = "split";
-        await updateDocBarsUI(ctx, canvas);
-      }
+      WBState.docMode = "split";
+      await updateDocBarsUI(ctx, canvas);
+      toast(`⚖️ تم فتح "${file.name}" في وضع التقسيم 50/50 بجانب السبورة!`);
     }
-    toast(`✅ تم فتح "${file.name}" بنجاح!`);
   } catch (err) {
-    console.error(err);
-    toast("تعذر قراءة الملف، تأكد من أن الملف سليم", "error");
+    console.error("File Open Error:", err);
+    toast("تعذر قراءة الملف، يرجى التأكد من صيغته", "error");
   }
 }
 
-// الترقية الكاملة لواجهة السبورة الهندسية 3.0 بتصميم كبسولات منظم وشريط محاضرة عائم
+// الدالة الرئيسية لفتح السبورة الهندسية في شاشة كاملة منعزلة 100%
 openSmartWhiteboardModal = function(autoStartPrivateRecord = false) {
   injectWB2StudioStyles();
   injectWB3ProDesignStyles();
   document.body.classList.add("wb-fullscreen-mode");
 
-  B().openFormModal("🎨 استوديو السبورة الهندسية والمحاضرات الذكي 3.0 (Whiteboard, File Annotator & Lecture Studio)", `
-    <!-- الشريط العلوي الأول: كبسولات الرسم + استوديو فتح الملفات وتقسيم الشاشة + وضع المحاضرة والإضاءة -->
+  // ضمان أن الإضاءة افتراضياً كاملة وموحدة وليست مظلمة
+  if (!WBState.lightingMode) WBState.lightingMode = "full";
+  WBState.spotlightMode = WBState.lightingMode === "spotlight";
+
+  B().openFormModal("🎨 استوديو السبورة الهندسية والمحاضرات الذكي 3.0 (Full-Screen Isolated Studio)", `
+    <!-- الشريط الأول: أدوات الرسم والتحديد + الإضاءة + فتح الملفات (50/50 أو داخل السبورة) + وضع المحاضرة -->
     <div class="wb3-ribbon-bar">
-      <!-- كبسولة 1: أدوات الرسم والتحديد -->
       <div class="wb3-pill-group">
-        <button type="button" class="wb-tool-btn ${WBState.tool === "select" ? "active" : ""}" data-wb-tool="select" title="تحديد وتحريك (V)"><i class="fa-solid fa-arrow-pointer"></i> تحديد</button>
-        <button type="button" class="wb-tool-btn ${WBState.tool === "pan" ? "active" : ""}" data-wb-tool="pan" title="تحريك اللوحة (Space)"><i class="fa-solid fa-hand"></i> يد</button>
-        <button type="button" class="wb-tool-btn ${WBState.tool === "pen" ? "active" : ""}" data-wb-tool="pen" title="قلم شرح ناعم (P)"><i class="fa-solid fa-pen"></i> قلم</button>
-        <button type="button" class="wb-tool-btn ${WBState.tool === "highlight" ? "active" : ""}" data-wb-tool="highlight" title="قلم تحديد / ماركر شفاف"><i class="fa-solid fa-highlighter"></i> قلم تحديد</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "select" ? "active" : ""}" data-wb-tool="select" title="تحديد وتحريك العناصر (V)"><i class="fa-solid fa-arrow-pointer"></i> تحديد</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "pan" ? "active" : ""}" data-wb-tool="pan" title="تحريك اللوحة اللانهائية (Space)"><i class="fa-solid fa-hand"></i> يد</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "pen" ? "active" : ""}" data-wb-tool="pen" title="قلم شرح (P)"><i class="fa-solid fa-pen"></i> قلم</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "highlight" ? "active" : ""}" data-wb-tool="highlight" title="قلم تحديد / ماركر شفاف للتظليل على الملفات"><i class="fa-solid fa-highlighter"></i> قلم تحديد</button>
         <button type="button" class="wb-tool-btn ${WBState.tool === "laser" ? "active" : ""}" data-wb-tool="laser" title="مؤشر ليزر للشرح"><i class="fa-solid fa-wand-magic-sparkles"></i> ليزر</button>
         <button type="button" class="wb-tool-btn ${WBState.tool === "arrow" ? "active" : ""}" data-wb-tool="arrow"><i class="fa-solid fa-arrow-trend-up"></i> سهم</button>
-        <button type="button" class="wb-tool-btn ${WBState.tool === "dimension" ? "active" : ""}" data-wb-tool="dimension" title="خط قياس أبعاد هندسي"><i class="fa-solid fa-ruler-horizontal gold-text"></i> أبعاد</button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "dimension" ? "active" : ""}" data-wb-tool="dimension" title="قياس المسافة بالـ cm"><i class="fa-solid fa-ruler-horizontal gold-text"></i> أبعاد</button>
         <button type="button" class="wb-tool-btn ${WBState.tool === "rect" ? "active" : ""}" data-wb-tool="rect"><i class="fa-regular fa-square"></i> مستطيل</button>
         <button type="button" class="wb-tool-btn ${WBState.tool === "circle" ? "active" : ""}" data-wb-tool="circle"><i class="fa-regular fa-circle"></i> دائرة</button>
         <button type="button" class="wb-tool-btn ${WBState.tool === "text" ? "active" : ""}" data-wb-tool="text"><i class="fa-solid fa-font"></i> نص</button>
         <button type="button" class="wb-tool-btn ${WBState.tool === "eraser" ? "active" : ""}" data-wb-tool="eraser"><i class="fa-solid fa-eraser"></i> ممحاة</button>
-        <button type="button" class="wb-tool-btn ${WBState.tool === "obj_eraser" ? "active" : ""}" data-wb-tool="obj_eraser" title="حذف عنصر بضغطة"><i class="fa-solid fa-trash-can text-danger"></i></button>
+        <button type="button" class="wb-tool-btn ${WBState.tool === "obj_eraser" ? "active" : ""}" data-wb-tool="obj_eraser" title="حذف عنصر بضغطة واحدة"><i class="fa-solid fa-trash-can text-danger"></i></button>
       </div>
 
-      <!-- كبسولة 2: اللون والسمك والخلفية والإضاءة -->
       <div class="wb3-pill-group">
-        <input type="color" id="wb-color" value="${WBState.color}" style="width:30px; height:28px; padding:1px; cursor:pointer;" title="اللون" />
-        <input type="range" id="wb-size" min="2" max="18" value="${WBState.size}" style="width:55px;" title="سمك القلم" />
-        <select id="wb-linestyle-select" class="select-sm" style="min-width:82px; padding:3px 5px;">
+        <input type="color" id="wb-color" value="${WBState.color}" style="width:30px; height:28px; padding:1px; cursor:pointer;" title="لون القلم أو الشكل" />
+        <input type="range" id="wb-size" min="2" max="18" value="${WBState.size}" style="width:55px;" title="سمك الخط" />
+        <select id="wb-linestyle-select" class="select-sm" style="min-width:80px; padding:3px 5px;">
           <option value="solid" ${WBState.lineStyle === "solid" ? "selected" : ""}>── متصل</option>
           <option value="dashed" ${WBState.lineStyle === "dashed" ? "selected" : ""}>- - متقطع</option>
           <option value="dotted" ${WBState.lineStyle === "dotted" ? "selected" : ""}>••• منقط</option>
@@ -8565,32 +8644,33 @@ openSmartWhiteboardModal = function(autoStartPrivateRecord = false) {
           <option value="dots" ${WBState.bgMode === "dots" ? "selected" : ""}>⠿ نقاط رقمية</option>
           <option value="dark" ${WBState.bgMode === "dark" ? "selected" : ""}>🌑 كحلي سادة</option>
         </select>
-        <button type="button" id="btn-wb3-lighting-toggle" class="wb-tool-btn ${WBState.lightingMode === "spotlight" ? "active" : ""}" title="التبديل بين إضاءة السبورة بالكامل أو إضاءة مكان الماوس فقط">
+        <button type="button" id="btn-wb3-lighting-toggle" class="wb-tool-btn ${WBState.lightingMode === "spotlight" ? "active" : ""}" title="اختر هل السبورة كلها مضيئة أم تضيء في مكان الماوس فقط">
           <i class="fa-solid ${WBState.lightingMode === "spotlight" ? "fa-bullseye" : "fa-sun"} gold-text"></i>
-          <span id="wb3-light-lbl">${WBState.lightingMode === "spotlight" ? "إضاءة الماوس 🔦" : "إضاءة كاملة ☀️"}</span>
+          <span id="wb3-light-lbl">${WBState.lightingMode === "spotlight" ? "كشاف الماوس 🔦" : "إضاءة كاملة ☀️"}</span>
         </button>
       </div>
 
-      <!-- كبسولة 3: فتح ملف للشرح (PDF / صورة / كود) + وضع المحاضرة الشامل -->
-      <div class="wb3-pill-group" style="border-color:rgba(25,184,137,0.4);">
-        <label class="btn btn-xs btn-gold" style="cursor:pointer; margin:0;" title="افتح ملف PDF أو صورة أو كود للشرح عليه مباشرة أو تقسيم الشاشة 50/50">
+      <div class="wb3-pill-group" style="border-color:rgba(25,184,137,0.5);">
+        <button type="button" id="btn-wb3-trigger-file" class="btn btn-xs btn-gold" title="افتح ملف PDF أو صورة أو كود للشرح عليه">
           <i class="fa-solid fa-file-import"></i> فتح ملف للشرح (PDF/صورة)
-          <input type="file" id="wb3-open-doc-inp" accept=".pdf,image/*,.txt,.js,.py,.html,.css,.cpp,.c,.java,.json,.md" class="hidden" />
-        </label>
-        <select id="wb3-doc-mode-select" class="select-sm" style="min-width:128px; padding:3px 6px;" title="اختر طريقة عرض الملف المفتوح">
-          <option value="ask" ${WBState.docMode === "none" ? "selected" : ""}>📂 وضع عرض الملف...</option>
-          <option value="canvas" ${WBState.docMode === "canvas" ? "selected" : ""}>✍️ الملف مفرود داخل السبورة</option>
-          <option value="split" ${WBState.docMode === "split" ? "selected" : ""}>⚖️ تقسيم 50/50 بجانب السبورة</option>
-          <option value="close">❌ إغلاق الملف المفتوح</option>
+        </button>
+        <input type="file" id="wb3-open-doc-inp" accept=".pdf,image/*,.txt,.js,.py,.html,.css,.cpp,.c,.java,.json,.md" class="hidden" />
+
+        <select id="wb3-doc-mode-select" class="select-sm" style="min-width:135px; padding:3px 6px;" title="تغيير طريقة عرض الملف المفتوح">
+          <option value="none" ${WBState.docMode === "none" ? "selected" : ""}>📂 وضع عرض الملف...</option>
+          <option value="canvas" ${WBState.docMode === "canvas" ? "selected" : ""}>✍️ مفرود داخل السبورة</option>
+          <option value="split" ${WBState.docMode === "split" ? "selected" : ""}>⚖️ تقسيم 50/50 بجانب الشرح</option>
+          <option value="close">❌ إغلاق الملف</option>
         </select>
-        <button type="button" id="btn-wb2-present-mode" class="btn btn-xs btn-gold" style="background:linear-gradient(135deg,#19B889,#059669)!important; color:#05070e!important;" title="تكبير بملء الشاشة مع شريط أقلام المحاضر العائم">
+
+        <button type="button" id="btn-wb2-present-mode" class="btn btn-xs btn-gold" style="background:linear-gradient(135deg,#19B889,#059669)!important; color:#05070e!important;">
           <i class="fa-solid fa-person-chalkboard"></i> وضع المحاضرة الشامل
         </button>
       </div>
     </div>
 
-    <!-- الشريط الثاني المدمج: الهندسة + التفريع الشجري + الـ AI + التصدير والتسجيل -->
-    <div class="wb3-ribbon-bar" style="padding:6px 10px;">
+    <!-- الشريط الثاني: الهندسة + التفريع الشجري + الـ AI + التصدير والتسجيل -->
+    <div class="wb3-ribbon-bar" style="padding:5px 10px;">
       <div class="wb3-pill-group">
         <select id="wb2-eng-symbol-picker" class="select-sm" style="min-width:155px; padding:3px 6px; border-color:var(--gold-primary);">
           <option value="">⚡ رموز هندسية / منطقية / 3D...</option>
@@ -8628,21 +8708,21 @@ openSmartWhiteboardModal = function(autoStartPrivateRecord = false) {
         <button type="button" id="btn-wb2-ruler" class="wb-tool-btn ${WBState.showRuler ? "active" : ""}"><i class="fa-solid fa-ruler"></i> مسطرة</button>
         <button type="button" id="btn-wb2-protractor" class="wb-tool-btn ${WBState.showProtractor ? "active" : ""}"><i class="fa-solid fa-compass-drafting"></i> منقلة</button>
 
-        <select id="wb2-connector-select" class="select-sm" style="min-width:95px; padding:3px 5px;">
+        <select id="wb2-connector-select" class="select-sm" style="min-width:92px; padding:3px 5px;">
           <option value="curved" ${WBState.connectorType === "curved" ? "selected" : ""}>↪️ منحني</option>
           <option value="elbow" ${WBState.connectorType === "elbow" ? "selected" : ""}> orthogonal قائم</option>
           <option value="straight" ${WBState.connectorType === "straight" ? "selected" : ""}>╱ مستقيم</option>
           <option value="dashed" ${WBState.connectorType === "dashed" ? "selected" : ""}>┅ متقطع</option>
         </select>
 
-        <select id="wb2-autolayout-select" class="select-sm" style="min-width:110px; padding:3px 5px;">
+        <select id="wb2-autolayout-select" class="select-sm" style="min-width:108px; padding:3px 5px;">
           <option value="">✨ ترتيب تلقائي...</option>
           <option value="tree">🌳 شجري رأسي</option>
           <option value="horizontal">➡️ تسلسلي أفقي</option>
           <option value="radial">☀️ دائري ذهني</option>
         </select>
 
-        <select id="wb2-template-select" class="select-sm" style="min-width:110px; padding:3px 5px;">
+        <select id="wb2-template-select" class="select-sm" style="min-width:108px; padding:3px 5px;">
           <option value="">📋 قوالب جاهزة...</option>
           <option value="elec_rectifier">⚡ دائرة توحيد</option>
           <option value="logic_adder">🔌 Full-Adder</option>
@@ -8651,34 +8731,32 @@ openSmartWhiteboardModal = function(autoStartPrivateRecord = false) {
         </select>
       </div>
 
-      <!-- كبسولة التحكم في العقد والتفريع -->
       <div class="wb3-pill-group">
         <button type="button" id="btn-wb-add-root" class="btn btn-xs btn-outline">+ عقدة</button>
         <button type="button" id="btn-wb-spawn-branches" class="btn btn-xs btn-gold">+ فرّع من المحدد</button>
-        <button type="button" id="btn-wb-toggle-shape" class="btn btn-xs btn-outline" title="تغيير شكل العقدة">الشكل</button>
-        <button type="button" id="btn-wb-edit-node" class="btn btn-xs btn-outline" title="تعديل النص أو القيمة">تعديل</button>
+        <button type="button" id="btn-wb-toggle-shape" class="btn btn-xs btn-outline">الشكل</button>
+        <button type="button" id="btn-wb-edit-node" class="btn btn-xs btn-outline">تعديل</button>
         <button type="button" id="btn-wb2-duplicate" class="btn btn-xs btn-outline" title="تكرار (Ctrl+D)"><i class="fa-regular fa-clone"></i></button>
         <button type="button" id="btn-wb2-rotate" class="btn btn-xs btn-outline" title="تدوير 45°"><i class="fa-solid fa-rotate-right"></i></button>
         <button type="button" id="btn-wb2-lock" class="btn btn-xs btn-outline" title="قفل/فك"><i class="fa-solid fa-lock"></i></button>
-        <button type="button" id="btn-wb-scale-up" class="btn btn-xs btn-outline" title="تكبير العنصر"><i class="fa-solid fa-plus"></i></button>
-        <button type="button" id="btn-wb-scale-down" class="btn btn-xs btn-outline" title="تصغير العنصر"><i class="fa-solid fa-minus"></i></button>
-        <label class="btn btn-xs btn-outline" style="cursor:pointer; margin:0;" title="إدراج صورة حرة">
+        <button type="button" id="btn-wb-scale-up" class="btn btn-xs btn-outline"><i class="fa-solid fa-plus"></i></button>
+        <button type="button" id="btn-wb-scale-down" class="btn btn-xs btn-outline"><i class="fa-solid fa-minus"></i></button>
+        <label class="btn btn-xs btn-outline" style="cursor:pointer; margin:0;" title="إدراج صورة إضافية">
           <i class="fa-regular fa-image gold-text"></i>
           <input type="file" id="wb-img-upload-inp" accept="image/*" class="hidden" />
         </label>
-        <button type="button" id="btn-wb-del-node" class="btn btn-xs btn-outline text-danger" title="حذف المحدد"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" id="btn-wb-del-node" class="btn btn-xs btn-outline text-danger"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <!-- كبسولة الـ AI والطبقات والتصدير والتسجيل -->
       <div class="wb3-pill-group">
         <button type="button" id="btn-wb2-ai-drawer" class="btn btn-xs btn-gold"><i class="fa-solid fa-robot"></i> AI</button>
         <button type="button" id="btn-wb2-layers-drawer" class="btn btn-xs btn-outline"><i class="fa-solid fa-layer-group gold-text"></i> الطبقات</button>
-        <button type="button" id="btn-wb-live-sync-room" class="btn btn-xs btn-outline" title="بث للغرفة المشتركة"><i class="fa-solid fa-satellite-dish gold-text"></i> بث</button>
+        <button type="button" id="btn-wb-live-sync-room" class="btn btn-xs btn-outline"><i class="fa-solid fa-satellite-dish gold-text"></i> بث</button>
         <button type="button" id="btn-wb3-teleprompter" class="btn btn-xs btn-outline" title="الملقن الذكي"><i class="fa-solid fa-scroll gold-text"></i></button>
         <button type="button" id="btn-wb-undo" class="btn btn-xs btn-outline" title="تراجع Ctrl+Z"><i class="fa-solid fa-rotate-left"></i></button>
         <button type="button" id="btn-wb2-redo" class="btn btn-xs btn-outline" title="إعادة Ctrl+Y"><i class="fa-solid fa-rotate-right"></i></button>
         <button type="button" id="btn-wb2-save-version" class="btn btn-xs btn-outline" title="حفظ إصدار"><i class="fa-solid fa-clock-rotate-left gold-text"></i></button>
-        <select id="wb2-export-select" class="select-sm" style="min-width:105px; padding:3px 5px; border-color:#19B889;">
+        <select id="wb2-export-select" class="select-sm" style="min-width:100px; padding:3px 5px; border-color:#19B889;">
           <option value="">📥 تصدير...</option>
           <option value="png">📸 صورة PNG</option>
           <option value="png_trans">✨ PNG شفاف</option>
@@ -8691,46 +8769,47 @@ openSmartWhiteboardModal = function(autoStartPrivateRecord = false) {
         <button type="button" id="btn-wb-rec-mp4" class="btn btn-xs btn-outline" style="border-color:#19B889;">
           <i class="fa-solid fa-video gold-text"></i> <span id="wb-rec-btn-lbl">MP4 🔒</span>
         </button>
-        <button type="button" id="btn-wb-clear" class="btn btn-xs btn-danger" title="مسح السبورة"><i class="fa-solid fa-trash"></i></button>
+        <button type="button" id="btn-wb-clear" class="btn btn-xs btn-danger"><i class="fa-solid fa-trash"></i></button>
       </div>
     </div>
 
-    <!-- منطقة العمل التفاعلية: تدعم العرض الكامل أو تقسيم الشاشة 50/50 مع التحكم الحي في حجم الملف -->
+    <!-- مساحة العمل الرئيسية (تدعم تقسيم الشاشة 50/50 أو عرض الملف بالكامل داخل السبورة) -->
     <div class="wb2-workspace-wrap">
       <div class="wb3-split-container">
-        <!-- اللوحة الجانبية للملف المفتوح (تظهر عند اختيار تقسيم الشاشة 50/50) -->
-        <div id="wb3-file-split-pane" class="wb3-file-split-pane hidden" style="width:${WBState.splitRatio}%;">
+        <!-- النصف الخاص بعارض الملفات عند اختيار تقسيم 50/50 -->
+        <div id="wb3-file-split-pane" class="wb3-file-split-pane ${WBState.docMode === "split" ? "" : "hidden"}" style="width:${WBState.splitRatio}%;">
           <div class="wb3-file-pane-header">
             <div class="filters-row" style="gap:5px;">
-              <strong class="gold-text"><i class="fa-solid fa-book-open"></i> عارض الملف التفاعلي</strong>
               <button type="button" id="btn-wb3-split-prev" class="btn-icon-xs" title="الصفحة السابقة"><i class="fa-solid fa-chevron-right"></i></button>
-              <span id="wb3-split-page-lbl" class="badge badge-gold">صفحة 1</span>
+              <span id="wb3-split-page-lbl" class="badge badge-gold">ملف الشرح</span>
               <button type="button" id="btn-wb3-split-next" class="btn-icon-xs" title="الصفحة التالية"><i class="fa-solid fa-chevron-left"></i></button>
             </div>
-            <div class="filters-row" style="gap:5px;">
-              <small class="small-muted">حجم الملف:</small>
-              <input type="range" id="wb3-split-width-slider" min="25" max="75" value="${WBState.splitRatio}" style="width:70px;" title="تحكم في حجم مساحة الملف بالنسبة للسبورة" />
-              <button type="button" id="btn-wb3-send-page-to-board" class="btn btn-xs btn-gold" title="انقل هذه الصفحة داخل السبورة للرسم والتحديد عليها مباشرة">
-                <i class="fa-solid fa-file-pen"></i> اشرح وحدد على هذه الصفحة في السبورة
+            <div class="filters-row" style="gap:6px;">
+              <small class="small-muted">عرض النافذة:</small>
+              <input type="range" id="wb3-split-width-slider" min="20" max="75" value="${WBState.splitRatio}" style="width:65px;" title="تكبير/تصغير عرض قسم الملف مقارنة بالسبورة" />
+              <small class="small-muted">زووم الملف:</small>
+              <input type="range" id="wb3-split-zoom-slider" min="60" max="180" value="${WBState.splitZoom}" style="width:60px;" title="تكبير/تصغير محتوى الملف نفسه" />
+              <button type="button" id="btn-wb3-send-page-to-board" class="btn btn-xs btn-gold" title="افرد هذه الصفحة داخل السبورة للكتابة والتحديد عليها">
+                <i class="fa-solid fa-file-pen"></i> اشرح وحدد على الملف في السبورة
               </button>
-              <button type="button" id="btn-wb3-close-split" class="btn-icon-xs text-danger" title="إغلاق عارض الملف"><i class="fa-solid fa-xmark"></i></button>
+              <button type="button" id="btn-wb3-close-split" class="btn-icon-xs text-danger"><i class="fa-solid fa-xmark"></i></button>
             </div>
           </div>
           <div id="wb3-file-pane-body" class="wb3-file-pane-body">
-            <p class="small-muted">اختر ملفاً لعرضه بجانب الشرح...</p>
+            <p class="small-muted">اختر ملفاً لعرضه بجانب السبورة...</p>
           </div>
         </div>
 
-        <!-- لوحة السبورة اللانهائية -->
-        <div style="flex:1; position:relative; overflow:hidden;">
-          <!-- شريط التحكم في صفحات الملف عندما يكون مفروداً داخل السبورة بالكامل -->
-          <div id="wb3-canvas-doc-bar" class="wb3-canvas-doc-bar hidden">
+        <!-- النصف الخاص بالسبورة التفاعلية -->
+        <div class="wb3-canvas-holder">
+          <!-- شريط التنقل بين صفحات الملف عندما يكون مفروداً داخل السبورة -->
+          <div id="wb3-canvas-doc-bar" class="wb3-canvas-doc-bar ${WBState.docMode === "canvas" ? "" : "hidden"}">
             <strong class="gold-text"><i class="fa-solid fa-file-signature"></i> شرح مباشر على الملف:</strong>
             <button type="button" id="btn-wb3-canv-prev" class="btn-icon-xs"><i class="fa-solid fa-chevron-right"></i></button>
             <span id="wb3-canvas-page-lbl" class="badge badge-emerald">صفحة 1</span>
             <button type="button" id="btn-wb3-canv-next" class="btn-icon-xs"><i class="fa-solid fa-chevron-left"></i></button>
-            <button type="button" id="btn-wb3-switch-to-split" class="btn btn-xs btn-outline" style="padding:2px 8px;">⚖️ حوّل لتقسيم 50/50</button>
-            <button type="button" id="btn-wb3-close-canv-doc" class="btn-icon-xs text-danger" title="إزالة الملف من السبورة"><i class="fa-solid fa-xmark"></i></button>
+            <button type="button" id="btn-wb3-switch-to-split" class="btn btn-xs btn-outline" style="padding:2px 8px;">⚖️ حوّل لتقسيم 50/50 بجانب السبورة</button>
+            <button type="button" id="btn-wb3-close-canv-doc" class="btn-icon-xs text-danger" title="إغلاق الملف"><i class="fa-solid fa-xmark"></i></button>
           </div>
 
           <canvas id="smart-whiteboard-canvas" class="whiteboard-canvas-box"></canvas>
@@ -8759,37 +8838,33 @@ openSmartWhiteboardModal = function(autoStartPrivateRecord = false) {
       <div id="wb2-side-drawer" class="wb2-side-drawer ${WBState.activeSideDrawer ? "" : "hidden"}"></div>
     </div>
 
-    <!-- شريط أدوات المحاضر العائم داخل وضع المحاضرة (Floating Lecture Dock) -->
+    <!-- شريط المحاضر العائم أسفل وضع المحاضرة (Floating Lecture Control Dock) -->
     <div id="wb3-lecture-floating-dock" class="wb3-lecture-floating-dock">
       <span class="badge badge-gold"><i class="fa-solid fa-person-chalkboard"></i> وضع المحاضرة</span>
-      <button type="button" class="wb-tool-btn" data-wb-lecture-tool="select"><i class="fa-solid fa-arrow-pointer"></i> تحريك</button>
-      <button type="button" class="wb-tool-btn active" data-wb-lecture-tool="pen"><i class="fa-solid fa-pen"></i> قلم شرح</button>
-      <button type="button" class="wb-tool-btn" data-wb-lecture-tool="highlight"><i class="fa-solid fa-highlighter"></i> قلم تحديد</button>
-      <button type="button" class="wb-tool-btn" data-wb-lecture-tool="laser"><i class="fa-solid fa-wand-magic-sparkles"></i> ليزر</button>
-      <button type="button" class="wb-tool-btn" data-wb-lecture-tool="arrow"><i class="fa-solid fa-arrow-trend-up"></i> سهم</button>
-      <button type="button" class="wb-tool-btn" data-wb-lecture-tool="rect"><i class="fa-regular fa-square"></i> مستطيل</button>
-      <button type="button" class="wb-tool-btn" data-wb-lecture-tool="circle"><i class="fa-regular fa-circle"></i> دائرة</button>
-      <button type="button" class="wb-tool-btn" data-wb-lecture-tool="eraser"><i class="fa-solid fa-eraser"></i> ممحاة</button>
+      <button type="button" class="wb-tool-btn ${WBState.tool === "select" ? "active" : ""}" data-wb-lecture-tool="select"><i class="fa-solid fa-arrow-pointer"></i> تحريك</button>
+      <button type="button" class="wb-tool-btn ${WBState.tool === "pen" ? "active" : ""}" data-wb-lecture-tool="pen"><i class="fa-solid fa-pen"></i> قلم شرح</button>
+      <button type="button" class="wb-tool-btn ${WBState.tool === "highlight" ? "active" : ""}" data-wb-lecture-tool="highlight"><i class="fa-solid fa-highlighter"></i> قلم تحديد</button>
+      <button type="button" class="wb-tool-btn ${WBState.tool === "laser" ? "active" : ""}" data-wb-lecture-tool="laser"><i class="fa-solid fa-wand-magic-sparkles"></i> ليزر</button>
+      <button type="button" class="wb-tool-btn ${WBState.tool === "arrow" ? "active" : ""}" data-wb-lecture-tool="arrow"><i class="fa-solid fa-arrow-trend-up"></i> سهم</button>
+      <button type="button" class="wb-tool-btn ${WBState.tool === "rect" ? "active" : ""}" data-wb-lecture-tool="rect"><i class="fa-regular fa-square"></i> مستطيل</button>
+      <button type="button" class="wb-tool-btn ${WBState.tool === "circle" ? "active" : ""}" data-wb-lecture-tool="circle"><i class="fa-regular fa-circle"></i> دائرة</button>
+      <button type="button" class="wb-tool-btn ${WBState.tool === "eraser" ? "active" : ""}" data-wb-lecture-tool="eraser"><i class="fa-solid fa-eraser"></i> ممحاة</button>
       <input type="color" id="wb3-lecture-color" value="${WBState.color}" style="width:28px; height:28px; padding:0; border-radius:50%; cursor:pointer;" title="لون القلم" />
-      <button type="button" id="btn-wb3-lecture-light" class="wb-tool-btn" title="تبديل إضاءة السبورة (إضاءة كاملة أو كشاف مكان الماوس فقط)">
+      <button type="button" id="btn-wb3-lecture-light" class="wb-tool-btn ${WBState.lightingMode === "spotlight" ? "active" : ""}" title="التبديل بين سبورة مضيئة بالكامل أو كشاف مكان الماوس">
         <i class="fa-solid fa-lightbulb gold-text"></i>
-        <span id="wb3-lecture-light-lbl">${WBState.lightingMode === "spotlight" ? "كشاف الماوس 🔦" : "سبورة مضيئة ☀️"}</span>
+        <span id="wb3-lecture-light-lbl">${WBState.lightingMode === "spotlight" ? "كشاف الماوس 🔦" : "إضاءة كاملة ☀️"}</span>
       </button>
-      <button type="button" id="btn-wb3-lecture-open-file" class="wb-tool-btn" title="فتح ملف PDF أو صورة للشرح عليها"><i class="fa-solid fa-file-import gold-text"></i> فتح ملف</button>
+      <button type="button" id="btn-wb3-lecture-open-file" class="wb-tool-btn"><i class="fa-solid fa-file-import gold-text"></i> فتح ملف</button>
       <button type="button" id="btn-wb3-lecture-undo" class="wb-tool-btn" title="تراجع"><i class="fa-solid fa-rotate-left"></i></button>
       <button type="button" id="btn-wb3-exit-lecture" class="btn btn-xs btn-danger" style="border-radius:99px; padding:5px 12px;">
-        <i class="fa-solid fa-compress"></i> إنهاء المحاضرة (ESC)
+        <i class="fa-solid fa-compress"></i> إظهار كل القوائم (ESC)
       </button>
-    </div>
-
-    <div class="flex-between mt-1 small-muted wb-bottom-hint">
-      <span>💡 <strong>جديد:</strong> اضغط <strong>(فتح ملف للشرح)</strong> لرفع أي PDF أو صورة واختيار فتحها داخل السبورة للكتابة عليها أو تقسيم الشاشة 50/50! واضغط <strong>(وضع المحاضرة الشامل)</strong> للشرح بملء الشاشة مع شريط الأقلام العائم.</span>
-      <span id="wb-selected-node-indicator" class="gold-text">المحدد: جاهز للرسم الهندسي</span>
     </div>
   `, async () => {});
 
+  // تفعيل الشاشة الكاملة المنعزلة 100% فور فتح السبورة
   const modalCard = document.querySelector("#universal-modal .modal-card");
-  modalCard?.classList.add("wide-lab-modal");
+  modalCard?.classList.add("wide-lab-modal", "wb-studio-fullscreen", "wb3-isolated-fullscreen");
   const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
   if (saveBtn) saveBtn.style.display = "none";
 
@@ -8800,7 +8875,7 @@ openSmartWhiteboardModal = function(autoStartPrivateRecord = false) {
       autoSaveWB2Board();
       WBState.presentationMode = false;
       document.body.classList.remove("wb-fullscreen-mode");
-      modalCard?.classList.remove("wb-studio-fullscreen", "wb-presentation-active");
+      modalCard?.classList.remove("wb-studio-fullscreen", "wb3-isolated-fullscreen", "wb-presentation-active");
       if (origClose) origClose(e);
     };
   }
@@ -8811,84 +8886,128 @@ openSmartWhiteboardModal = function(autoStartPrivateRecord = false) {
 
   const redraw = () => renderWhiteboardScene(ctx, canvas.width, canvas.height);
   const resizeBoard = () => {
-    canvas.width = canvas.clientWidth || 960;
-    canvas.height = canvas.clientHeight || 520;
+    canvas.width = canvas.clientWidth || 1050;
+    canvas.height = canvas.clientHeight || 620;
     redraw();
   };
-  setTimeout(resizeBoard, 40);
+  setTimeout(resizeBoard, 45);
+  window.addEventListener("resize", resizeBoard);
 
-  // استدعاء ربط الأحداث الأساسية للكانفاس والأشرطة
+  // ربط أحداث الرسم والماوس على اللوحة
   bindWB3CanvasPointerEvents(ctx, canvas, redraw);
-  bindWB2ToolbarActions(ctx, canvas, modalCard, redraw, resizeBoard);
 
-  // 1. زر تبديل الإضاءة (سبورة كاملة مضيئة ☀️ أو كشاف مكان الماوس فقط 🔦)
-  const syncLightButtonsUI = () => {
-    const isSpot = WBState.lightingMode === "spotlight";
-    WBState.spotlightMode = isSpot;
-    const b1 = document.getElementById("btn-wb3-lighting-toggle");
-    const l1 = document.getElementById("wb3-light-lbl");
-    const l2 = document.getElementById("wb3-lecture-light-lbl");
-    b1?.classList.toggle("active", isSpot);
-    if (l1) l1.textContent = isSpot ? "إضاءة الماوس 🔦" : "إضاءة كاملة ☀️";
-    if (l2) l2.textContent = isSpot ? "كشاف الماوس 🔦" : "سبورة مضيئة ☀️";
-    redraw();
+  // ربط جميع الأزرار والقوائم بشكل آمن ومستقل 100% بدون أي خطأ
+  bindWB3AllEventsSafe(ctx, canvas, modalCard, redraw, resizeBoard);
+
+  if (WBState.docMode !== "none" && WBState.activeFileType) {
+    setTimeout(() => updateDocBarsUI(ctx, canvas), 80);
+  }
+  if (autoStartPrivateRecord) {
+    setTimeout(() => document.getElementById("btn-wb-rec-mp4")?.click(), 350);
+  }
+};
+
+function bindWB3AllEventsSafe(ctx, canvas, modalCard, redraw, resizeBoard) {
+  // 1. اختيار أداة الرسم (من الشريط العلوي أو شريط المحاضرة العائم)
+  const setActiveTool = (toolName) => {
+    WBState.tool = toolName;
+    document.querySelectorAll("[data-wb-tool]").forEach(b => b.classList.toggle("active", b.dataset.wbTool === toolName));
+    document.querySelectorAll("[data-wb-lecture-tool]").forEach(b => b.classList.toggle("active", b.dataset.wbLectureTool === toolName));
+    canvas.style.cursor = toolName === "pan" ? "grab" : toolName === "select" ? "default" : "crosshair";
   };
 
-  document.getElementById("btn-wb3-lighting-toggle").onclick = () => {
-    WBState.lightingMode = WBState.lightingMode === "spotlight" ? "full" : "spotlight";
-    syncLightButtonsUI();
-    toast(WBState.lightingMode === "spotlight" ? "🔦 تم تفعيل كشاف التركيز على مكان الماوس فقط" : "☀️ تم تفعيل الإضاءة الكاملة الموحدة للسبورة");
-  };
-
-  // 2. وضع المحاضرة الشامل (بدون تفعيل الكشاف قسرياً إلا إذا اختاره المستخدم!)
-  const toggleLectureMode = (forceState) => {
-    WBState.presentationMode = typeof forceState === "boolean" ? forceState : !WBState.presentationMode;
-    WBState.spotlightMode = WBState.lightingMode === "spotlight";
-    modalCard?.classList.toggle("wb-studio-fullscreen", WBState.presentationMode);
-    modalCard?.classList.toggle("wb-presentation-active", WBState.presentationMode);
-    setTimeout(resizeBoard, 60);
-  };
-
-  document.getElementById("btn-wb2-present-mode").onclick = () => toggleLectureMode(true);
-  document.getElementById("btn-wb3-exit-lecture").onclick = () => toggleLectureMode(false);
-
-  // أزرار شريط المحاضر العائم تحت وضع المحاضرة
+  document.querySelectorAll("[data-wb-tool]").forEach(btn => {
+    btn.onclick = () => setActiveTool(btn.dataset.wbTool);
+  });
   document.querySelectorAll("[data-wb-lecture-tool]").forEach(btn => {
-    btn.onclick = () => {
-      const t = btn.dataset.wbLectureTool;
-      WBState.tool = t;
-      document.querySelectorAll("[data-wb-lecture-tool]").forEach(b => b.classList.toggle("active", b === btn));
-      document.querySelectorAll("[data-wb-tool]").forEach(b => b.classList.toggle("active", b.dataset.wbTool === t));
-    };
+    btn.onclick = () => setActiveTool(btn.dataset.wbLectureTool);
   });
 
-  document.getElementById("wb3-lecture-color").oninput = (e) => {
+  // 2. اللون والسمك ونوع الخط والخلفية
+  document.getElementById("wb-color")?.addEventListener("input", (e) => {
     WBState.color = e.target.value;
-    const mainCol = document.getElementById("wb-color");
-    if (mainCol) mainCol.value = e.target.value;
+    const lecCol = document.getElementById("wb3-lecture-color");
+    if (lecCol) lecCol.value = e.target.value;
+  });
+  document.getElementById("wb3-lecture-color")?.addEventListener("input", (e) => {
+    WBState.color = e.target.value;
+    const topCol = document.getElementById("wb-color");
+    if (topCol) topCol.value = e.target.value;
+  });
+  document.getElementById("wb-size")?.addEventListener("input", (e) => {
+    WBState.size = Number(e.target.value) || 4;
+  });
+  document.getElementById("wb-linestyle-select")?.addEventListener("change", (e) => {
+    WBState.lineStyle = e.target.value;
+  });
+  document.getElementById("wb-bg-select")?.addEventListener("change", (e) => {
+    WBState.bgMode = e.target.value;
+    autoSaveWB2Board();
+    redraw();
+  });
+
+  // 3. التبديل الفوري بين (إضاءة كاملة ☀️) و (كشاف مكان الماوس فقط 🔦)
+  const toggleBoardLighting = () => {
+    WBState.lightingMode = WBState.lightingMode === "spotlight" ? "full" : "spotlight";
+    WBState.spotlightMode = WBState.lightingMode === "spotlight";
+    const isSpot = WBState.spotlightMode;
+
+    document.getElementById("btn-wb3-lighting-toggle")?.classList.toggle("active", isSpot);
+    document.getElementById("btn-wb3-lecture-light")?.classList.toggle("active", isSpot);
+
+    const lbl1 = document.getElementById("wb3-light-lbl");
+    const lbl2 = document.getElementById("wb3-lecture-light-lbl");
+    if (lbl1) lbl1.textContent = isSpot ? "كشاف الماوس 🔦" : "إضاءة كاملة ☀️";
+    if (lbl2) lbl2.textContent = isSpot ? "كشاف الماوس 🔦" : "إضاءة كاملة ☀️";
+
+    redraw();
+    toast(isSpot ? "🔦 تم تفعيل كشاف الماوس (يضيء مكان وقوفك فقط)" : "☀️ تم تفعيل الإضاءة الكاملة الموحدة للسبورة");
   };
-  document.getElementById("btn-wb3-lecture-light").onclick = () => document.getElementById("btn-wb3-lighting-toggle")?.click();
-  document.getElementById("btn-wb3-lecture-open-file").onclick = () => document.getElementById("wb3-open-doc-inp")?.click();
-  document.getElementById("btn-wb3-lecture-undo").onclick = () => document.getElementById("btn-wb-undo")?.click();
 
-  // 3. استوديو فتح الملفات (PDF / صور / أكواد) والتحويل السلس بين (مفرود داخل السبورة) و (تقسيم 50/50)
+  document.getElementById("btn-wb3-lighting-toggle")?.addEventListener("click", toggleBoardLighting);
+  document.getElementById("btn-wb3-lecture-light")?.addEventListener("click", toggleBoardLighting);
+
+  // 4. وضع المحاضرة الشامل (يحترم اختيارك للإضاءة ولا يفرض الكشاف المظلم!)
+  const setLectureMode = (active) => {
+    WBState.presentationMode = active;
+    WBState.spotlightMode = WBState.lightingMode === "spotlight";
+    modalCard?.classList.toggle("wb-presentation-active", active);
+    setTimeout(resizeBoard, 60);
+    if (active) {
+      toast("🎤 وضع المحاضرة نشط! استخدم الشريط السفلي للشرح أو اضغط ESC لإظهار القوائم");
+    }
+  };
+
+  document.getElementById("btn-wb2-present-mode")?.addEventListener("click", () => setLectureMode(true));
+  document.getElementById("btn-wb3-exit-lecture")?.addEventListener("click", () => setLectureMode(false));
+
+  // 5. فتح الملفات (PDF / صورة / كود) والتحكم الكامل في (مفرود داخل السبورة) أو (تقسيم 50/50)
   const docInp = document.getElementById("wb3-open-doc-inp");
-  docInp.onchange = (e) => handleWB3FileUpload(e.target.files?.[0], ctx, canvas);
+  document.getElementById("btn-wb3-trigger-file")?.addEventListener("click", () => docInp?.click());
+  document.getElementById("btn-wb3-lecture-open-file")?.addEventListener("click", () => docInp?.click());
 
-  document.getElementById("wb3-doc-mode-select").onchange = async (e) => {
+  if (docInp) {
+    docInp.onchange = (e) => {
+      const f = e.target.files?.[0];
+      if (f) handleWB3FileUpload(f, ctx, canvas);
+      docInp.value = "";
+    };
+  }
+
+  document.getElementById("wb3-doc-mode-select")?.addEventListener("change", async (e) => {
     const val = e.target.value;
-    if (val === "close") {
+    if (val === "close" || val === "none") {
       WBState.docMode = "none";
       if (WBState.canvasDocImageId) {
         WBState.images = WBState.images.filter(im => im.id !== WBState.canvasDocImageId);
         WBState.canvasDocImageId = null;
       }
       await updateDocBarsUI(ctx, canvas);
-      e.target.value = "ask";
+      e.target.value = "none";
       return;
     }
     if (!WBState.activeFileType) {
-      docInp.click();
+      docInp?.click();
       return;
     }
     if (val === "split") {
@@ -8898,18 +9017,21 @@ openSmartWhiteboardModal = function(autoStartPrivateRecord = false) {
       WBState.docMode = "canvas";
       await placeActiveFileOnWhiteboardCanvas(ctx, canvas);
     }
-  };
+  });
 
-  // التحكم في حجم الملف في وضع التقسيم (من 25% إلى 75%)
-  document.getElementById("wb3-split-width-slider").oninput = (e) => {
+  document.getElementById("wb3-split-width-slider")?.addEventListener("input", (e) => {
     WBState.splitRatio = Number(e.target.value);
     const pane = document.getElementById("wb3-file-split-pane");
     if (pane) pane.style.width = `${WBState.splitRatio}%`;
-    setTimeout(resizeBoard, 20);
-  };
+    setTimeout(resizeBoard, 25);
+  });
 
-  // التنقل بين صفحات الـ PDF في وضع التقسيم أو داخل السبورة
-  const changePdfPage = async (delta) => {
+  document.getElementById("wb3-split-zoom-slider")?.addEventListener("input", async (e) => {
+    WBState.splitZoom = Number(e.target.value);
+    await updateDocBarsUI(ctx, canvas);
+  });
+
+  const stepPdfPage = async (delta) => {
     if (WBState.activeFileType !== "pdf" || !WBState.pdfDoc) return;
     const nextP = Math.max(1, Math.min(WBState.pdfTotalPages, WBState.pdfPageNum + delta));
     if (nextP === WBState.pdfPageNum) return;
@@ -8921,49 +9043,411 @@ openSmartWhiteboardModal = function(autoStartPrivateRecord = false) {
     }
   };
 
-  document.getElementById("btn-wb3-split-prev").onclick = () => changePdfPage(-1);
-  document.getElementById("btn-wb3-split-next").onclick = () => changePdfPage(1);
-  document.getElementById("btn-wb3-canv-prev").onclick = () => changePdfPage(-1);
-  document.getElementById("btn-wb3-canv-next").onclick = () => changePdfPage(1);
+  document.getElementById("btn-wb3-split-prev")?.addEventListener("click", () => stepPdfPage(-1));
+  document.getElementById("btn-wb3-split-next")?.addEventListener("click", () => stepPdfPage(1));
+  document.getElementById("btn-wb3-canv-prev")?.addEventListener("click", () => stepPdfPage(-1));
+  document.getElementById("btn-wb3-canv-next")?.addEventListener("click", () => stepPdfPage(1));
 
-  document.getElementById("btn-wb3-send-page-to-board").onclick = async () => {
+  document.getElementById("btn-wb3-send-page-to-board")?.addEventListener("click", async () => {
+    WBState.docMode = "canvas";
     await placeActiveFileOnWhiteboardCanvas(ctx, canvas);
-    toast("✍️ تم نقل الصفحة إلى السبورة! يمكنك الآن التحديد والرسم والكتابة عليها مباشرة");
-  };
+    toast("✍️ تم فرد الصفحة داخل السبورة! يمكنك الآن التحديد والرسم والكتابة عليها مباشرة");
+  });
 
-  document.getElementById("btn-wb3-switch-to-split").onclick = async () => {
+  document.getElementById("btn-wb3-switch-to-split")?.addEventListener("click", async () => {
     WBState.docMode = "split";
     await updateDocBarsUI(ctx, canvas);
-  };
+  });
 
-  document.getElementById("btn-wb3-close-split").onclick = async () => {
+  document.getElementById("btn-wb3-close-split")?.addEventListener("click", async () => {
     WBState.docMode = "none";
     await updateDocBarsUI(ctx, canvas);
-  };
+  });
 
-  document.getElementById("btn-wb3-close-canv-doc").onclick = async () => {
+  document.getElementById("btn-wb3-close-canv-doc")?.addEventListener("click", async () => {
     WBState.docMode = "none";
     if (WBState.canvasDocImageId) {
       WBState.images = WBState.images.filter(im => im.id !== WBState.canvasDocImageId);
       WBState.canvasDocImageId = null;
     }
     await updateDocBarsUI(ctx, canvas);
-  };
+  });
 
-  // ربط زر البث والملقن
-  document.getElementById("btn-wb-live-sync-room").onclick = () => {
+  // 6. الأدوات الهندسية، القوالب، الترتيب التلقائي، والتفريع الشجري
+  document.getElementById("wb2-connector-select")?.addEventListener("change", (e) => {
+    WBState.connectorType = e.target.value;
+    autoSaveWB2Board();
+    redraw();
+  });
+
+  document.getElementById("wb2-autolayout-select")?.addEventListener("change", (e) => {
+    if (!e.target.value) return;
+    applyWB2AutoLayout(e.target.value, canvas.width, canvas.height);
+    e.target.value = "";
+    redraw();
+  });
+
+  document.getElementById("wb2-template-select")?.addEventListener("change", (e) => {
+    const key = e.target.value;
+    if (!key || !WB2Templates[key]) return;
+    pushWB2Undo();
+    const tpl = WB2Templates[key];
+    WBState.bgMode = tpl.bgMode || "grid";
+    WBState.nodes = JSON.parse(JSON.stringify(tpl.nodes));
+    WBState.selectedNodeId = WBState.nodes[0]?.id || null;
+    e.target.value = "";
+    redraw();
+    toast(`📋 تم تحميل قالب: ${tpl.name}`);
+  });
+
+  document.getElementById("wb2-eng-symbol-picker")?.addEventListener("change", (e) => {
+    const sym = e.target.value;
+    if (!sym) return;
+    e.target.value = "";
+    pushWB2Undo();
+
+    const cx = (canvas.width / 2 - WBState.panX) / WBState.zoom;
+    const cy = (canvas.height / 2 - WBState.panY) / WBState.zoom;
+    const col = document.getElementById("wb-color")?.value || "#D4A72C";
+
+    if (sym === "math_plot") {
+      const fnStr = prompt("📈 اكتب الدالة الرياضية بدلالة x (مثال: Math.sin(x) أو x*x/4):", "Math.sin(x)");
+      if (!fnStr) return;
+      WBState.nodes.push({ id: "nd_" + Date.now(), text: `f(x) = ${fnStr}`, val: fnStr, shape: "math_plot", x: cx, y: cy, w: 220, h: 150, color: col, parentId: null });
+      redraw();
+      return;
+    }
+
+    if (sym === "truth_table") {
+      const gateType = prompt("📋 اكتب نوع البوابة لجدول الحقيقة (AND / OR / XOR / NAND):", "XOR") || "XOR";
+      WBState.nodes.push({ id: "nd_" + Date.now(), text: `Truth Table (${gateType.toUpperCase()})`, val: gateType.toUpperCase(), shape: "truth_table", x: cx, y: cy, w: 190, h: 135, color: col, parentId: null });
+      redraw();
+      return;
+    }
+
+    const defaultLabels = {
+      elec_res: ["Resistor R", "10kΩ"], elec_cap: ["Capacitor C", "100μF"], elec_ind: ["Inductor L", "10mH"],
+      elec_diode: ["Diode D", "1N4007"], elec_led: ["LED", "Red 2V"], elec_trans: ["MOSFET / BJT", "IRFZ44N"],
+      elec_dc: ["DC Source", "12V DC"], elec_ac: ["AC Source", "220V 50Hz"], elec_gnd: ["GND", "0V"],
+      gate_and: ["AND Gate", "Y = A · B"], gate_or: ["OR Gate", "Y = A + B"], gate_not: ["NOT Gate", "Y = A'"],
+      gate_nand: ["NAND Gate", "Y = (A·B)'"], gate_xor: ["XOR Gate", "Y = A ⊕ B"],
+      sticky: ["ملاحظة سريعة 📌", "اكتب التفاصيل"], code_block: ["Code Snippet 💻", "return true;"],
+      cube: ["3D Cube", "Layer 1"], cylinder: ["Database DB", "PostgreSQL"],
+      math_eq: ["∫ f(x) dx = F(b) - F(a)", "Formula"], phys_vec: ["Force F = 50N", "θ = 30°"], phys_wave: ["Sine Wave", "50Hz"]
+    };
+
+    const [defTitle, defVal] = defaultLabels[sym] || ["Element", ""];
+    const title = prompt("اسم العنصر أو المعادلة:", defTitle) || defTitle;
+    const val = prompt("القيمة أو التفاصيل الفرعية:", defVal) ?? defVal;
+
+    WBState.nodes.push({
+      id: "nd_" + Date.now(), text: title, val, shape: sym,
+      x: cx + (Math.random() - 0.5) * 40, y: cy + (Math.random() - 0.5) * 40,
+      w: sym === "sticky" ? 175 : sym === "code_block" ? 230 : Math.max(125, title.length * 8.5 + 40),
+      h: sym === "sticky" ? 115 : sym === "code_block" ? 85 : 58,
+      color: sym === "sticky" ? "#FBBF24" : col, parentId: WBState.selectedNodeId || null
+    });
+    redraw();
+  });
+
+  document.getElementById("btn-wb2-ruler")?.addEventListener("click", (e) => {
+    WBState.showRuler = !WBState.showRuler;
+    e.currentTarget.classList.toggle("active", WBState.showRuler);
+    redraw();
+  });
+  document.getElementById("btn-wb2-protractor")?.addEventListener("click", (e) => {
+    WBState.showProtractor = !WBState.showProtractor;
+    e.currentTarget.classList.toggle("active", WBState.showProtractor);
+    redraw();
+  });
+
+  // 7. أزرار العقد، التفريع، الزووم، التراجع، والتصدير
+  document.getElementById("btn-wb-add-root")?.addEventListener("click", () => {
+    const title = prompt("🌟 اكتب النص داخل الشكل الجديد:", "عنصر رئيسي جديد");
+    if (!title || !title.trim()) return;
+    pushWB2Undo();
+    const id = "nd_" + Date.now();
+    const c = document.getElementById("wb-color")?.value || "#D4A72C";
+    WBState.nodes.push({
+      id, text: title.trim(), shape: "rect",
+      x: (canvas.width / 2 - WBState.panX) / WBState.zoom,
+      y: (120 - WBState.panY) / WBState.zoom,
+      w: Math.max(140, title.trim().length * 9 + 42), h: 48, color: c, parentId: null
+    });
+    WBState.selectedNodeId = id;
+    redraw();
+  });
+
+  document.getElementById("btn-wb-spawn-branches")?.addEventListener("click", () => {
+    const parent = WBState.nodes.find(n => n.id === WBState.selectedNodeId) || WBState.nodes[0];
+    if (!parent) return;
+    const raw = prompt(`🌿 تفريع من (${parent.text}):\nاكتب أسماء الفروع مفصولة بفاصلة ( , ):`, "فرع 1, فرع 2, فرع 3");
+    if (!raw || !raw.trim()) return;
+    const parts = raw.split(/[،,]/).map(s => s.trim()).filter(Boolean);
+    pushWB2Undo();
+    const c = document.getElementById("wb-color")?.value || "#19B889";
+    const spreadW = parts.length * 190;
+    const startX = parent.x - spreadW / 2 + 95;
+    parts.forEach((txt, idx) => {
+      WBState.nodes.push({
+        id: "nd_" + Date.now() + "_" + idx, text: txt, shape: "round_rect",
+        x: parts.length === 1 ? parent.x : startX + idx * 190,
+        y: parent.y + 125, w: Math.max(130, txt.length * 9 + 36), h: 44, color: c, parentId: parent.id
+      });
+    });
+    redraw();
+  });
+
+  document.getElementById("btn-wb-toggle-shape")?.addEventListener("click", () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (!nd) return;
+    const shapes = ["rect", "round_rect", "circle", "diamond", "hexagon", "cylinder", "cube", "sticky"];
+    nd.shape = shapes[(shapes.indexOf(nd.shape || "rect") + 1) % shapes.length];
+    redraw();
+  });
+
+  document.getElementById("btn-wb-edit-node")?.addEventListener("click", () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (!nd) return;
+    const txt = prompt("✏️ تعديل النص:", nd.text);
+    if (txt !== null && txt.trim()) { nd.text = txt.trim(); nd.w = Math.max(130, nd.text.length * 9 + 36); }
+    const val = prompt("📐 تعديل القيمة الفرعية / الملاحظة:", nd.val || "");
+    if (val !== null) nd.val = val.trim();
+    redraw();
+  });
+
+  document.getElementById("btn-wb2-duplicate")?.addEventListener("click", () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (!nd) return;
+    pushWB2Undo();
+    const copyId = "nd_" + Date.now();
+    WBState.nodes.push({ ...nd, id: copyId, x: nd.x + 36, y: nd.y + 36 });
+    WBState.selectedNodeId = copyId;
+    redraw();
+  });
+
+  document.getElementById("btn-wb2-rotate")?.addEventListener("click", () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (nd) { nd.rotation = ((nd.rotation || 0) + 45) % 360; redraw(); }
+  });
+
+  document.getElementById("btn-wb2-lock")?.addEventListener("click", () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (nd) { nd.locked = !nd.locked; redraw(); }
+  });
+
+  const scaleCurrentSelected = (factor) => {
+    if (WBState.selectedImgId) {
+      const im = WBState.images.find(i => i.id === WBState.selectedImgId);
+      if (im) { im.w = Math.max(50, Math.round(im.w * factor)); im.h = Math.max(50, Math.round(im.h * factor)); }
+    } else if (WBState.selectedNodeId) {
+      const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+      if (nd) { nd.w = Math.max(80, Math.round(nd.w * factor)); nd.h = Math.max(36, Math.round(nd.h * factor)); }
+    }
+    redraw();
+  };
+  document.getElementById("btn-wb-scale-up")?.addEventListener("click", () => scaleCurrentSelected(1.16));
+  document.getElementById("btn-wb-scale-down")?.addEventListener("click", () => scaleCurrentSelected(0.86));
+
+  document.getElementById("wb-img-upload-inp")?.addEventListener("change", (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const imgEl = new Image();
+      imgEl.onload = () => {
+        const scale = Math.min(1, 380 / imgEl.width);
+        const id = "im_" + Date.now();
+        WBState.images.push({ id, imgEl, x: 80, y: 90, w: Math.round(imgEl.width * scale), h: Math.round(imgEl.height * scale) });
+        WBState.selectedImgId = id;
+        redraw();
+      };
+      imgEl.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById("btn-wb-del-node")?.addEventListener("click", () => {
+    pushWB2Undo();
+    if (WBState.selectedImgId) { WBState.images = WBState.images.filter(i => i.id !== WBState.selectedImgId); WBState.selectedImgId = null; }
+    else if (WBState.selectedStrokeIdx !== null) { WBState.strokes.splice(WBState.selectedStrokeIdx, 1); WBState.selectedStrokeIdx = null; }
+    else if (WBState.selectedNodeId) {
+      const id = WBState.selectedNodeId;
+      WBState.nodes = WBState.nodes.filter(n => n.id !== id && n.parentId !== id);
+      WBState.selectedNodeId = WBState.nodes[0]?.id || null;
+    }
+    redraw();
+  });
+
+  const doUndo = () => {
+    const last = WBState.undoStack.pop();
+    if (last) {
+      WBState.redoStack.push(JSON.stringify({ nodes: WBState.nodes, strokes: WBState.strokes }));
+      const parsed = JSON.parse(last);
+      WBState.nodes = parsed.nodes || [];
+      WBState.strokes = parsed.strokes || [];
+      redraw();
+    }
+  };
+  document.getElementById("btn-wb-undo")?.addEventListener("click", doUndo);
+  document.getElementById("btn-wb3-lecture-undo")?.addEventListener("click", doUndo);
+
+  document.getElementById("btn-wb2-redo")?.addEventListener("click", () => {
+    const next = WBState.redoStack.pop();
+    if (next) {
+      WBState.undoStack.push(JSON.stringify({ nodes: WBState.nodes, strokes: WBState.strokes }));
+      const parsed = JSON.parse(next);
+      WBState.nodes = parsed.nodes || [];
+      WBState.strokes = parsed.strokes || [];
+      redraw();
+    }
+  });
+
+  document.getElementById("btn-wb2-save-version")?.addEventListener("click", () => {
+    const vName = prompt("💾 اسم الإصدار:", `إصدار ${WBState.versions.length + 1}`);
+    if (!vName) return;
+    WBState.versions.unshift({ name: vName, nodes: JSON.parse(JSON.stringify(WBState.nodes)), strokes: JSON.parse(JSON.stringify(WBState.strokes)) });
+    OSProStore.set("wb2_versions", WBState.versions.slice(0, 15));
+    toast(`تم حفظ "${vName}" في سجل الإصدارات! 🕰️`);
+  });
+
+  document.getElementById("btn-wb2-ai-drawer")?.addEventListener("click", () => {
+    WBState.activeSideDrawer = WBState.activeSideDrawer === "ai" ? null : "ai";
+    renderWB2SideDrawer(ctx, canvas);
+  });
+  document.getElementById("btn-wb2-layers-drawer")?.addEventListener("click", () => {
+    WBState.activeSideDrawer = WBState.activeSideDrawer === "layers" ? null : "layers";
+    renderWB2SideDrawer(ctx, canvas);
+  });
+
+  document.getElementById("btn-wb-live-sync-room")?.addEventListener("click", () => {
     if (!V6ExpansionState.activeRoomCode) openCoStudyRoomModal();
     else broadcastWhiteboardToRoom();
-  };
-  document.getElementById("btn-wb3-teleprompter").onclick = toggleFloatingTeleprompter;
+  });
+  document.getElementById("btn-wb3-teleprompter")?.addEventListener("click", toggleFloatingTeleprompter);
 
-  if (WBState.docMode !== "none" && WBState.activeFileType) {
-    setTimeout(() => updateDocBarsUI(ctx, canvas), 80);
+  document.getElementById("btn-wb2-zoom-in")?.addEventListener("click", () => {
+    WBState.zoom = Math.min(3.5, WBState.zoom + 0.15);
+    const z = document.getElementById("wb2-zoom-lbl");
+    if (z) z.textContent = `${Math.round(WBState.zoom * 100)}%`;
+    redraw();
+  });
+  document.getElementById("btn-wb2-zoom-out")?.addEventListener("click", () => {
+    WBState.zoom = Math.max(0.25, WBState.zoom - 0.15);
+    const z = document.getElementById("wb2-zoom-lbl");
+    if (z) z.textContent = `${Math.round(WBState.zoom * 100)}%`;
+    redraw();
+  });
+  document.getElementById("btn-wb2-zoom-fit")?.addEventListener("click", () => {
+    WBState.zoom = 1; WBState.panX = 0; WBState.panY = 0;
+    const z = document.getElementById("wb2-zoom-lbl");
+    if (z) z.textContent = "100%";
+    redraw();
+  });
+  document.getElementById("wb2-snap-chk")?.addEventListener("change", (e) => { WBState.snapToGrid = e.target.checked; });
+  document.getElementById("wb2-autoshape-chk")?.addEventListener("change", (e) => { WBState.smartShapeRecognition = e.target.checked; });
+
+  document.getElementById("btn-wb2-add-slide")?.addEventListener("click", () => {
+    const title = prompt("🎬 اسم الشريحة:", `الشريحة ${WBState.slides.length + 1}`);
+    if (!title) return;
+    WBState.slides.push({ title, panX: WBState.panX, panY: WBState.panY, zoom: WBState.zoom });
+    OSProStore.set("wb2_slides", WBState.slides);
+    toast(`تم حفظ "${title}"! 🎬`);
+  });
+
+  document.getElementById("btn-wb2-next-slide")?.addEventListener("click", () => {
+    if (!WBState.slides.length) return;
+    WBState.activeSlideIdx = (WBState.activeSlideIdx + 1) % WBState.slides.length;
+    const sl = WBState.slides[WBState.activeSlideIdx];
+    WBState.panX = sl.panX; WBState.panY = sl.panY; WBState.zoom = sl.zoom;
+    redraw();
+    toast(`🎬 الشريحة: ${sl.title}`);
+  });
+
+  // التصدير والاستيراد
+  const jsonFileInp = document.getElementById("wb2-import-json-inp");
+  document.getElementById("wb2-export-select")?.addEventListener("change", async (e) => {
+    const mode = e.target.value;
+    if (!mode) return;
+    e.target.value = "";
+    if (mode === "png") {
+      const a = document.createElement("a"); a.download = `Board-${today()}.png`; a.href = canvas.toDataURL("image/png"); a.click();
+    } else if (mode === "png_trans") {
+      const prev = WBState.bgMode; WBState.bgMode = "transparent"; redraw();
+      const a = document.createElement("a"); a.download = `Board-Transparent-${today()}.png`; a.href = canvas.toDataURL("image/png"); a.click();
+      WBState.bgMode = prev; redraw();
+    } else if (mode === "svg") {
+      let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}" style="background:#080D1A; font-family:sans-serif;">`;
+      WBState.nodes.forEach(n => {
+        svg += `<rect x="${n.x - n.w/2}" y="${n.y - n.h/2}" width="${n.w}" height="${n.h}" rx="10" fill="#11192E" stroke="${n.color || "#D4A72C"}" stroke-width="2"/>`;
+        svg += `<text x="${n.x}" y="${n.y + 5}" fill="#FFFFFF" font-size="13" font-weight="bold" text-anchor="middle">${esc(n.text)}</text>`;
+      });
+      svg += `</svg>`;
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" })); a.download = `Diagram-${today()}.svg`; a.click();
+    } else if (mode === "pdf") {
+      selectedPdfImages = [canvas.toDataURL("image/jpeg", 0.92)];
+      openImageToPdfConverterModal();
+    } else if (mode === "json") {
+      const blob = new Blob([JSON.stringify({ nodes: WBState.nodes, strokes: WBState.strokes, bgMode: WBState.bgMode }, null, 2)], { type: "application/json" });
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `Project-${today()}.json`; a.click();
+    } else if (mode === "import_json") {
+      jsonFileInp?.click();
+    }
+  });
+
+  if (jsonFileInp) {
+    jsonFileInp.onchange = async (e) => {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      try {
+        const parsed = JSON.parse(await f.text());
+        if (parsed.nodes) { WBState.nodes = parsed.nodes; WBState.strokes = parsed.strokes || []; redraw(); toast("تم استيراد المشروع بنجاح! 📂"); }
+      } catch (err) { toast("ملف غير صالح", "error"); }
+    };
   }
-  if (autoStartPrivateRecord) {
-    setTimeout(() => document.getElementById("btn-wb-rec-mp4")?.click(), 350);
-  }
-};
+
+  document.getElementById("btn-wb-clear")?.addEventListener("click", () => {
+    if (!confirm("هل تريد مسح السبورة بالكامل؟")) return;
+    pushWB2Undo();
+    WBState.nodes = []; WBState.strokes = []; WBState.images = [];
+    redraw();
+  });
+
+  // تسجيل الفيديو الخاص MP4
+  document.getElementById("btn-wb-rec-mp4")?.addEventListener("click", async () => {
+    const recLbl = document.getElementById("wb-rec-btn-lbl");
+    const recBtn = document.getElementById("btn-wb-rec-mp4");
+    if (WBState.isRecordingCanvas && WBState.canvasRecorder) {
+      WBState.canvasRecorder.stop();
+      WBState.micStream?.getTracks().forEach(t => t.stop());
+      WBState.isRecordingCanvas = false;
+      if (recLbl) recLbl.textContent = "MP4 🔒";
+      recBtn?.classList.remove("btn-danger");
+      return;
+    }
+    try {
+      const canvasStream = canvas.captureStream(30);
+      try {
+        WBState.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        WBState.micStream.getAudioTracks().forEach(track => canvasStream.addTrack(track));
+      } catch (e) {}
+      const mime = getBestMP4MimeType();
+      WBState.canvasRecorder = mime ? new MediaRecorder(canvasStream, { mimeType: mime }) : new MediaRecorder(canvasStream);
+      WBState.canvasRecChunks = [];
+      WBState.canvasRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) WBState.canvasRecChunks.push(e.data); };
+      WBState.canvasRecorder.onstop = () => {
+        const blob = new Blob(WBState.canvasRecChunks, { type: "video/mp4" });
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `Whiteboard-Lecture-${today()}.mp4`; a.click();
+        toast("تم حفظ فيديو الشرح بصيغة .MP4 بخصوصية تامة! 🎥✅");
+      };
+      WBState.canvasRecorder.start(200);
+      WBState.isRecordingCanvas = true;
+      if (recLbl) recLbl.textContent = "إيقاف 🔴";
+      recBtn?.classList.add("btn-danger");
+      toast("🔒 بدأ تسجيل السبورة وصوتك مباشرة بصيغة MP4!");
+    } catch (e) { toast("تعذر بدء التسجيل", "error"); }
+  });
+}
 
 function bindWB3CanvasPointerEvents(ctx, canvas, redraw) {
   const screenToWorld = (sx, sy) => ({
@@ -9133,4 +9617,46 @@ function bindWB3CanvasPointerEvents(ctx, canvas, redraw) {
     isDrawingStroke = false; currentStroke = null; WBState.laserPoints = [];
     autoSaveWB2Board(); redraw();
   });
+
+  canvas.ondblclick = (e) => {
+    const { x, y } = getRawPos(e);
+    const hitNode = findNodeAt(x, y);
+    if (hitNode) {
+      WBState.selectedNodeId = hitNode.id;
+      const newTxt = prompt("✏️ تعديل اسم/عنوان العنصر:", hitNode.text);
+      if (newTxt !== null && newTxt.trim()) hitNode.text = newTxt.trim();
+      if (hitNode.val !== undefined) {
+        const newVal = prompt("📐 تعديل القيمة أو الملاحظة الفرعية:", hitNode.val);
+        if (newVal !== null) hitNode.val = newVal.trim();
+      }
+      hitNode.w = Math.max(125, hitNode.text.length * 9 + 42);
+      autoSaveWB2Board(); redraw(); return;
+    }
+    const hitSt = findStrokeAt(x, y);
+    if (hitSt) {
+      const s = hitSt.stroke;
+      const cur = s.type === "text" ? s.text : (s.innerText || "");
+      const next = prompt("✏️ تعديل النص:", cur);
+      if (next !== null) {
+        if (s.type === "text") s.text = next.trim();
+        else s.innerText = next.trim();
+        autoSaveWB2Board(); redraw();
+      }
+    }
+  };
+
+  canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.12 : 0.89;
+    const r = canvas.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    const wx = (mx - WBState.panX) / WBState.zoom, wy = (my - WBState.panY) / WBState.zoom;
+    const newZoom = Math.min(3.5, Math.max(0.25, WBState.zoom * factor));
+    WBState.panX = mx - wx * newZoom;
+    WBState.panY = my - wy * newZoom;
+    WBState.zoom = newZoom;
+    const zLbl = document.getElementById("wb2-zoom-lbl");
+    if (zLbl) zLbl.textContent = `${Math.round(WBState.zoom * 100)}%`;
+    redraw();
+  }, { passive: false });
 }
