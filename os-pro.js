@@ -1650,8 +1650,8 @@ function renderProModuleById(id) {
 }
 
 /* ============================================================================
-   MODULE C (FLAGSHIP V4): MULTI-STEP WIZARD, HOME VS GYM, 3D ANIMATED COACH,
-   MASSIVE EXERCISE LIBRARY, OPTIONAL NUTRITION & TASK/CALENDAR SCHEDULER
+   MODULE C (FLAGSHIP V5): BIOMECHANICAL GROUNDED 3D TRAINER, 100% RESPECTFUL
+   EQUIPMENT/DIAGRAM VISUALS (ZERO WOMEN PHOTOS), WIZARD & TASK SCHEDULER
    ============================================================================ */
 
 function injectGymV4Styles() {
@@ -1659,7 +1659,6 @@ function injectGymV4Styles() {
   const st = document.createElement("style");
   st.id = "gym-v4-pro-styles";
   st.textContent = `
-    /* 1. معالج الإعداد المتدرج (4-Step Full Wizard) */
     .gym-wizard-shell {
       max-width: 780px;
       margin: 10px auto;
@@ -1668,8 +1667,6 @@ function injectGymV4Styles() {
       border-radius: 26px;
       padding: 34px 32px;
       box-shadow: 0 30px 70px rgba(0, 0, 0, 0.85), 0 0 40px rgba(212, 167, 44, 0.12);
-      position: relative;
-      overflow: hidden;
     }
     .wizard-steps-bar {
       display: grid;
@@ -1700,27 +1697,32 @@ function injectGymV4Styles() {
       padding: 26px 20px;
       text-align: center;
       cursor: pointer;
-      transition: all 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+      transition: all 0.25s ease;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 12px;
     }
     .wizard-big-card:hover {
-      transform: translateY(-5px);
+      transform: translateY(-4px);
       border-color: rgba(212, 167, 44, 0.6);
     }
     .wizard-big-card.active {
       border-color: #D4A72C;
       background: linear-gradient(145deg, rgba(212, 167, 44, 0.2), rgba(25, 184, 137, 0.1));
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7), 0 0 28px rgba(212, 167, 44, 0.3);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7), 0 0 28px rgba(212, 167, 44, 0.25);
     }
-    .wizard-big-card img {
-      width: 115px;
-      height: 115px;
+    .wizard-emblem-circle {
+      width: 96px;
+      height: 96px;
       border-radius: 50%;
-      object-fit: cover;
-      border: 3px solid #D4A72C;
+      background: radial-gradient(circle, rgba(212, 167, 44, 0.22), rgba(9, 13, 25, 0.95));
+      border: 2.5px solid #D4A72C;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.6rem;
+      color: #D4A72C;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
     }
     .wizard-input-giant {
@@ -1733,79 +1735,111 @@ function injectGymV4Styles() {
       border: 1.5px solid rgba(212, 167, 44, 0.35) !important;
     }
 
-    /* 2. مشغل التمرين التفاعلي بالمدرب المتحرك 3D (Live Animated Human Trainer) */
+    /* مشغل التمرين التفاعلي بالمدرب الميكانيكي المرتكز على الأرض */
     .live-workout-stage {
       background: radial-gradient(circle at 50% 30%, #162238 0%, #070b14 100%);
       border: 2px solid #19B889;
       border-radius: 24px;
       padding: 24px;
       margin-bottom: 24px;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(25, 184, 137, 0.2);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
     }
     .trainer-3d-box {
-      width: 240px;
-      height: 260px;
+      width: 100%;
+      max-width: 310px;
+      height: 240px;
       margin: 0 auto;
-      background: radial-gradient(circle, rgba(25, 184, 137, 0.14) 0%, transparent 70%);
-      border-radius: 50%;
+      background: radial-gradient(circle at 50% 70%, rgba(25, 184, 137, 0.14) 0%, rgba(9, 13, 25, 0.9) 75%);
+      border: 1px solid rgba(25, 184, 137, 0.35);
+      border-radius: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
       position: relative;
+      overflow: hidden;
     }
-    /* حركات المدرب التفاعلي حسب نوع التمرين */
-    .anim-human-svg {
-      width: 200px;
-      height: 240px;
-      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.8));
+    .biomech-svg {
+      width: 280px;
+      height: 220px;
     }
-    .anim-mode-squat .human-upper {
-      animation: squatMove 1.8s ease-in-out infinite;
+
+    /* حركات المفاصل الواقعية على الأرضية بدون طيران */
+    .bm-squat-hip {
+      animation: bmSquatBody 2s ease-in-out infinite;
     }
-    .anim-mode-pushup {
-      transform: rotate(65deg);
+    @keyframes bmSquatBody {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(34px); }
     }
-    .anim-mode-pushup .human-body-all {
-      animation: pushupMove 1.6s ease-in-out infinite;
+
+    .bm-pushup-plank {
+      animation: bmPushupTorso 1.8s ease-in-out infinite;
+      transform-origin: 215px 172px;
     }
-    .anim-mode-jump .human-arms {
-      animation: jumpingArms 1.1s ease-in-out infinite;
-      transform-origin: 100px 75px;
+    @keyframes bmPushupTorso {
+      0%, 100% { transform: rotate(0deg) translateY(0px); }
+      50% { transform: rotate(-12deg) translateY(22px); }
     }
-    .anim-mode-jump .human-body-all {
-      animation: jumpingBounce 1.1s ease-in-out infinite;
+
+    .bm-crunch-torso {
+      animation: bmCrunchUp 1.9s ease-in-out infinite;
+      transform-origin: 145px 168px;
     }
-    .anim-mode-core .human-upper {
-      animation: crunchMove 1.7s ease-in-out infinite;
-      transform-origin: 100px 135px;
-    }
-    .anim-mode-pull .human-arms {
-      animation: pullArmsMove 1.6s ease-in-out infinite;
-      transform-origin: 100px 80px;
-    }
-    @keyframes squatMove {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(28px); }
-    }
-    @keyframes pushupMove {
-      0%, 100% { transform: translateX(0); }
-      50% { transform: translateX(18px); }
-    }
-    @keyframes jumpingArms {
-      0%, 100% { transform: scaleY(1); }
-      50% { transform: scaleY(-0.85) translateY(-10px); }
-    }
-    @keyframes jumpingBounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-14px); }
-    }
-    @keyframes crunchMove {
+    @keyframes bmCrunchUp {
       0%, 100% { transform: rotate(0deg); }
-      50% { transform: rotate(18deg) translateY(8px); }
+      50% { transform: rotate(28deg); }
     }
-    @keyframes pullArmsMove {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-16px); }
+
+    .bm-bridge-pelvis {
+      animation: bmBridgeLift 2s ease-in-out infinite;
+    }
+    @keyframes bmBridgeLift {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-28px); }
+    }
+
+    .bm-jump-body {
+      animation: bmJumpUp 1.1s ease-in-out infinite;
+    }
+    .bm-jump-arm-l {
+      animation: bmArmL 1.1s ease-in-out infinite;
+      transform-origin: 125px 76px;
+    }
+    .bm-jump-arm-r {
+      animation: bmArmR 1.1s ease-in-out infinite;
+      transform-origin: 155px 76px;
+    }
+    @keyframes bmJumpUp {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-12px); }
+    }
+    @keyframes bmArmL {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(115deg); }
+    }
+    @keyframes bmArmR {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(-115deg); }
+    }
+
+    .bm-pull-arms {
+      animation: bmPullMove 1.7s ease-in-out infinite;
+    }
+    @keyframes bmPullMove {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(24px); }
+    }
+
+    /* كروت التمارين الثابتة النظيفة (رسوم تشريحية ومعدات بدون صور أشخاص) */
+    .static-diagram-thumb {
+      width: 100%;
+      height: 175px;
+      background: radial-gradient(circle at 50% 40%, #17233b 0%, #090d18 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      border-bottom: 1px solid rgba(212, 167, 44, 0.22);
     }
 
     .workout-step-pills {
@@ -1834,76 +1868,94 @@ function injectGymV4Styles() {
       border-color: #D4A72C;
       color: #D4A72C;
     }
+    .goal-upload-zone {
+      border: 2px dashed rgba(212, 167, 44, 0.45);
+      background: rgba(15, 22, 38, 0.65);
+      border-radius: 14px;
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .goal-upload-zone:hover {
+      border-color: #19B889;
+      background: rgba(25, 184, 137, 0.08);
+    }
   `;
   document.head.appendChild(st);
 }
 
 /* ============================================================================
-   1. 12 HOME WORKOUT EXERCISES (BODYWEIGHT ONLY — NO GYM MACHINES!)
+   1. CLEAN RESPECTFUL EQUIPMENT BACKGROUNDS & STATIC EXERCISE DIAGRAMS
+   (100% ZERO WOMEN / ZERO INAPPROPRIATE PHOTOS)
    ============================================================================ */
+const CLEAN_EQUIP_IMAGES = {
+  dumbbells: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=800&q=80",
+  barbell: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80",
+  plates: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80",
+  kettlebell: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=800&q=80"
+};
+
 const HOME_12_EXERCISES = [
-  { id: "hm_1", name: "1. Jumping Jacks • قفز فتح وضم لتسخين الجسم بالكامل", cat: "تسخين وكارديو", reps: "45 ثانية متواصلة", cals: "45 kcal", anim: "jump", maleDesc: "قف مستقيماً، اقفز مع فتح القدمين ورفع الذراعين عالياً فوق الرأس ثم العودة برشاقة.", femaleDesc: "حركة هوائية ممتازة لتنشيط الدورة الدموية وحرق الدهون وشد الجسم بالكامل.", img: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=800&q=80" },
-  { id: "hm_2", name: "2. Standard Push-Ups • تمرين الضغط الأساسي للصدر والذراعين", cat: "علوي وصدر", reps: "3 جولات × 12-15 عدة", cals: "60 kcal", anim: "pushup", maleDesc: "ضع يديك باتساع الكتفين، حافظ على استقامة ظهرك، انزل بصدرك حتى يقترب من الأرض ثم ادفع بقوة.", femaleDesc: "يمكنك أداؤه كاملًا أو مع تثبيت الركبتين على الأرض لشد الصدر والذراعين والأكتاف.", img: "https://images.unsplash.com/photo-1598971639058-fab3c3109a00?auto=format&fit=crop&w=800&q=80" },
-  { id: "hm_3", name: "3. Bodyweight Squats • سكوات بوزن الجسم للأرجل والأرداف", cat: "سفلي وأرداف", reps: "4 جولات × 15-20 عدة", cals: "75 kcal", anim: "squat", maleDesc: "افتح قدميك بعرض الكتفين، انزل بالحوض للخلف والأسفل كأنك تجلس على كرسي مع إبقاء الصدر مرفوعاً.", femaleDesc: "التمرين الأول عالمياً لشد ونحت الأفخاذ والأرداف في المنزل بدون أي معدات.", img: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?auto=format&fit=crop&w=800&q=80" },
-  { id: "hm_4", name: "4. Alternating Lunges • طعن أمامي تبادلي لنحت الأرجل", cat: "سفلي وأرداف", reps: "3 جولات × 12 عدة لكل رجل", cals: "70 kcal", anim: "squat", maleDesc: "تقدم خطوة للأمام واثنِ الركبتين بزاوية 90 درجة دون أن تلامس الركبة الخلفية الأرض ثم ارجع.", femaleDesc: "يركز بعمق على شد العضلة الأمامية والأرداف وتحسين التوازن والمرونة.", img: "https://images.unsplash.com/photo-1548690312-e3b507d8c110?auto=format&fit=crop&w=800&q=80" },
-  { id: "hm_5", name: "5. Incline / Pike Push-Ups • ضغط مائل لتقوية الأكتاف في البيت", cat: "علوي وأكتاف", reps: "3 جولات × 10-12 عدة", cals: "55 kcal", anim: "pushup", maleDesc: "ارفع الحوض للأعلى على شكل حرف V مقلوب وانزل برأسك بين يديك لتشغيل عضلات الكتف الأمامي والجانبي.", femaleDesc: "يقوي الأكتاف وأعلى الظهر ويمنح القوام العلوي تناسقاً رائعاً في المنزل.", img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=80" },
-  { id: "hm_6", name: "6. Glute Bridges • جسر الأرضية لشد الأرداف وأسفل الظهر", cat: "سفلي وأرداف", reps: "4 جولات × 15-20 عدة", cals: "65 kcal", anim: "core", maleDesc: "استلقِ على ظهرك مع ثني الركبتين، ارفع الحوض للأعلى واعصر عضلات المؤخرة وأسفل الظهر لمدة ثانية.", femaleDesc: "أقوى تمرين منزلي لعزل ورفع وشد عضلات الأرداف وتقوية أسفل الظهر.", img: "https://images.unsplash.com/photo-1518310383802-640c2de311b2?auto=format&fit=crop&w=800&q=80" },
-  { id: "hm_7", name: "7. Tricep Chair Dips • متوازي على حافة الكرسي للترايسبس", cat: "علوي وذراعين", reps: "3 جولات × 12-15 عدة", cals: "55 kcal", anim: "pull", maleDesc: "ثبّت يديك على حافة كرسي ثابت خلفك، انزل بجسمك بثني الكوعين بزاوية 90 درجة ثم ادفع للأعلى.", femaleDesc: "يقضي تماماً على ترهلات خلف الذراعين ويشد عضلة الترايسبس في البيت.", img: "https://images.unsplash.com/photo-1590487988256-9ed24133863e?auto=format&fit=crop&w=800&q=80" },
-  { id: "hm_8", name: "8. Superman Back Extensions • تمرين سوبرمان لعضلات الظهر", cat: "علوي وظهر", reps: "3 جولات × 15 عدة", cals: "50 kcal", anim: "pull", maleDesc: "استلقِ على بطنك، ارفع ذراعيك وصدرك وقدميك عن الأرض في نفس الوقت واثبت ثانيتين لتقوية طول الظهر.", femaleDesc: "يحسن استقامة العمود الفقري ويقوي عضلات الظهر بدون أي أجهزة.", img: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?auto=format&fit=crop&w=800&q=80" },
-  { id: "hm_9", name: "9. Mountain Climbers • متسلق الجبال لحرق دهون البطن", cat: "بطن وكارديو", reps: "3 جولات × 40 ثانية", cals: "80 kcal", anim: "pushup", maleDesc: "في وضع الضغط، اسحب ركبتك اليمنى نحو صدرك ثم بدل سريعاً مع اليسرى كأنك تجري في مكانك.", femaleDesc: "يشعل حرق الدهون في منطقة الخصر والبطن ويرفع اللياقة القلبية.", img: "https://images.unsplash.com/photo-1550345332-09e3ac987658?auto=format&fit=crop&w=800&q=80" },
-  { id: "hm_10", name: "10. Bicycle Crunches • طحن البطن التبادلي (الدراجة)", cat: "بطن وخصر", reps: "3 جولات × 20 عدة", cals: "60 kcal", anim: "core", maleDesc: "استلقِ على ظهرك، المس كوعك الأيمن بركبتك اليسرى بالتبادل مع عصر عضلات البطن والجانبين.", femaleDesc: "ينحت الخصر ويشغل عضلات البطن العلوية والسفلية والجانبية معاً.", img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=80" },
-  { id: "hm_11", name: "11. High Knees / Burpees • رفع الركبتين عالياً لحرق السعرات", cat: "تسخين وكارديو", reps: "3 جولات × 40 ثانية", cals: "90 kcal", anim: "jump", maleDesc: "اجرِ في مكانك مع رفع الركبتين لمستوى الخصر بأقصى سرعة ممكنة لحرق أقصى كمية دهون.", femaleDesc: "يرفع معدل الحرق لساعات بعد التمرين وينشط عضلات الساقين والبطن.", img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80" },
-  { id: "hm_12", name: "12. Core Plank Hold • الثبات في وضع البلانك لشد الجذع", cat: "بطن وخصر", reps: "3 جولات × 60 ثانية ثبات", cals: "55 kcal", anim: "core", maleDesc: "ارتكز على ساعديك وأطراف أصابع قدميك، شد بطنك وأردافك وحافظ على جسمك كخط مستقيم تماماً.", femaleDesc: "يشد البطن للداخل ويقوي عضلات الجذع العميقة (Core) بشكل مذهل.", img: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=800&q=80" }
+  { id: "hm_1", name: "1. Jumping Jacks • قفز فتح وضم لتسخين الجسم", cat: "تسخين وكارديو", reps: "45 ثانية متواصلة", cals: "45 kcal", anim: "jump", desc: "قف مستقيماً على الأرض، اقفز مع فتح القدمين ورفع الذراعين عالياً فوق الرأس ثم العودة برشاقة لتنشيط الدورة الدموية." },
+  { id: "hm_2", name: "2. Standard Push-Ups • تمرين الضغط الأساسي للصدر والذراعين", cat: "علوي وصدر", reps: "3 جولات × 12-15 عدة", cals: "60 kcal", anim: "pushup", desc: "ارتكز بيديك وأطراف أصابع قدميك على الأرض، حافظ على استقامة ظهرك، انزل بصدرك نحو الأرض بثني الكوعين ثم ادفع للأعلى." },
+  { id: "hm_3", name: "3. Bodyweight Squats • سكوات بوزن الجسم للأرجل", cat: "سفلي وأرجل", reps: "4 جولات × 15-20 عدة", cals: "75 kcal", anim: "squat", desc: "قف بقدمين بعرض الكتفين، انزل بالحوض للخلف والأسفل كأنك تجلس على كرسي مع إبقاء الصدر مرفوعاً والظهر مستقيماً ثم اصعد." },
+  { id: "hm_4", name: "4. Alternating Lunges • طعن أمامي تبادلي لتقوية الأرجل", cat: "سفلي وأرجل", reps: "3 جولات × 12 عدة لكل رجل", cals: "70 kcal", anim: "squat", desc: "تقدم خطوة للأمام واثنِ الركبتين بزاوية 90 درجة على الأرض مع توازن الجذع ثم ادفع للعودة لوضع الوقوف." },
+  { id: "hm_5", name: "5. Pike Push-Ups • ضغط مائل لتقوية الأكتاف في البيت", cat: "علوي وأكتاف", reps: "3 جولات × 10-12 عدة", cals: "55 kcal", anim: "pike", desc: "ثبّت يديك وقدميك على الأرض وارفع الحوض للأعلى على شكل مثلث (V مقلوب)، ثم اثنِ ذراعيك لتقريب الرأس من الأرض وادفع." },
+  { id: "hm_6", name: "6. Floor Hip Bridge • جسر الأرضية لتقوية أسفل الظهر والخلفية", cat: "سفلي وجذع", reps: "4 جولات × 15 عدة", cals: "65 kcal", anim: "bridge", desc: "استلقِ على ظهرك فوق البساط مع ثني الركبتين وتثبيت القدمين، ارفع الحوض للأعلى حتى يستقيم جسمك واثبت ثانية ثم انزل." },
+  { id: "hm_7", name: "7. Bench / Chair Tricep Dips • متوازي على الكرسي للترايسبس", cat: "علوي وذراعين", reps: "3 جولات × 12-15 عدة", cals: "55 kcal", anim: "dips", desc: "ثبّت يديك على حافة كرسي ثابت خلفك، انزل بجسمك بثني الكوعين بزاوية 90 درجة ثم ادفع للأعلى لعزل الترايسبس." },
+  { id: "hm_8", name: "8. Floor Back Extensions • رفع الجذع على الأرض لعضلات الظهر", cat: "علوي وظهر", reps: "3 جولات × 15 عدة", cals: "50 kcal", anim: "plank", desc: "استلقِ على بطنك فوق البساط، ارفع الصدر والذراعين عن الأرض قليلاً بشد عضلات طول الظهر واثبت ثانيتين ثم انزل." },
+  { id: "hm_9", name: "9. Mountain Climbers • متسلق الجبال لحرق الدهون", cat: "بطن وكارديو", reps: "3 جولات × 40 ثانية", cals: "80 kcal", anim: "pushup", desc: "في وضع الارتكاز الأفقي على اليدين، اسحب ركبتك نحو الصدر بالتبادل السريع مع الحفاظ على ثبات الظهر." },
+  { id: "hm_10", name: "10. Abdominal Crunches • طحن البطن على البساط", cat: "بطن وجذع", reps: "3 جولات × 20 عدة", cals: "60 kcal", anim: "crunch", desc: "استلقِ على ظهرك واثنِ ركبتيك، ارفع الكتفين وأعلى الظهر عن الأرض بعصر عضلات البطن الأمامية مع الزفير." },
+  { id: "hm_11", name: "11. High Knees March • رفع الركبتين في المكان للياقة", cat: "تسخين وكارديو", reps: "3 جولات × 40 ثانية", cals: "90 kcal", anim: "jump", desc: "تحرك في مكانك مع رفع الركبتين بالتبادل لمستوى الخصر وتنظيم التنفس لرفع معدل الحرق." },
+  { id: "hm_12", name: "12. Forearm Plank Hold • الثبات في وضع البلانك للجذع", cat: "بطن وجذع", reps: "3 جولات × 60 ثانية ثبات", cals: "55 kcal", anim: "plank", desc: "ارتكز على ساعديك وأطراف أصابع قدميك فوق الأرض، شد عضلات البطن وحافظ على استقامة الجسم بالكامل." }
 ];
 
-/* ============================================================================
-   2. MASSIVE GYM EQUIPMENT EXERCISE LIBRARY (30+ GYM MACHINES & FREE WEIGHTS)
-   ============================================================================ */
 const GYM_PRO_EXERCISES_DB = {
   chest: [
-    { id: "g_ch1", name: "1. Barbell Flat Bench Press • ضغط بنش مسطح بالبار", sets: "4 × 8-10", cals: "145 kcal", equip: "بار + بنش مسطح", anim: "pushup", tips: "ثبّت لوحي الكتف، انزل بالبار لمنتصف الصدر وادفع للأعلى بقوة.", img: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_ch2", name: "2. Incline Dumbbell Press • تجميع دمبل عالي (زاوية 30°)", sets: "4 × 10-12", cals: "135 kcal", equip: "دمبل + بنش عالي", anim: "pushup", tips: "يركز على ملء الصدر العلوي؛ انزل بمدى حركي كامل وضم للأعلى دون تصادم الدمبل.", img: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_ch3", name: "3. Chest Press Machine • جهاز الدفع للصدر (Hammer Strength)", sets: "3 × 12", cals: "115 kcal", equip: "جهاز الصدر", anim: "pushup", tips: "ممتاز لعزل الصدر بأمان والوصول للفشل العضلي في آخر جولة.", img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_ch4", name: "4. Cable Crossover (High to Low) • تفتيح كابل للصدر السفلي", sets: "3 × 15", cals: "100 kcal", equip: "جهاز الكابل", anim: "pull", tips: "اسحب الكابل من الأعلى للأسفل واعصر الصدر في المنتصف لثانية.", img: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_ch5", name: "5. Pec Deck / Butterfly Machine • جهاز الفراشة لتفصيل الصدر", sets: "3 × 15", cals: "95 kcal", equip: "جهاز الفراشة", anim: "pull", tips: "أبقِ الكوعين في مستوى الكتف واعصر عضلة الصدر الداخلية ببطء.", img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_ch6", name: "6. Weighted Chest Dips • متوازي للصدر السفلي", sets: "3 × 10-12", cals: "130 kcal", equip: "جهاز المتوازي", anim: "pushup", tips: "مِل بجذعك للأمام قليلاً أثناء النزول لتحويل التركيز بالكامل على الصدر السفلي.", img: "https://images.unsplash.com/photo-1598971639058-fab3c3109a00?auto=format&fit=crop&w=800&q=80" }
+    { id: "g_ch1", name: "1. Barbell Flat Bench Press • ضغط بنش مسطح بالبار", sets: "4 × 8-10", cals: "145 kcal", equip: "بار + بنش مسطح", anim: "pushup", tips: "ثبّت لوحي الكتف في البنش، انزل بالبار لمنتصف الصدر وادفع للأعلى بتحكم." },
+    { id: "g_ch2", name: "2. Incline Dumbbell Press • تجميع دمبل عالي (زاوية 30°)", sets: "4 × 10-12", cals: "135 kcal", equip: "دمبل + بنش عالي", anim: "pushup", tips: "يركز على الصدر العلوي؛ انزل بمدى حركي كامل وادفع للأعلى دون تصادم الدمبل." },
+    { id: "g_ch3", name: "3. Chest Press Machine • جهاز الدفع للصدر", sets: "3 × 12", cals: "115 kcal", equip: "جهاز الصدر", anim: "pushup", tips: "ممتاز لعزل عضلات الصدر بأمان تام على المفاصل." },
+    { id: "g_ch4", name: "4. Cable Crossover • تفتيح كابل للصدر", sets: "3 × 15", cals: "100 kcal", equip: "جهاز الكابل", anim: "pull", tips: "اسحب الكابل للأمام مع انحناء بسيط في الكوع واعصر الصدر في المنتصف." },
+    { id: "g_ch5", name: "5. Pec Deck Machine • جهاز الفراشة لتفصيل الصدر", sets: "3 × 15", cals: "95 kcal", equip: "جهاز الفراشة", anim: "pull", tips: "أبقِ الكوعين في مستوى الكتف وضم الذراعين ببطء." },
+    { id: "g_ch6", name: "6. Parallel Bar Dips • متوازي للصدر السفلي", sets: "3 × 10-12", cals: "130 kcal", equip: "جهاز المتوازي", anim: "dips", tips: "مِل بالجذع للأمام قليلاً أثناء النزول لاستهداف الصدر السفلي." }
   ],
   back: [
-    { id: "g_bk1", name: "1. Wide-Grip Lat Pulldown • سحب عالي واسع للمجنص", sets: "4 × 10-12", cals: "145 kcal", equip: "جهاز السحب العالي", anim: "pull", tips: "اسحب البار لأعلى الصدر بكوعك مع إرجاع الكتف للخلف.", img: "https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_bk2", name: "2. Barbell Bent-Over Row • طرمبة بالبار لسمك الظهر", sets: "4 × 8-10", cals: "160 kcal", equip: "بار حر", anim: "pull", tips: "حافظ على استقامة أسفل الظهر بزاوية 45 درجة واسحب البار نحو السرة.", img: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_bk3", name: "3. Seated V-Bar Cable Row • سحب أرضي ضيق بالكابل", sets: "4 × 12", cals: "140 kcal", equip: "جهاز السحب الأرضي", anim: "pull", tips: "افرد ظهرك تماماً واضمم لوحي الكتف في نهاية السحبة.", img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_bk4", name: "4. Single-Arm Dumbbell Row • منشار دمبل فردي للمجنص", sets: "3 × 12 لكل جانب", cals: "130 kcal", equip: "دمبل + بنش", anim: "pull", tips: "اسحب الدمبل في مسار قوسي باتجاه جيب البنطلون لعزل المجنص.", img: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_bk5", name: "5. T-Bar Row Machine • جهاز التي بار لكثافة الظهر الوسطى", sets: "3 × 10", cals: "150 kcal", equip: "جهاز T-Bar", anim: "pull", tips: "ثبّت صدرك على المسند واسحب الوزن بتحكم كامل.", img: "https://images.unsplash.com/photo-1605296867304-46d5465a13f1?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_bk6", name: "6. Straight-Arm Cable Pulldown • سحب ذراع مستقيم بالكابل", sets: "3 × 15", cals: "105 kcal", equip: "جهاز الكابل", anim: "pull", tips: "أبقِ الذراعين مفرودتين واسحب الحبل للفخذين لضخ الدم في المجنص.", img: "https://images.unsplash.com/photo-1550345332-09e3ac987658?auto=format&fit=crop&w=800&q=80" }
+    { id: "g_bk1", name: "1. Wide-Grip Lat Pulldown • سحب عالي واسع للمجنص", sets: "4 × 10-12", cals: "145 kcal", equip: "جهاز السحب العالي", anim: "pull", tips: "اسحب البار لأعلى الصدر بكوعك مع إرجاع الكتف للخلف." },
+    { id: "g_bk2", name: "2. Barbell Bent-Over Row • سحب بار حر لسمك الظهر", sets: "4 × 8-10", cals: "160 kcal", equip: "بار حر", anim: "pull", tips: "حافظ على استقامة الظهر بزاوية 45 درجة واسحب البار نحو السرة." },
+    { id: "g_bk3", name: "3. Seated V-Bar Cable Row • سحب أرضي ضيق بالكابل", sets: "4 × 12", cals: "140 kcal", equip: "جهاز السحب الأرضي", anim: "pull", tips: "افرد ظهرك تماماً واضمم لوحي الكتف في نهاية السحبة." },
+    { id: "g_bk4", name: "4. Single-Arm Dumbbell Row • منشار دمبل فردي", sets: "3 × 12 لكل جانب", cals: "130 kcal", equip: "دمبل + بنش", anim: "pull", tips: "اسحب الدمبل في مسار قوسي باتجاه الخصر لعزل المجنص." },
+    { id: "g_bk5", name: "5. T-Bar Row Machine • جهاز التي بار لكثافة الظهر", sets: "3 × 10", cals: "150 kcal", equip: "جهاز T-Bar", anim: "pull", tips: "ثبّت صدرك على المسند واسحب الوزن بتحكم كامل." },
+    { id: "g_bk6", name: "6. Straight-Arm Pulldown • سحب ذراع مستقيم بالكابل", sets: "3 × 15", cals: "105 kcal", equip: "جهاز الكابل", anim: "pull", tips: "أبقِ الذراعين مفرودتين واسحب الحبل لأسفل لضخ الدم في المجنص." }
   ],
   shoulders: [
-    { id: "g_sh1", name: "1. Overhead Barbell / Dumbbell Press • ضغط أكتاف عالي", sets: "4 × 8-10", cals: "130 kcal", equip: "دمبل أو بار", anim: "pushup", tips: "ادفع الوزن للأعلى مع إبقاء الكوع للأمام قليلاً بزاوية 45 درجة.", img: "https://images.unsplash.com/photo-1532029837206-abbe2b7620e3?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_sh2", name: "2. Dumbbell Lateral Raises • رفرفة جانبي لتعريض الكتف", sets: "4 × 15", cals: "100 kcal", equip: "دمبل", anim: "jump", tips: "ارفع بوزن متوسط لمستوى الكتف مع قيادة الحركة بالكوع.", img: "https://images.unsplash.com/photo-1584466977773-e625c37cdd50?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_sh3", name: "3. Rope Face Pulls • سحب حبل للوجه للكتف الخلفي", sets: "4 × 15", cals: "95 kcal", equip: "كابل + حبل", anim: "pull", tips: "اسحب الحبل نحو الجبهة مع فتح الذراعين للخارج لتقوية الكتف الخلفي.", img: "https://images.unsplash.com/photo-1579758629938-03607ccdbaba?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_sh4", name: "4. Reverse Pec Deck Machine • فراشة خلفي للكتف الخلفي", sets: "3 × 15", cals: "90 kcal", equip: "جهاز الفراشة", anim: "pull", tips: "ارجع بذراعيك للخلف في مسار أفقي لعزل الكتف الخلفي تماماً.", img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_sh5", name: "5. Cable Lateral Raises • رفرفة جانبي بالكابل الفردي", sets: "3 × 15 لكل يد", cals: "95 kcal", equip: "جهاز الكابل", anim: "jump", tips: "يوفر شداً مستمراً على عضلة الكتف الجانبية طوال الحركة.", img: "https://images.unsplash.com/photo-1584466977773-e625c37cdd50?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_sh6", name: "6. Dumbbell Shrugs • ترابيس بالدمبل أو البار", sets: "3 × 15", cals: "90 kcal", equip: "دمبل ثقيل", anim: "pull", tips: "ارفع كتفيك للأعلى باتجاه الأذنين واثبت ثانية في الأعلى.", img: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=800&q=80" }
+    { id: "g_sh1", name: "1. Overhead Dumbbell Press • ضغط أكتاف بالدمبل", sets: "4 × 8-10", cals: "130 kcal", equip: "دمبل + بنش", anim: "jump", tips: "ادفع الوزن للأعلى مع إبقاء الكوع للأمام قليلاً بزاوية 45 درجة." },
+    { id: "g_sh2", name: "2. Dumbbell Lateral Raises • رفرفة جانبي بالدمبل", sets: "4 × 15", cals: "100 kcal", equip: "دمبل", anim: "jump", tips: "ارفع بوزن متوسط لمستوى الكتف مع قيادة الحركة بالكوع." },
+    { id: "g_sh3", name: "3. Rope Face Pulls • سحب حبل للكتف الخلفي", sets: "4 × 15", cals: "95 kcal", equip: "كابل + حبل", anim: "pull", tips: "اسحب الحبل نحو الجبهة لتقوية الكتف الخلفي وصحة المفاصل." },
+    { id: "g_sh4", name: "4. Reverse Pec Deck • جهاز الفراشة العكسي للكتف الخلفي", sets: "3 × 15", cals: "90 kcal", equip: "جهاز الفراشة", anim: "pull", tips: "ارجع بذراعيك للخلف في مسار أفقي لعزل الكتف الخلفي." },
+    { id: "g_sh5", name: "5. Cable Lateral Raises • رفرفة جانبي بالكابل", sets: "3 × 15 لكل يد", cals: "95 kcal", equip: "جهاز الكابل", anim: "jump", tips: "يوفر شداً مستمراً على عضلة الكتف الجانبية طوال المدى الحركي." },
+    { id: "g_sh6", name: "6. Dumbbell Shrugs • ترابيس بالدمبل", sets: "3 × 15", cals: "90 kcal", equip: "دمبل ثقيل", anim: "pull", tips: "ارفع كتفيك للأعلى باتجاه الأذنين واثبت ثانية في الأعلى." }
   ],
   arms: [
-    { id: "g_ar1", name: "1. EZ-Bar Bicep Curl • بار زجزاج واقف للبايسبس", sets: "4 × 10-12", cals: "95 kcal", equip: "بار زجزاج", anim: "pull", tips: "ثبّت الكوعين بجانب الخصر وارفع البار بعصر كامل للباي.", img: "https://images.unsplash.com/photo-1581009137042-c552e485697a?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_ar2", name: "2. Incline Dumbbell Curl • تبادل دمبل على بنش مائل للباي", sets: "3 × 12", cals: "90 kcal", equip: "دمبل + بنش", anim: "pull", tips: "يضع أقصى إطالة على الرأس الطويل لعضلة البايسبس لتكويرها.", img: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_ar3", name: "3. Hammer Curls • شاكوش بالدمبل للساعد والباي الخارجي", sets: "3 × 12", cals: "90 kcal", equip: "دمبل", anim: "pull", tips: "اجعل قبضة اليد متقابلة طوال الحركة لزيادة عرض الذراع.", img: "https://images.unsplash.com/photo-1581009137042-c552e485697a?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_ar4", name: "4. Tricep Rope Pushdown • سحب حبل بالكابل للترايسبس", sets: "4 × 12-15", cals: "95 kcal", equip: "كابل + حبل", anim: "pushup", tips: "افتح الحبل في أسفل الحركة للخارج مع تثبيت الكوع تماماً.", img: "https://images.unsplash.com/photo-1590487988256-9ed24133863e?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_ar5", name: "5. Overhead Cable / EZ-Bar Extension • فرنساوي خلف الرأس للتراي", sets: "3 × 12", cals: "100 kcal", equip: "بار زجزاج أو كابل", anim: "pushup", tips: "يستهدف الرأس الطويل الأكبر حجماً في عضلة الترايسبس.", img: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_ar6", name: "6. Preacher Curl Machine • جهاز الحصان لعزل البايسبس", sets: "3 × 12", cals: "85 kcal", equip: "جهاز الحصان", anim: "pull", tips: "يمنع أي غش أو مرجحة ويعزل البايسبس بنسبة 100%.", img: "https://images.unsplash.com/photo-1581009137042-c552e485697a?auto=format&fit=crop&w=800&q=80" }
+    { id: "g_ar1", name: "1. EZ-Bar Bicep Curl • بار زجزاج واقف للبايسبس", sets: "4 × 10-12", cals: "95 kcal", equip: "بار زجزاج", anim: "pull", tips: "ثبّت الكوعين بجانب الخصر وارفع البار بعصر كامل للباي." },
+    { id: "g_ar2", name: "2. Incline Dumbbell Curl • تبادل دمبل على بنش مائل", sets: "3 × 12", cals: "90 kcal", equip: "دمبل + بنش", anim: "pull", tips: "يركز على إطالة الرأس الطويل لعضلة البايسبس." },
+    { id: "g_ar3", name: "3. Hammer Curls • شاكوش بالدمبل للساعد والباي", sets: "3 × 12", cals: "90 kcal", equip: "دمبل", anim: "pull", tips: "اجعل قبضة اليد متقابلة طوال الحركة لزيادة سماكة الذراع." },
+    { id: "g_ar4", name: "4. Tricep Rope Pushdown • سحب حبل بالكابل للترايسبس", sets: "4 × 12-15", cals: "95 kcal", equip: "كابل + حبل", anim: "dips", tips: "افتح الحبل في أسفل الحركة للخارج مع تثبيت الكوع تماماً." },
+    { id: "g_ar5", name: "5. Overhead EZ-Bar Extension • فرنساوي للترايسبس", sets: "3 × 12", cals: "100 kcal", equip: "بار زجزاج", anim: "dips", tips: "يستهدف الرأس الطويل الأكبر حجماً في عضلة الترايسبس." },
+    { id: "g_ar6", name: "6. Preacher Curl Machine • جهاز الحصان لعزل البايسبس", sets: "3 × 12", cals: "85 kcal", equip: "جهاز الحصان", anim: "pull", tips: "يمنع أي مرجحة ويعزل البايسبس بالكامل." }
   ],
   legs: [
-    { id: "g_lg1", name: "1. Barbell Back Squat • سكوات بالبار الحر أو السميث", sets: "4 × 8-10", cals: "195 kcal", equip: "بار + راك السكوات", anim: "squat", tips: "ملك تمارين الأرجل؛ انزل حتى يصبح الفخذ موازياً للأرض وادفع بكعبك.", img: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_lg2", name: "2. 45° Leg Press Machine • جهاز دفع الأرجل المائل", sets: "4 × 12", cals: "180 kcal", equip: "جهاز الدفع", anim: "squat", tips: "لا تقفل مفصل الركبة بالكامل في الأعلى لحماية المفاصل.", img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_lg3", name: "3. Romanian Deadlift (RDL) • رفعة رومانية للخلفي والأرداف", sets: "4 × 10-12", cals: "175 kcal", equip: "بار أو دمبل", anim: "squat", tips: "ادفع الحوض للخلف مع ظهر مفرود حتى تشعر بشد قوي في الخلفي.", img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_lg4", name: "4. Barbell Hip Thrust • رفع الحوض بالبار للأرداف", sets: "4 × 12", cals: "165 kcal", equip: "بار + بنش", anim: "core", tips: "التمرين الأقوى لتقوية وتدوير عضلات الأرداف (Glutes).", img: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_lg5", name: "5. Leg Extension & Leg Curl Machines • جهاز الأمامي والخلفي", sets: "4 × 15", cals: "140 kcal", equip: "أجهزة العزل", anim: "squat", tips: "اثبت ثانية في قمة الانقباض لتفصيل عضلات الفخذ الأمامية والخلفية.", img: "https://images.unsplash.com/photo-1548690312-e3b507d8c110?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_lg6", name: "6. Standing / Seated Calf Raises • جهاز السمانة", sets: "4 × 15-20", cals: "100 kcal", equip: "جهاز السمانة", anim: "jump", tips: "انزل بمدى حركي كامل واصعد على أطراف الأصابع مع الثبات لثانية.", img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80" }
+    { id: "g_lg1", name: "1. Barbell Back Squat • سكوات بالبار", sets: "4 × 8-10", cals: "195 kcal", equip: "بار + راك السكوات", anim: "squat", tips: "انزل حتى يصبح الفخذ موازياً للأرض وادفع بكعب القدم." },
+    { id: "g_lg2", name: "2. 45° Leg Press Machine • جهاز دفع الأرجل المائل", sets: "4 × 12", cals: "180 kcal", equip: "جهاز الدفع", anim: "squat", tips: "لا تقفل مفصل الركبة بالكامل في نهاية الدفع لحماية المفاصل." },
+    { id: "g_lg3", name: "3. Romanian Deadlift (RDL) • رفعة رومانية للخلفي", sets: "4 × 10-12", cals: "175 kcal", equip: "بار أو دمبل", anim: "squat", tips: "ادفع الحوض للخلف مع ظهر مفرود حتى تشعر بشد في العضلة الخلفية." },
+    { id: "g_lg4", name: "4. Leg Extension Machine • جهاز الأمامي لعزل الفخذ", sets: "4 × 15", cals: "135 kcal", equip: "جهاز الأمامي", anim: "squat", tips: "اثبت ثانية كاملة في قمة الحركة لتفصيل العضلة الأمامية." },
+    { id: "g_lg5", name: "5. Lying / Seated Leg Curl • جهاز الخلفي للأرجل", sets: "4 × 12-15", cals: "130 kcal", equip: "جهاز الخلفي", anim: "bridge", tips: "انزل بالوزن ببطء في 3 ثوانٍ لتحقيق أقصى استفادة عضلية." },
+    { id: "g_lg6", name: "6. Standing Calf Raises • جهاز السمانة", sets: "4 × 15-20", cals: "100 kcal", equip: "جهاز السمانة", anim: "jump", tips: "انزل بمدى حركي كامل واصعد على أطراف الأصابع مع الثبات لثانية." }
   ],
   core: [
-    { id: "g_cr1", name: "1. Cable Rope Crunch • طحن البطن بالكابل العلوي", sets: "4 × 15", cals: "110 kcal", equip: "جهاز الكابل + حبل", anim: "core", tips: "اثنِ العمود الفقري للأسفل بعصر عضلات البطن وليس بالنزول بالحوض.", img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_cr2", name: "2. Hanging Leg Raises • رفع الأرجل على العقلة للبطن السفلي", sets: "4 × 12-15", cals: "115 kcal", equip: "عقلة أو متوازي", anim: "core", tips: "ارفع الركبتين نحو الصدر مع لف الحوض للأعلى لإبراز البطن السفلي.", img: "https://images.unsplash.com/photo-1518310383802-640c2de311b2?auto=format&fit=crop&w=800&q=80" },
-    { id: "g_cr3", name: "3. Russian Twists with Plate • التفاف روسي بالوزن للجانبين", sets: "3 × 20", cals: "95 kcal", equip: "طارة وزن", anim: "core", tips: "لف الجذع يميناً ويساراً بتحكم لشد عضلات الخصر (Obliques).", img: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=800&q=80" }
+    { id: "g_cr1", name: "1. Cable Rope Crunch • طحن البطن بالكابل", sets: "4 × 15", cals: "110 kcal", equip: "كابل + حبل", anim: "crunch", tips: "اثنِ الجذع للأسفل بعصر عضلات البطن." },
+    { id: "g_cr2", name: "2. Hanging Leg Raises • رفع الأرجل للبطن السفلي", sets: "4 × 12-15", cals: "115 kcal", equip: "متوازي / عقلة", anim: "crunch", tips: "ارفع الركبتين نحو الصدر بتحكم دون مرجحة." },
+    { id: "g_cr3", name: "3. Plank & Core Hold • ثبات البلانك لشد الجذع", sets: "3 × 60 ثانية", cals: "95 kcal", equip: "بساط أرضي", anim: "plank", tips: "حافظ على استقامة الظهر وشد عضلات البطن طوال الدقيقة." }
   ]
 };
 
@@ -1943,25 +1995,17 @@ function calculatePhysiologyMetrics(profile) {
   return { bmi, bmiStatus, bmr, tdee, targetCalories, proteinG, carbsG, fatsG, waterLiters, weightDiff };
 }
 
-// مجسم 3D تشريحي يختلف بين الذكر والأنثى
-function build3DMuscleSVG(selectedMuscle, isMale) {
-  const shoulderRx = isMale ? 17 : 13;
-  const waistWidth = isMale ? 44 : 34;
-  const hipWidth = isMale ? 46 : 56;
-  const accentStroke = isMale ? "#D4A72C" : "#EC4899";
-
+function build3DMuscleSVG(selectedMuscle) {
   return `
     <svg viewBox="0 0 220 340" class="muscle-svg-interactive" xmlns="http://www.w3.org/2000/svg">
       <ellipse cx="110" cy="318" rx="68" ry="12" fill="rgba(25, 184, 137, 0.22)" />
-      <!-- الرأس والرقبة -->
-      <circle cx="110" cy="34" r="18" fill="#1e293b" stroke="${accentStroke}" stroke-width="2.2" />
-      ${!isMale ? `<path d="M92 34 Q82 55 88 68 M128 34 Q138 55 132 68" stroke="${accentStroke}" stroke-width="3" fill="none" />` : ""}
+      <circle cx="110" cy="34" r="18" fill="#1e293b" stroke="#D4A72C" stroke-width="2.2" />
       <rect x="103" y="52" width="14" height="12" rx="4" fill="#334155" />
 
       <!-- الأكتاف (Shoulders 3D) -->
       <g class="muscle-zone ${selectedMuscle === "shoulders" ? "active" : ""}" data-muscle-pick="shoulders">
-        <ellipse cx="${isMale ? 62 : 68}" cy="78" rx="${shoulderRx}" ry="14" />
-        <ellipse cx="${isMale ? 158 : 152}" cy="78" rx="${shoulderRx}" ry="14" />
+        <ellipse cx="62" cy="78" rx="17" ry="14" />
+        <ellipse cx="158" cy="78" rx="17" ry="14" />
       </g>
 
       <!-- الصدر (Chest 3D) -->
@@ -1970,7 +2014,7 @@ function build3DMuscleSVG(selectedMuscle, isMale) {
         <path d="M111 66 L142 66 L138 98 L111 102 Z" />
       </g>
 
-      <!-- المجنص والظهر (Back & Lats 3D) -->
+      <!-- الظهر والمجنص (Back 3D) -->
       <g class="muscle-zone ${selectedMuscle === "back" ? "active" : ""}" data-muscle-pick="back">
         <path d="M76 96 L86 146 L70 126 Z" />
         <path d="M144 96 L134 146 L150 126 Z" />
@@ -1978,20 +2022,19 @@ function build3DMuscleSVG(selectedMuscle, isMale) {
 
       <!-- الذراعين (Arms 3D) -->
       <g class="muscle-zone ${selectedMuscle === "arms" ? "active" : ""}" data-muscle-pick="arms">
-        <rect x="${isMale ? 45 : 52}" y="92" width="${isMale ? 16 : 13}" height="58" rx="7" />
-        <rect x="${isMale ? 159 : 155}" y="92" width="${isMale ? 16 : 13}" height="58" rx="7" />
+        <rect x="45" y="92" width="16" height="58" rx="7" />
+        <rect x="159" y="92" width="16" height="58" rx="7" />
       </g>
 
-      <!-- البطن والخصر (Core 3D) -->
+      <!-- البطن والجذع (Core 3D) -->
       <g class="muscle-zone ${selectedMuscle === "core" ? "active" : ""}" data-muscle-pick="core">
-        <rect x="${110 - waistWidth / 2}" y="104" width="${waistWidth}" height="54" rx="10" />
+        <rect x="88" y="104" width="44" height="54" rx="10" />
       </g>
 
-      <!-- الأرجل والأرداف (Legs & Glutes 3D) -->
+      <!-- الأرجل (Legs 3D) -->
       <g class="muscle-zone ${selectedMuscle === "legs" ? "active" : ""}" data-muscle-pick="legs">
-        <ellipse cx="110" cy="172" rx="${hipWidth / 2}" ry="14" />
-        <path d="M${110 - hipWidth / 2} 174 L106 174 L103 248 L82 248 Z" />
-        <path d="M114 174 L${110 + hipWidth / 2} 174 L138 248 L117 248 Z" />
+        <path d="M84 164 L106 164 L103 248 L82 248 Z" />
+        <path d="M114 164 L136 164 L138 248 L117 248 Z" />
         <rect x="83" y="252" width="18" height="54" rx="8" />
         <rect x="119" y="252" width="18" height="54" rx="8" />
       </g>
@@ -1999,29 +2042,178 @@ function build3DMuscleSVG(selectedMuscle, isMale) {
   `;
 }
 
-// مدرب بشري ثلاثي الأبعاد يتحرك فعلياً ليشرح لك التمرين في البيت!
-function buildAnimatedHumanTrainerSVG(animType = "squat", isMale = true) {
-  const color = isMale ? "#D4A72C" : "#EC4899";
+/* ============================================================================
+   BIOMECHANICAL GROUNDED TRAINER SVG (FIXED ON FLOOR MAT — NO FLYING!)
+   ============================================================================ */
+function buildAnimatedHumanTrainerSVG(animType = "squat", isStaticCard = false) {
+  const cls = isStaticCard ? "" : "";
+  const floorLine = `
+    <line x1="20" y1="185" x2="260" y2="185" stroke="#D4A72C" stroke-width="4" stroke-linecap="round" />
+    <rect x="45" y="185" width="190" height="6" rx="3" fill="#19B889" opacity="0.7" />
+  `;
+
+  // 1. وضع الضغط أو الارتكاز الأفقي على الأرض (Push-Up / Mountain Climber)
+  if (animType === "pushup") {
+    return `
+      <svg viewBox="0 0 280 210" class="biomech-svg" xmlns="http://www.w3.org/2000/svg">
+        ${floorLine}
+        <text x="140" y="28" fill="#94a3b8" font-size="11" text-anchor="middle" font-weight="bold">ارتكاز أفقي على البساط • نزول وصعود بالصدر</text>
+        <!-- الأذرع الثابتة كفها على الأرض -->
+        <line x1="82" y1="183" x2="88" y2="142" stroke="#19B889" stroke-width="8" stroke-linecap="round" />
+        <!-- الجذع والأرجل المرتكزة على مشط القدم عند (215, 175) -->
+        <g class="${isStaticCard ? "" : "bm-pushup-plank"}">
+          <circle cx="64" cy="128" r="13" fill="#1e293b" stroke="#D4A72C" stroke-width="3" />
+          <line x1="78" y1="132" x2="152" y2="152" stroke="#D4A72C" stroke-width="14" stroke-linecap="round" />
+          <line x1="152" y1="152" x2="215" y2="175" stroke="#f8fafc" stroke-width="10" stroke-linecap="round" />
+          <line x1="88" y1="135" x2="82" y2="183" stroke="#19B889" stroke-width="7" stroke-linecap="round" />
+        </g>
+        <circle cx="215" cy="179" r="5" fill="#19B889" />
+        <circle cx="82" cy="181" r="5" fill="#19B889" />
+      </svg>
+    `;
+  }
+
+  // 2. وضع الضغط المائل للأكتاف على الأرض (Pike Push-Up — Inverted V on Floor)
+  if (animType === "pike") {
+    return `
+      <svg viewBox="0 0 280 210" class="biomech-svg" xmlns="http://www.w3.org/2000/svg">
+        ${floorLine}
+        <text x="140" y="28" fill="#94a3b8" font-size="11" text-anchor="middle" font-weight="bold">وضع المثلث (V مقلوب) على الأرض لتقوية الأكتاف</text>
+        <!-- الأرجل ثابتة على الأرض والحوض مرفوع للأعلى -->
+        <line x1="195" y1="182" x2="145" y2="92" stroke="#f8fafc" stroke-width="11" stroke-linecap="round" />
+        <g class="${isStaticCard ? "" : "bm-squat-hip"}">
+          <line x1="145" y1="92" x2="95" y2="145" stroke="#D4A72C" stroke-width="13" stroke-linecap="round" />
+          <circle cx="88" cy="152" r="12" fill="#1e293b" stroke="#D4A72C" stroke-width="3" />
+          <line x1="95" y1="142" x2="75" y2="182" stroke="#19B889" stroke-width="8" stroke-linecap="round" />
+        </g>
+        <circle cx="75" cy="182" r="5" fill="#19B889" />
+        <circle cx="195" cy="182" r="5" fill="#19B889" />
+      </svg>
+    `;
+  }
+
+  // 3. وضع تمارين البطن على البساط (Floor Crunch)
+  if (animType === "crunch") {
+    return `
+      <svg viewBox="0 0 280 210" class="biomech-svg" xmlns="http://www.w3.org/2000/svg">
+        ${floorLine}
+        <text x="140" y="28" fill="#94a3b8" font-size="11" text-anchor="middle" font-weight="bold">استلقاء على البساط • عصر ورفع الجذع للبطن</text>
+        <!-- الحوض والركبتان مثنيتان والقدمان على الأرض -->
+        <line x1="145" y1="172" x2="185" y2="128" stroke="#f8fafc" stroke-width="11" stroke-linecap="round" />
+        <line x1="185" y1="128" x2="218" y2="181" stroke="#f8fafc" stroke-width="10" stroke-linecap="round" />
+        <!-- الجذع والرأس يرتفعان لعصر البطن -->
+        <g class="${isStaticCard ? "" : "bm-crunch-torso"}">
+          <line x1="145" y1="172" x2="82" y2="155" stroke="#D4A72C" stroke-width="14" stroke-linecap="round" />
+          <circle cx="66" cy="146" r="13" fill="#1e293b" stroke="#D4A72C" stroke-width="3" />
+          <line x1="86" y1="154" x2="115" y2="135" stroke="#19B889" stroke-width="7" stroke-linecap="round" />
+        </g>
+      </svg>
+    `;
+  }
+
+  // 4. وضع جسر الأرضية (Floor Hip Bridge)
+  if (animType === "bridge") {
+    return `
+      <svg viewBox="0 0 280 210" class="biomech-svg" xmlns="http://www.w3.org/2000/svg">
+        ${floorLine}
+        <text x="140" y="28" fill="#94a3b8" font-size="11" text-anchor="middle" font-weight="bold">استلقاء على البساط • رفع الحوض للأعلى</text>
+        <circle cx="62" cy="172" r="12" fill="#1e293b" stroke="#D4A72C" stroke-width="3" />
+        <g class="${isStaticCard ? "" : "bm-bridge-pelvis"}">
+          <line x1="78" y1="174" x2="150" y2="138" stroke="#D4A72C" stroke-width="14" stroke-linecap="round" />
+          <line x1="150" y1="138" x2="195" y2="132" stroke="#f8fafc" stroke-width="11" stroke-linecap="round" />
+        </g>
+        <line x1="195" y1="132" x2="212" y2="181" stroke="#f8fafc" stroke-width="10" stroke-linecap="round" />
+      </svg>
+    `;
+  }
+
+  // 5. وضع الثبات على الكوعين (Forearm Plank)
+  if (animType === "plank") {
+    return `
+      <svg viewBox="0 0 280 210" class="biomech-svg" xmlns="http://www.w3.org/2000/svg">
+        ${floorLine}
+        <text x="140" y="28" fill="#94a3b8" font-size="11" text-anchor="middle" font-weight="bold">ثبات أفقي مستقيم على الساعدين وأطراف الأصابع</text>
+        <circle cx="62" cy="142" r="12" fill="#1e293b" stroke="#D4A72C" stroke-width="3" />
+        <line x1="76" y1="146" x2="155" y2="152" stroke="#D4A72C" stroke-width="14" stroke-linecap="round" />
+        <line x1="155" y1="152" x2="218" y2="176" stroke="#f8fafc" stroke-width="10" stroke-linecap="round" />
+        <!-- الساعد على الأرض -->
+        <polyline points="86,148 86,181 64,181" fill="none" stroke="#19B889" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="130" cy="150" r="18" fill="rgba(25, 184, 137, 0.2)" />
+      </svg>
+    `;
+  }
+
+  // 6. وضع المتوازي على الكرسي (Bench / Chair Dips)
+  if (animType === "dips") {
+    return `
+      <svg viewBox="0 0 280 210" class="biomech-svg" xmlns="http://www.w3.org/2000/svg">
+        ${floorLine}
+        <text x="140" y="28" fill="#94a3b8" font-size="11" text-anchor="middle" font-weight="bold">ارتكاز اليدين على الكرسي • ثني ومد الكوعين</text>
+        <!-- صندوق الكرسي أو البنش -->
+        <rect x="52" y="132" width="46" height="52" rx="6" fill="#1e293b" stroke="#D4A72C" stroke-width="2" />
+        <g class="${isStaticCard ? "" : "bm-squat-hip"}">
+          <circle cx="122" cy="78" r="13" fill="#1e293b" stroke="#D4A72C" stroke-width="3" />
+          <line x1="122" y1="92" x2="122" y2="145" stroke="#D4A72C" stroke-width="14" stroke-linecap="round" />
+          <polyline points="122,102 95,112 95,132" fill="none" stroke="#19B889" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+          <polyline points="122,145 162,145 182,181" fill="none" stroke="#f8fafc" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+        </g>
+      </svg>
+    `;
+  }
+
+  // 7. وضع القفز والكارديو (Jumping Jacks / High Knees)
+  if (animType === "jump") {
+    return `
+      <svg viewBox="0 0 280 210" class="biomech-svg" xmlns="http://www.w3.org/2000/svg">
+        ${floorLine}
+        <text x="140" y="24" fill="#94a3b8" font-size="11" text-anchor="middle" font-weight="bold">وقوف على الأرض • حركة متناسقة للذراعين والأرجل</text>
+        <g class="${isStaticCard ? "" : "bm-jump-body"}">
+          <circle cx="140" cy="52" r="14" fill="#1e293b" stroke="#D4A72C" stroke-width="3" />
+          <rect x="126" y="68" width="28" height="54" rx="8" fill="#D4A72C" />
+          <line class="${isStaticCard ? "" : "bm-jump-arm-l"}" x1="125" y1="76" x2="96" y2="118" stroke="#19B889" stroke-width="8" stroke-linecap="round" />
+          <line class="${isStaticCard ? "" : "bm-jump-arm-r"}" x1="155" y1="76" x2="184" y2="118" stroke="#19B889" stroke-width="8" stroke-linecap="round" />
+          <line x1="132" y1="122" x2="116" y2="181" stroke="#f8fafc" stroke-width="10" stroke-linecap="round" />
+          <line x1="148" y1="122" x2="164" y2="181" stroke="#f8fafc" stroke-width="10" stroke-linecap="round" />
+        </g>
+      </svg>
+    `;
+  }
+
+  // 8. وضع السحب والباي والظهر (Pull / Curls)
+  if (animType === "pull") {
+    return `
+      <svg viewBox="0 0 280 210" class="biomech-svg" xmlns="http://www.w3.org/2000/svg">
+        ${floorLine}
+        <text x="140" y="24" fill="#94a3b8" font-size="11" text-anchor="middle" font-weight="bold">ثبات الجذع • سحب وعصر العضلة بتحكم</text>
+        <circle cx="140" cy="54" r="14" fill="#1e293b" stroke="#D4A72C" stroke-width="3" />
+        <rect x="125" y="70" width="30" height="56" rx="8" fill="#D4A72C" />
+        <line x1="132" y1="126" x2="128" y2="181" stroke="#f8fafc" stroke-width="10" stroke-linecap="round" />
+        <line x1="148" y1="126" x2="152" y2="181" stroke="#f8fafc" stroke-width="10" stroke-linecap="round" />
+        <g class="${isStaticCard ? "" : "bm-pull-arms"}">
+          <line x1="124" y1="78" x2="96" y2="98" stroke="#19B889" stroke-width="8" stroke-linecap="round" />
+          <line x1="156" y1="78" x2="184" y2="98" stroke="#19B889" stroke-width="8" stroke-linecap="round" />
+          <line x1="86" y1="98" x2="194" y2="98" stroke="#cbd5e1" stroke-width="5" stroke-linecap="round" />
+        </g>
+      </svg>
+    `;
+  }
+
+  // الوضع الافتراضي: السكوات والطعن على الأرض (Squat / Lunge)
   return `
-    <svg viewBox="0 0 200 240" class="anim-human-svg anim-mode-${esc(animType)}" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="100" cy="222" rx="55" ry="9" fill="rgba(25, 184, 137, 0.25)" />
-      <g class="human-body-all">
-        <g class="human-upper">
-          <!-- الرأس -->
-          <circle cx="100" cy="42" r="16" fill="#1e293b" stroke="${color}" stroke-width="3" />
-          <!-- الجذع والصدر -->
-          <path d="M78 65 L122 65 L114 135 L86 135 Z" fill="${color}" opacity="0.88" />
-          <!-- الذراعين المتحركتين -->
-          <g class="human-arms">
-            <line x1="78" y1="70" x2="48" y2="115" stroke="#19B889" stroke-width="9" stroke-linecap="round" />
-            <line x1="122" y1="70" x2="152" y2="115" stroke="#19B889" stroke-width="9" stroke-linecap="round" />
-          </g>
-        </g>
-        <!-- الأرجل -->
-        <g class="human-legs">
-          <line x1="90" y1="135" x2="82" y2="212" stroke="#f8fafc" stroke-width="11" stroke-linecap="round" />
-          <line x1="110" y1="135" x2="118" y2="212" stroke="#f8fafc" stroke-width="11" stroke-linecap="round" />
-        </g>
+    <svg viewBox="0 0 280 210" class="biomech-svg" xmlns="http://www.w3.org/2000/svg">
+      ${floorLine}
+      <text x="140" y="24" fill="#94a3b8" font-size="11" text-anchor="middle" font-weight="bold">ثبات القدمين على الأرض • نزول بالحوض وثني الركبتين</text>
+      <!-- الساق السفلية ثابتة على الأرض -->
+      <line x1="122" y1="181" x2="112" y2="142" stroke="#f8fafc" stroke-width="10" stroke-linecap="round" />
+      <line x1="158" y1="181" x2="168" y2="142" stroke="#f8fafc" stroke-width="10" stroke-linecap="round" />
+      <!-- الجذع والفخذ ينزلان ويصعدان فوق الركبة -->
+      <g class="${isStaticCard ? "" : "bm-squat-hip"}">
+        <circle cx="140" cy="48" r="14" fill="#1e293b" stroke="#D4A72C" stroke-width="3" />
+        <rect x="125" y="64" width="30" height="52" rx="8" fill="#D4A72C" />
+        <line x1="125" y1="74" x2="95" y2="78" stroke="#19B889" stroke-width="8" stroke-linecap="round" />
+        <line x1="155" y1="74" x2="185" y2="78" stroke="#19B889" stroke-width="8" stroke-linecap="round" />
+        <line x1="132" y1="114" x2="112" y2="142" stroke="#f8fafc" stroke-width="11" stroke-linecap="round" />
+        <line x1="148" y1="114" x2="168" y2="142" stroke="#f8fafc" stroke-width="11" stroke-linecap="round" />
       </g>
     </svg>
   `;
@@ -2033,7 +2225,7 @@ function renderHealthView() {
   if (!sec) return;
 
   const profile = OSProStore.get("gym_profile_v4", {
-    wizardStep: 1, // 1: Gender | 2: Name & Age | 3: Weight & Ambition | 4: Home vs Gym | 5: Done!
+    wizardStep: 1,
     gender: "male",
     name: B().getAppState?.()?.user?.displayName || "أحمد محمد حسني",
     age: 21,
@@ -2041,12 +2233,11 @@ function renderHealthView() {
     currentWeight: 74,
     targetWeight: 82,
     goal: "bulk",
-    workoutMode: "home", // "home" (البيت بدون أجهزة) | "gym" (الجيم بالأجهزة)
+    workoutMode: "home",
     daysPerWeek: 4,
     preferredTime: "18:00",
     waterCups: 6,
     completedToday: [],
-    livePlayerOpen: false,
     liveExIdx: 0,
     customExercises: [],
     showNutrition: false,
@@ -2056,7 +2247,7 @@ function renderHealthView() {
   const saveP = () => OSProStore.set("gym_profile_v4", profile);
 
   /* --------------------------------------------------------------------------
-     WIZARD ONBOARDING (4 FULL STEPS: GENDER -> NAME/AGE -> WEIGHT -> HOME/GYM)
+     WIZARD ONBOARDING (4 STEPS — ZERO HUMAN/WOMEN PHOTOS, 3D EMBLEMS ONLY)
      -------------------------------------------------------------------------- */
   if (profile.wizardStep < 5) {
     const step = profile.wizardStep;
@@ -2068,20 +2259,20 @@ function renderHealthView() {
 
         ${step === 1 ? `
           <div class="text-center">
-            <span class="badge badge-gold">الخطوة 1 من 4 • تحديد الهوية الفسيولوجية</span>
-            <h2 class="mt-2">اختر النوع لتخصيص التشريح العضلي والتمارين 3D</h2>
-            <p class="small-muted mt-1">كل نوع له خريطة عضلية وتوزيع تمارين ومعدلات حرق مختلفة تماماً:</p>
+            <span class="badge badge-gold">الخطوة 1 من 4 • المعادلات الفسيولوجية</span>
+            <h2 class="mt-2">اختر الفئة لضبط معادلات الحرق والبرنامج التدريبي</h2>
+            <p class="small-muted mt-1">يتم ضبط الأحمال التدريبية والسعرات تلقائياً:</p>
           </div>
           <div class="wizard-gender-grid">
             <div class="wizard-big-card ${profile.gender === "male" ? "active" : ""}" data-wiz-gender="male">
-              <img src="https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=400&q=80" alt="Male" />
-              <h3 class="gold-text">ذكر (Male Athlete 🚹)</h3>
-              <p class="small-muted">تركيز على الضخامة العضلية، القوة، تفصيل الصدر والظهر V-Taper والذراعين</p>
+              <div class="wizard-emblem-circle"><i class="fa-solid fa-dumbbell"></i></div>
+              <h3 class="gold-text">برنامج الشباب والرجال 🚹</h3>
+              <p class="small-muted">تركيز على القوة العضلية، الضخامة، واللياقة البدنية العالية</p>
             </div>
             <div class="wizard-big-card ${profile.gender === "female" ? "active" : ""}" data-wiz-gender="female">
-              <img src="https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=400&q=80" alt="Female" />
-              <h3 style="color:#EC4899;">أنثى (Female Athlete 🚺)</h3>
-              <p class="small-muted">تركيز على نحت القوام، شد البطن والخصر، تقوية الأرداف واللياقة الشاملة</p>
+              <div class="wizard-emblem-circle" style="border-color:#19B889; color:#19B889;"><i class="fa-solid fa-heart-pulse"></i></div>
+              <h3 style="color:#19B889;">برنامج اللياقة والرشاقة 🚺</h3>
+              <p class="small-muted">تركيز على اللياقة الصحية، المرونة، وحرق السعرات</p>
             </div>
           </div>
           <button type="button" id="btn-wiz-next-1" class="btn btn-gold btn-block btn-luxury-shine">
@@ -2091,13 +2282,12 @@ function renderHealthView() {
 
         ${step === 2 ? `
           <div class="text-center mb-4">
-            <span class="badge badge-gold">الخطوة 2 من 4 • البطاقة الشخصية للبطل</span>
+            <span class="badge badge-gold">الخطوة 2 من 4 • البطاقة الشخصية</span>
             <h2 class="mt-2">ما هو اسمك وكم عمرك يا بطل؟</h2>
-            <p class="small-muted mt-1">سنضبط شدة التمارين ومعدل الاستشفاء العضلي بناءً على سنك:</p>
           </div>
           <div class="form-group">
-            <label class="text-center">الاسم الذي سيظهر في استوديو التمرين</label>
-            <input type="text" id="wiz-inp-name" class="wizard-input-giant" value="${esc(profile.name)}" placeholder="اكتب اسمك هنا..." autofocus />
+            <label class="text-center">الاسم الرياضي</label>
+            <input type="text" id="wiz-inp-name" class="wizard-input-giant" value="${esc(profile.name)}" autofocus />
           </div>
           <div class="form-group mt-4">
             <label class="text-center">العمر (بالسنوات)</label>
@@ -2115,7 +2305,6 @@ function renderHealthView() {
           <div class="text-center mb-4">
             <span class="badge badge-gold">الخطوة 3 من 4 • القياسات والوزن الطموح</span>
             <h2 class="mt-2">كم وزنك وطولك الحالي.. وطموحك توصل لكام كيلو؟ 🎯</h2>
-            <p class="small-muted mt-1">سيحسب النظام تلقائياً الفرق المطلوب ويبني خطتك للوصول لهدفك:</p>
           </div>
           <div class="dashboard-grid" style="grid-template-columns:repeat(3, 1fr); gap:14px;">
             <div class="form-group">
@@ -2132,105 +2321,85 @@ function renderHealthView() {
             </div>
           </div>
           <div class="form-group mt-2">
-            <label class="text-center">هدفك الأساسي من التمرين</label>
+            <label class="text-center">هدفك الأساسي</label>
             <select id="wiz-inp-goal" class="wizard-input-giant" style="font-size:1.05rem!important;">
               <option value="bulk" ${profile.goal === "bulk" ? "selected" : ""}>💪 زيادة الكتلة العضلية والوزن (Bulking)</option>
-              <option value="cut" ${profile.goal === "cut" ? "selected" : ""}>🔥 حرق الدهون والتنشيف ونحت الجسم (Cutting)</option>
-              <option value="recomp" ${profile.goal === "recomp" ? "selected" : ""}>⚡ شد الجسم واللياقة البدنية الشاملة (Fitness & Toning)</option>
+              <option value="cut" ${profile.goal === "cut" ? "selected" : ""}>🔥 حرق الدهون والتنشيف (Cutting)</option>
+              <option value="recomp" ${profile.goal === "recomp" ? "selected" : ""}>⚡ شد الجسم واللياقة البدنية الشاملة</option>
             </select>
           </div>
           <div class="flex-between mt-4">
             <button type="button" id="btn-wiz-prev" class="btn btn-outline"><i class="fa-solid fa-arrow-right"></i> السابق</button>
             <button type="button" id="btn-wiz-next-3" class="btn btn-gold btn-luxury-shine" style="flex:1; margin-right:12px;">
-              التالي: تتمرن في البيت ولا الجيم؟ <i class="fa-solid fa-arrow-left"></i>
+              التالي: مكان التمرين <i class="fa-solid fa-arrow-left"></i>
             </button>
           </div>
         ` : ""}
 
         ${step === 4 ? `
           <div class="text-center">
-            <span class="badge badge-gold">الخطوة 4 والأخيرة • مكان التمرين (البيت غير الجيم تماماً!)</span>
-            <h2 class="mt-2">هل ستتمرن في البيت 🏠 أم ستنزل الجيم 🏋️‍♂️؟</h2>
-            <p class="small-muted mt-1">اختر بيئة تمرينك لنعرض لك التمارين المناسبة بدون أي أجهزة غير متوفرة لديك:</p>
+            <span class="badge badge-gold">الخطوة 4 والأخيرة • تحديد بيئة التمرين</span>
+            <h2 class="mt-2">هل ستتمرن في البيت 🏠 أم في الجيم 🏋️‍♂️؟</h2>
           </div>
           <div class="wizard-gender-grid">
             <div class="wizard-big-card ${profile.workoutMode === "home" ? "active" : ""}" data-wiz-mode="home">
-              <img src="https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=400&q=80" alt="Home Workout" />
+              <div class="wizard-emblem-circle"><i class="fa-solid fa-house-chimney"></i></div>
               <h3 class="gold-text">🏠 تمرين في البيت (بدون أجهزة)</h3>
-              <p class="small-muted">12 تمريناً منزلياً بوزن الجسم مع مدرب تفاعلي متحرك 3D يشرح لك كل حركة خطوة بخطوة مع العداد</p>
+              <p class="small-muted">12 تمريناً منزلياً بوزن الجسم مع رسوم تشريحية توضح وضع الجسم الصحيح على الأرض</p>
             </div>
             <div class="wizard-big-card ${profile.workoutMode === "gym" ? "active" : ""}" data-wiz-mode="gym">
-              <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=400&q=80" alt="Gym Workout" />
+              <div class="wizard-emblem-circle" style="border-color:#19B889; color:#19B889;"><i class="fa-solid fa-dumbbell"></i></div>
               <h3 style="color:#19B889;">🏋️‍♂️ تمرين في الجيم (أجهزة وأوزان)</h3>
-              <p class="small-muted">أكثر من 30 تمريناً بالبار والدمبل والكابلات والأجهزة مقسمة على خريطة العضلات 3D</p>
+              <p class="small-muted">أكثر من 30 تمريناً بالبار والدمبل والأجهزة مقسمة على خريطة العضلات 3D</p>
             </div>
           </div>
           <div class="flex-between mt-4">
             <button type="button" id="btn-wiz-prev" class="btn btn-outline"><i class="fa-solid fa-arrow-right"></i> السابق</button>
             <button type="button" id="btn-wiz-finish" class="btn btn-gold btn-luxury-shine" style="flex:1; margin-right:12px;">
-              🚀 افتح استوديو التمرين المخصص لي الآن!
+              🚀 افتح استوديو التمرين الآن!
             </button>
           </div>
         ` : ""}
       </div>
     `;
 
-    // أحداث أزرار الـ Wizard
     sec.querySelectorAll("[data-wiz-gender]").forEach(c => {
-      c.onclick = () => {
-        profile.gender = c.dataset.wizGender;
-        saveP();
-        renderHealthView();
-      };
+      c.onclick = () => { profile.gender = c.dataset.wizGender; saveP(); renderHealthView(); };
     });
     sec.querySelectorAll("[data-wiz-mode]").forEach(c => {
-      c.onclick = () => {
-        profile.workoutMode = c.dataset.wizMode;
-        saveP();
-        renderHealthView();
-      };
+      c.onclick = () => { profile.workoutMode = c.dataset.wizMode; saveP(); renderHealthView(); };
     });
     sec.querySelector("#btn-wiz-prev")?.addEventListener("click", () => {
-      profile.wizardStep = Math.max(1, profile.wizardStep - 1);
-      saveP();
-      renderHealthView();
+      profile.wizardStep = Math.max(1, profile.wizardStep - 1); saveP(); renderHealthView();
     });
     sec.querySelector("#btn-wiz-next-1")?.addEventListener("click", () => {
-      profile.wizardStep = 2;
-      saveP();
-      renderHealthView();
+      profile.wizardStep = 2; saveP(); renderHealthView();
     });
     sec.querySelector("#btn-wiz-next-2")?.addEventListener("click", () => {
       const n = document.getElementById("wiz-inp-name")?.value.trim();
       const a = Number(document.getElementById("wiz-inp-age")?.value) || 21;
       if (n) profile.name = n;
       profile.age = a;
-      profile.wizardStep = 3;
-      saveP();
-      renderHealthView();
+      profile.wizardStep = 3; saveP(); renderHealthView();
     });
     sec.querySelector("#btn-wiz-next-3")?.addEventListener("click", () => {
       profile.height = Number(document.getElementById("wiz-inp-height")?.value) || 175;
       profile.currentWeight = Number(document.getElementById("wiz-inp-cur-w")?.value) || 74;
       profile.targetWeight = Number(document.getElementById("wiz-inp-tar-w")?.value) || 80;
       profile.goal = document.getElementById("wiz-inp-goal")?.value || "bulk";
-      profile.wizardStep = 4;
-      saveP();
-      renderHealthView();
+      profile.wizardStep = 4; saveP(); renderHealthView();
     });
     sec.querySelector("#btn-wiz-finish")?.addEventListener("click", () => {
-      profile.wizardStep = 5;
-      saveP();
-      toast(`تم تجهيز برنامج ${profile.workoutMode === "home" ? "البيت التفاعلي 🏠" : "الجيم المتكامل 🏋️‍♂️"} لك يا كابتن ${profile.name}!`);
+      profile.wizardStep = 5; saveP();
+      toast(`تم تجهيز برنامجك التدريبي بنجاح يا كابتن ${profile.name}! 💪`);
       renderHealthView();
     });
     return;
   }
 
   /* --------------------------------------------------------------------------
-     MAIN STUDIO VIEW (SEPARATED: HOME MODE VS GYM MODE + TASK SCHEDULER)
+     MAIN STUDIO VIEW (CLEAN DIAGRAMS & EQUIPMENT — ZERO WOMEN PHOTOS)
      -------------------------------------------------------------------------- */
-  const isMale = profile.gender !== "female";
   const isHome = profile.workoutMode === "home";
   const m = calculatePhysiologyMetrics(profile);
 
@@ -2250,24 +2419,23 @@ function renderHealthView() {
     back: "الظهر والمجنص (Back 3D)",
     shoulders: "الأكتاف (Shoulders 3D)",
     arms: "الباي والتراي (Arms 3D)",
-    legs: "الأرجل والأرداف (Legs 3D)",
-    core: "البطن والخصر (Core 3D)"
+    legs: "الأرجل (Legs 3D)",
+    core: "البطن والجذع (Core 3D)"
   };
 
   sec.innerHTML = `
-    <!-- 1. شريط قيادة البطل والتبديل الفوري بين (تمرين البيت 🏠 / تمرين الجيم 🏋️‍♂️) وتثبيت التمرين في المهام -->
-    <div class="pro-hero-banner" style="background-image: linear-gradient(90deg, rgba(9,13,25,0.96) 0%, rgba(9,13,25,0.78) 55%, rgba(9,13,25,0.95) 100%), url('${isHome ? "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1500&q=80" : "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1500&q=80"}');">
+    <div class="pro-hero-banner" style="background-image: linear-gradient(90deg, rgba(9,13,25,0.96) 0%, rgba(9,13,25,0.82) 55%, rgba(9,13,25,0.96) 100%), url('${CLEAN_EQUIP_IMAGES.barbell}');">
       <div class="pro-hero-overlay">
         <div>
           <div class="filters-row mb-1">
-            <span class="badge badge-gold">${isMale ? "🚹 ملف رياضي رجالي" : "🚺 ملف رياضي نسائي"}</span>
-            <span class="badge badge-emerald">${isHome ? "🏠 وضع تمرين البيت (بدون أجهزة)" : "🏋️‍♂️ وضع الجيم (أجهزة وحديد)"}</span>
+            <span class="badge badge-gold"><i class="fa-solid fa-shield-heart"></i> استوديو اللياقة المحترم والنقي 3D</span>
+            <span class="badge badge-emerald">${isHome ? "🏠 وضع تمرين البيت (بدون أجهزة)" : "🏋️‍♂️ وضع الجيم (أجهزة وأوزان)"}</span>
             <span class="badge badge-warning">BMI: ${m.bmi} (${m.bmiStatus})</span>
           </div>
           <h2>كابتن <span class="gold-text">${esc(profile.name)}</span> (${profile.age} سنة) — من <span class="gold-text">${profile.currentWeight}kg</span> إلى <span class="gold-text">${profile.targetWeight}kg</span></h2>
           <p class="small-muted mt-1">
             الفرق لتحقيق طموحك: <strong class="gold-text">${m.weightDiff > 0 ? `+${m.weightDiff} كجم زيادة مطلوبة` : m.weightDiff < 0 ? `${m.weightDiff} كجم نزول مطلوب` : "وصلت لوزنك المثالي! 🎯"}</strong>
-            &bull; احتياجك اليومي: <strong>${m.targetCalories} kcal</strong> (${m.proteinG}g بروتين)
+            &bull; احتياجك المحسوب: <strong>${m.targetCalories} kcal</strong> (${m.proteinG}g بروتين)
             &bull; المياه: <strong>${profile.waterCups}/10 أكواب</strong>
           </p>
         </div>
@@ -2284,21 +2452,17 @@ function renderHealthView() {
             <i class="fa-solid fa-plus gold-text"></i> أضف تمريناً خاصاً
           </button>
           <button type="button" id="btn-gym-water-plus" class="btn btn-outline btn-sm">💧 +مية</button>
-          <button type="button" id="btn-reopen-wizard" class="btn btn-outline btn-sm" title="إعادة ضبط بياناتي"><i class="fa-solid fa-Gear"></i> بياناتي</button>
+          <button type="button" id="btn-reopen-wizard" class="btn btn-outline btn-sm"><i class="fa-solid fa-sliders"></i> بياناتي</button>
         </div>
       </div>
     </div>
 
-    <!-- ======================================================================
-         وضع رقم 1: إذا كان المستخدم يتمرن في البيت (HOME WORKOUT — 12 EXERCISES + 3D COACH)
-         ====================================================================== -->
     ${isHome ? `
-      <!-- مشغل التمرين المنزلي المباشر (ابدأ تمرين اليوم بالمدرب المتحرك 3D) -->
       <div class="live-workout-stage">
         <div class="flex-between" style="flex-wrap:wrap; gap:12px;">
           <div>
-            <span class="badge badge-emerald">🏠 HOME WORKOUT PLAYER • بدون أي أجهزة</span>
-            <h3 class="mt-1">🔥 برنامج تمرين البيت المتكامل (${allHomeExercises.length} تمرين بمدرب تفاعلي يوضح لك الحركة)</h3>
+            <span class="badge badge-emerald">🏠 HOME WORKOUT COACH • ارتكاز واقعي على الأرضية</span>
+            <h3 class="mt-1">🔥 برنامج تمرين البيت المتكامل (${allHomeExercises.length} تمرين بدون أجهزة)</h3>
           </div>
           <div class="filters-row">
             <button type="button" id="btn-start-live-home" class="btn btn-gold btn-sm">
@@ -2308,7 +2472,6 @@ function renderHealthView() {
           </div>
         </div>
 
-        <!-- شريط التنقل السريع بين الـ 12 تمريناً -->
         <div class="workout-step-pills">
           ${allHomeExercises.map((ex, idx) => `
             <span class="workout-step-pill ${profile.liveExIdx === idx ? "active" : ""} ${(profile.completedToday || []).includes(ex.id) ? "done" : ""}" data-jump-home-ex="${idx}">
@@ -2317,10 +2480,9 @@ function renderHealthView() {
           `).join("")}
         </div>
 
-        <!-- عرض المدرب المتحرك 3D + خطوات أداء الحركة الحالية -->
-        <div class="dashboard-grid" style="align-items:center; grid-template-columns: 270px 1fr;">
+        <div class="dashboard-grid" style="align-items:center; grid-template-columns: 320px 1fr;">
           <div class="trainer-3d-box">
-            ${buildAnimatedHumanTrainerSVG(activeLiveEx.anim || "squat", isMale)}
+            ${buildAnimatedHumanTrainerSVG(activeLiveEx.anim || "squat", false)}
           </div>
           <div>
             <div class="flex-between">
@@ -2329,24 +2491,23 @@ function renderHealthView() {
             </div>
             <h2 class="gold-text mt-1">${esc(activeLiveEx.name)}</h2>
             <div class="subject-progress-box mt-2">
-              <strong class="gold-text d-block">🗣️ إرشاد المدرب (ازاي تعمل الحركة صح في البيت):</strong>
-              <p class="mt-1" style="font-size:0.95rem;">${esc(isMale ? activeLiveEx.maleDesc : (activeLiveEx.femaleDesc || activeLiveEx.maleDesc))}</p>
+              <strong class="gold-text d-block">📐 خطوات الأداء الصحيح على الأرض:</strong>
+              <p class="mt-1" style="font-size:0.95rem;">${esc(activeLiveEx.desc || activeLiveEx.tips)}</p>
             </div>
             <div class="filters-row mt-2">
-              <button type="button" id="btn-prev-home-ex" class="btn btn-outline btn-sm"><i class="fa-solid fa-backward-step"></i> التمرين السابق</button>
+              <button type="button" id="btn-prev-home-ex" class="btn btn-outline btn-sm"><i class="fa-solid fa-backward-step"></i> السابق</button>
               <button type="button" id="btn-done-home-ex" class="btn btn-gold btn-sm">
-                <i class="fa-solid fa-check-double"></i> أتممت هذا التمرين ➔ انتقل للتالي
+                <i class="fa-solid fa-check-double"></i> أتممت هذا التمرين ➔ التالي
               </button>
-              <button type="button" id="btn-next-home-ex" class="btn btn-outline btn-sm">التمرين التالي <i class="fa-solid fa-forward-step"></i></button>
+              <button type="button" id="btn-next-home-ex" class="btn btn-outline btn-sm">التالي <i class="fa-solid fa-forward-step"></i></button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- شبكة الـ 12 تمريناً منزلياً بالكامل -->
       <div class="card">
         <div class="card-header">
-          <h3><i class="fa-solid fa-list-check gold-text"></i> قائمة تمارين البيت الكاملة (${allHomeExercises.length} حركة بوزن الجسم)</h3>
+          <h3><i class="fa-solid fa-list-check gold-text"></i> بطاقات تمارين البيت التوضيحية الثابتة (${allHomeExercises.length} حركة)</h3>
           <span class="badge badge-emerald">أنجزت اليوم: ${(profile.completedToday || []).length} من ${allHomeExercises.length}</span>
         </div>
         <div class="exercise-photo-grid">
@@ -2354,18 +2515,16 @@ function renderHealthView() {
             const done = (profile.completedToday || []).includes(ex.id);
             return `
               <div class="exercise-pro-card">
-                <div class="exercise-img-box">
-                  <img src="${esc(ex.img)}" alt="${esc(ex.name)}" loading="lazy" />
-                  <span class="exercise-3d-tag">🏠 تمرين منزلي • ${esc(ex.cat)}</span>
+                <div class="static-diagram-thumb">
+                  ${buildAnimatedHumanTrainerSVG(ex.anim || "squat", true)}
+                  <span class="exercise-3d-tag">🏠 ${esc(ex.cat)}</span>
                   <span class="exercise-sets-pill">${esc(ex.reps)}</span>
                 </div>
                 <div class="exercise-body">
                   <h4>${esc(ex.name)}</h4>
-                  <div class="exercise-steps-box">
-                    ${esc(isMale ? ex.maleDesc : (ex.femaleDesc || ex.maleDesc))}
-                  </div>
+                  <div class="exercise-steps-box">${esc(ex.desc || ex.tips)}</div>
                   <div class="flex-between mt-1">
-                    <button type="button" class="btn btn-xs btn-outline" data-jump-home-ex="${idx}"><i class="fa-solid fa-person-running gold-text"></i> اعرض الحركة 3D</button>
+                    <button type="button" class="btn btn-xs btn-outline" data-jump-home-ex="${idx}"><i class="fa-solid fa-play gold-text"></i> شغل في المدرب</button>
                     <button type="button" class="btn btn-xs ${done ? "btn-gold" : "btn-outline"}" data-toggle-ex-done="${esc(ex.id)}">
                       ${done ? "تم اليوم ✅" : "سجّل كمكتمل"}
                     </button>
@@ -2377,16 +2536,13 @@ function renderHealthView() {
         </div>
       </div>
     ` : `
-    <!-- ======================================================================
-         وضع رقم 2: إذا كان المستخدم ينزل الجيم (GYM MODE — 3D MUSCLE MAP + 30+ MACHINES)
-         ====================================================================== -->
       <div class="gym-layout-split">
         <div class="muscle-3d-stage">
-          <span class="badge badge-gold">3D GYM ANATOMY (${isMale ? "MALE" : "FEMALE"})</span>
+          <span class="badge badge-gold">3D GYM ANATOMY</span>
           <h4 class="mt-1">${muscleNamesAr[activeMuscleGroup]}</h4>
-          <small class="small-muted d-block">اضغط على العضلة التي ستلعبها اليوم في الجيم لعرض كل تمارينها وأجهزتها:</small>
+          <small class="small-muted d-block">اضغط على العضلة لعرض تمارينها وأجهزتها:</small>
 
-          ${build3DMuscleSVG(activeMuscleGroup, isMale)}
+          ${build3DMuscleSVG(activeMuscleGroup)}
 
           <div class="cert-pill-row" style="justify-content:center;">
             ${Object.keys(muscleNamesAr).map(k => `
@@ -2416,8 +2572,8 @@ function renderHealthView() {
               const done = (profile.completedToday || []).includes(ex.id);
               return `
                 <div class="exercise-pro-card">
-                  <div class="exercise-img-box">
-                    <img src="${esc(ex.img)}" alt="${esc(ex.name)}" loading="lazy" />
+                  <div class="static-diagram-thumb">
+                    ${buildAnimatedHumanTrainerSVG(ex.anim || "pull", true)}
                     <span class="exercise-3d-tag"><i class="fa-solid fa-dumbbell"></i> ${esc(ex.equip)}</span>
                     <span class="exercise-sets-pill">${esc(ex.sets)}</span>
                   </div>
@@ -2427,7 +2583,7 @@ function renderHealthView() {
                       <span class="badge badge-gold">🔥 ${esc(ex.cals)}</span>
                     </div>
                     <div class="exercise-steps-box">
-                      <strong class="gold-text d-block">📐 التكنيك الصحيح في الجيم:</strong>
+                      <strong class="gold-text d-block">📐 التكنيك الصحيح:</strong>
                       ${esc(ex.tips)}
                     </div>
                     <div class="flex-between mt-1">
@@ -2447,12 +2603,11 @@ function renderHealthView() {
       </div>
     `}
 
-    <!-- 3. قسم التغذية الاختياري بالكامل (لا يظهر إلا إذا أراد المستخدم فتحه وإضافة وجباته بحرية) -->
     <div class="card mt-4">
       <div class="flex-between">
         <div>
           <h3><i class="fa-solid fa-utensils gold-text"></i> مفكرة التغذية والوجبات الخاصة بك (اختياري بالكامل)</h3>
-          <small class="small-muted">أنت حر تماماً: يمكنك إضافة وجباتك الخاصة أو إخفاء هذا القسم والتركيز على التمرين فقط</small>
+          <small class="small-muted">أضف وجباتك الخاصة بحرية أو اترك القسم مغلقاً</small>
         </div>
         <div class="filters-row">
           <button type="button" id="btn-toggle-nutrition-sec" class="btn btn-outline btn-sm">
@@ -2473,54 +2628,42 @@ function renderHealthView() {
               <h4 class="mt-1">${esc(ml.title)}</h4>
               <small class="small-note">${esc(ml.macros || "")}</small>
             </div>
-          `).join("") : `<p class="small-muted">لم تضف أي وجبات بعد. اضغط "+ أضف وجبة من اختيارك" لتسجيل أكلك بحرية.</p>`}
+          `).join("") : `<p class="small-muted">اضغط "+ أضف وجبة من اختيارك" لتسجيل وجباتك.</p>`}
         </div>
       ` : ""}
     </div>
   `;
 
-  /* --------------------------------------------------------------------------
-     BIND EVENTS FOR HOME PLAYER, GYM MAP, CUSTOM EXERCISES & TASK SCHEDULER
-     -------------------------------------------------------------------------- */
   sec.querySelector("#btn-switch-home-gym")?.addEventListener("click", () => {
     profile.workoutMode = isHome ? "gym" : "home";
-    saveP();
-    renderHealthView();
-    toast(`تم التبديل إلى ${profile.workoutMode === "home" ? "وضع تمرين البيت 🏠" : "وضع الجيم 🏋️‍♂️"}`);
+    saveP(); renderHealthView();
   });
 
   sec.querySelector("#btn-reopen-wizard")?.addEventListener("click", () => {
-    profile.wizardStep = 1;
-    saveP();
-    renderHealthView();
+    profile.wizardStep = 1; saveP(); renderHealthView();
   });
 
   sec.querySelector("#btn-gym-water-plus")?.addEventListener("click", () => {
     profile.waterCups = (Number(profile.waterCups) || 0) + 1;
-    saveP();
-    renderHealthView();
+    saveP(); renderHealthView();
     toast("بالهنا والشفا! +1 كوب مية 💧");
   });
 
-  // أحداث مشغل تمرين البيت التفاعلي (12 تمرين)
   sec.querySelectorAll("[data-jump-home-ex]").forEach(el => {
     el.onclick = () => {
       profile.liveExIdx = Number(el.dataset.jumpHomeEx) || 0;
-      saveP();
-      renderHealthView();
+      saveP(); renderHealthView();
     };
   });
 
   sec.querySelector("#btn-prev-home-ex")?.addEventListener("click", () => {
     profile.liveExIdx = (profile.liveExIdx - 1 + allHomeExercises.length) % allHomeExercises.length;
-    saveP();
-    renderHealthView();
+    saveP(); renderHealthView();
   });
 
   sec.querySelector("#btn-next-home-ex")?.addEventListener("click", () => {
     profile.liveExIdx = (profile.liveExIdx + 1) % allHomeExercises.length;
-    saveP();
-    renderHealthView();
+    saveP(); renderHealthView();
   });
 
   sec.querySelector("#btn-done-home-ex")?.addEventListener("click", () => {
@@ -2530,7 +2673,7 @@ function renderHealthView() {
     }
     profile.liveExIdx = (profile.liveExIdx + 1) % allHomeExercises.length;
     saveP();
-    toast(`عاش يا بطل! أنجزت "${activeLiveEx.name.split("•")[0]}" وانتقلت للتمرين التالي 🔥`);
+    toast(`عاش يا بطل! أنجزت التمرين وانتقلت للتالي 🔥`);
     renderHealthView();
   });
 
@@ -2538,7 +2681,7 @@ function renderHealthView() {
     if (livePlayerTimerInterval) clearInterval(livePlayerTimerInterval);
     let s = 45;
     const badge = document.getElementById("live-home-timer");
-    toast("بدأ عداد التمرين (45 ثانية أداء)! قلد حركة المدرب أمامك 💪🔥");
+    toast("بدأ عداد الجولة (45 ثانية)! 💪🔥");
     livePlayerTimerInterval = setInterval(() => {
       s--;
       if (badge) badge.textContent = `00:${String(Math.max(0, s)).padStart(2, "0")}`;
@@ -2549,12 +2692,8 @@ function renderHealthView() {
     }, 1000);
   });
 
-  // أحداث الجيم ومجسم الـ 3D
   sec.querySelectorAll("[data-muscle-pick]").forEach(el => {
-    el.onclick = () => {
-      activeMuscleGroup = el.dataset.musclePick;
-      renderHealthView();
-    };
+    el.onclick = () => { activeMuscleGroup = el.dataset.musclePick; renderHealthView(); };
   });
 
   sec.querySelectorAll("[data-toggle-ex-done]").forEach(btn => {
@@ -2567,8 +2706,7 @@ function renderHealthView() {
         profile.completedToday.push(id);
         toast("تم تسجيل التمرين كمكتمل اليوم 💪✅");
       }
-      saveP();
-      renderHealthView();
+      saveP(); renderHealthView();
     };
   });
 
@@ -2586,14 +2724,22 @@ function renderHealthView() {
     }, 1000);
   });
 
-  // إضافة تمرين مخصص بواسطة المستخدم
   sec.querySelector("#btn-add-custom-ex")?.addEventListener("click", () => {
     B().openFormModal("➕ إضافة تمرين جديد خاص بك", `
       <div class="form-group"><label>اسم التمرين</label><input name="name" required placeholder="مثال: عقلة واسع / ضغط الماسة..." /></div>
       <div class="form-group"><label>المكان</label>
         <select name="mode">
-          <option value="home" ${isHome ? "selected" : ""}>🏠 تمرين بيت (بدون أجهزة)</option>
+          <option value="home" ${isHome ? "selected" : ""}>🏠 تمرين بيت</option>
           <option value="gym" ${!isHome ? "selected" : ""}>🏋️‍♂️ تمرين جيم</option>
+        </select>
+      </div>
+      <div class="form-group"><label>نوع الحركة التوضيحية</label>
+        <select name="anim">
+          <option value="pushup">حركة ضغط أرضي (Push-up)</option>
+          <option value="squat">حركة سكوات وأرجل (Squat)</option>
+          <option value="pull">حركة سحب وظهر وذراعين (Pull)</option>
+          <option value="crunch">حركة بطن وجذع (Core)</option>
+          <option value="jump">حركة لياقة وكارديو (Cardio)</option>
         </select>
       </div>
       <div class="form-group"><label>العضلة المستهدفة (للجيم)</label>
@@ -2604,7 +2750,7 @@ function renderHealthView() {
         </select>
       </div>
       <div class="form-group"><label>الجولات والعدات</label><input name="sets" value="4 Sets × 12 Reps" required /></div>
-      <div class="form-group"><label>شرح الحركة أو ملاحظاتك</label><input name="tips" required placeholder="اكتب طريقة الأداء أو الوزن..." /></div>
+      <div class="form-group"><label>شرح الحركة</label><input name="tips" required /></div>
     `, async (d) => {
       profile.customExercises = profile.customExercises || [];
       profile.customExercises.push({
@@ -2617,19 +2763,15 @@ function renderHealthView() {
         sets: d.sets,
         equip: "مخصص",
         cals: "110 kcal",
-        anim: "squat",
-        maleDesc: d.tips,
-        femaleDesc: d.tips,
-        tips: d.tips,
-        img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80"
+        anim: d.anim || "squat",
+        desc: d.tips,
+        tips: d.tips
       });
-      saveP();
-      renderHealthView();
+      saveP(); renderHealthView();
       toast("تمت إضافة تمرينك الخاص بنجاح! 💪");
     });
   });
 
-  // تثبيت وجدولة التمرين في المهام والتقويم بتوقيت محدد وتكرار دوري
   const openPinWorkoutModal = (defaultTitle = "") => {
     const defaultName = defaultTitle || (isHome ? "🏠 تمرين البيت الكامل (12 حركة)" : `🏋️‍♂️ تمرين الجيم: ${muscleNamesAr[activeMuscleGroup]}`);
     B().openFormModal("📌 تثبيت وجدولة التمرين في المهام والتقويم", `
@@ -2638,30 +2780,25 @@ function renderHealthView() {
         <input name="title" value="${esc(defaultName)}" required />
       </div>
       <div class="form-group">
-        <label>توقيت التمرين المفضل في اليوم (الساعة)</label>
+        <label>توقيت التمرين المفضل (الساعة)</label>
         <input type="time" name="time" value="${esc(profile.preferredTime || "18:00")}" required />
       </div>
       <div class="form-group">
-        <label>التكرار الدوري للتثبيت</label>
+        <label>التكرار الدوري</label>
         <select name="freq">
           <option value="daily">🔁 يومياً في نفس الموعد</option>
           <option value="3days" selected>📅 3 أيام أسبوعياً (السبت - الإثنين - الأربعاء)</option>
-          <option value="4days">📅 4 أيام أسبوعياً (السبت - الأحد - الثلاثاء - الخميس)</option>
+          <option value="4days">📅 4 أيام أسبوعياً</option>
           <option value="once">📌 اليوم فقط</option>
         </select>
       </div>
     `, async (d) => {
       profile.preferredTime = d.time;
       saveP();
-      const freqLabels = {
-        daily: "مثبت يومياً",
-        "3days": "مثبت 3 أيام أسبوعياً",
-        "4days": "مثبت 4 أيام أسبوعياً",
-        once: "مرة واحدة"
-      };
+      const freqLabels = { daily: "مثبت يومياً", "3days": "مثبت 3 أيام أسبوعياً", "4days": "مثبت 4 أيام أسبوعياً", once: "مرة واحدة" };
       await B().createRecord?.("tasks", {
         title: `🏋️‍♂️ ${d.title} (الساعة ${d.time})`,
-        description: `تكرار التمرين: ${freqLabels[d.freq]} • المكان: ${isHome ? "البيت" : "الجيم"}`,
+        description: `تكرار التمرين: ${freqLabels[d.freq]}`,
         dueDate: today(),
         priority: "High",
         status: "Pending",
@@ -2673,7 +2810,7 @@ function renderHealthView() {
         time: d.time,
         type: "Reminder"
       });
-      toast(`تم تثبيت "${d.title}" الساعة ${d.time} (${freqLabels[d.freq]}) في مهامك وتقويمك! 📌📅`);
+      toast(`تم تثبيت التمرين في مهامك وتقويمك! 📌📅`);
     });
   };
 
@@ -2682,23 +2819,20 @@ function renderHealthView() {
     btn.onclick = () => openPinWorkoutModal(btn.dataset.pinSingleEx);
   });
 
-  // قسم التغذية الاختياري
   sec.querySelector("#btn-toggle-nutrition-sec")?.addEventListener("click", () => {
     profile.showNutrition = !profile.showNutrition;
-    saveP();
-    renderHealthView();
+    saveP(); renderHealthView();
   });
 
   sec.querySelector("#btn-add-custom-meal")?.addEventListener("click", () => {
     B().openFormModal("🍽️ إضافة وجبة خاصة بك", `
-      <div class="form-group"><label>اسم الوجبة ومكوناتها</label><input name="title" required placeholder="مثال: 4 بيضات + شوفان / صدور دجاج وأرز..." /></div>
-      <div class="form-group"><label>توقيت الوجبة</label><input name="time" placeholder="الإفطار — 9:00 صباحاً" /></div>
+      <div class="form-group"><label>اسم الوجبة ومكوناتها</label><input name="title" required /></div>
+      <div class="form-group"><label>توقيت الوجبة</label><input name="time" placeholder="الإفطار / بعد التمرين" /></div>
       <div class="form-group"><label>السعرات أو البروتين (اختياري)</label><input name="macros" placeholder="600 kcal • 45g Protein" /></div>
     `, async (d) => {
       profile.customMeals = profile.customMeals || [];
       profile.customMeals.push(d);
-      saveP();
-      renderHealthView();
+      saveP(); renderHealthView();
       toast("تمت إضافة وجبتك بنجاح 🍽️");
     });
   });
@@ -2706,15 +2840,36 @@ function renderHealthView() {
   sec.querySelectorAll("[data-del-meal]").forEach(btn => {
     btn.onclick = () => {
       profile.customMeals.splice(Number(btn.dataset.delMeal), 1);
-      saveP();
-      renderHealthView();
+      saveP(); renderHealthView();
     };
   });
 }
 
 /* ============================================================================
-   MODULE A: 3D VISION BOARD & LIFE GOALS STUDIO
+   MODULE A: 3D VISION BOARD & LIFE GOALS (WITH CUSTOM PC IMAGE UPLOAD!)
    ============================================================================ */
+function compressGoalImageFile(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxW = 720;
+        const scale = Math.min(1, maxW / img.width);
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = () => resolve(ev.target.result);
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function renderGoalsView() {
   const sec = document.getElementById("view-goals");
   if (!sec) return;
@@ -2734,13 +2889,13 @@ function renderGoalsView() {
       title: "الامتياز الأكاديمي والتفوق في مواد الهندسة",
       level: "أهداف ربع سنوية",
       deadline: "2026-06-15",
-      img: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=900&q=80",
+      img: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=900&q=80",
       milestones: ["إنهاء الـ 29 بنداً لكل مادة", "حل جميع الشيتات", "مراجعة بطاقات 3D"],
       doneMilestones: [0]
     },
     {
       id: "g3",
-      title: "الوصول لأفضل فورمة رياضية وصحية في الجيم",
+      title: "الوصول لأفضل فورمة رياضية وصحية",
       level: "أهداف شهرية",
       deadline: "2026-05-01",
       img: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=900&q=80",
@@ -2753,13 +2908,16 @@ function renderGoalsView() {
     <div class="section-toolbar">
       <div>
         <h3><i class="fa-solid fa-bullseye gold-text"></i> لوحة الرؤية البصرية والأهداف (3D Vision Board & Life Goals)</h3>
-        <small class="small-muted">صمم مستقبلك بالصور الملهمة وقسّم كل حلم إلى محطات قابلة للتحقيق</small>
+        <small class="small-muted">ارفع صورتك الخاصة من جهازك لأي هدف وقسّم حلمك إلى محطات قابلة للتحقيق</small>
       </div>
       <div class="filters-row">
         <button type="button" id="btn-ai-goal-coach" class="btn btn-outline btn-sm"><i class="fa-solid fa-wand-magic-sparkles gold-text"></i> AI Goal Coach</button>
-        <button type="button" id="btn-add-life-goal" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> إضافة هدف في Vision Board</button>
+        <button type="button" id="btn-add-life-goal" class="btn btn-gold btn-sm"><i class="fa-solid fa-plus"></i> إضافة هدف بصورة خاصة</button>
       </div>
     </div>
+
+    <!-- مدخل خفي لتغيير صورة أي هدف حالي مباشرة من الجهاز -->
+    <input type="file" id="hidden-goal-img-changer" accept="image/*" class="hidden" />
 
     <div class="items-grid">
       ${goals.map((g, gIdx) => {
@@ -2771,7 +2929,12 @@ function renderGoalsView() {
             <div class="visual-cover-img" style="background-image:url('${esc(g.img || "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=800&q=80")}');">
               <div class="flex-between" style="width:100%;">
                 <span class="badge badge-gold">${esc(g.level)}</span>
-                <span class="badge badge-emerald">${pct}% مكتمل</span>
+                <div class="filters-row">
+                  <button type="button" class="btn btn-xs btn-gold" data-change-goal-photo="${gIdx}" title="تغيير صورة هذا الهدف من جهازك">
+                    <i class="fa-solid fa-camera"></i> تغيير الصورة
+                  </button>
+                  <span class="badge badge-emerald">${pct}% مكتمل</span>
+                </div>
               </div>
             </div>
             <div class="visual-cover-body">
@@ -2802,10 +2965,40 @@ function renderGoalsView() {
     </div>
   `;
 
+  // تغيير صورة أي هدف حالي بضغطة زر من الكمبيوتر
+  let targetGoalIdxForPhoto = null;
+  const hiddenFileInp = sec.querySelector("#hidden-goal-img-changer");
+  sec.querySelectorAll("[data-change-goal-photo]").forEach(btn => {
+    btn.onclick = () => {
+      targetGoalIdxForPhoto = Number(btn.dataset.changeGoalPhoto);
+      hiddenFileInp.value = "";
+      hiddenFileInp.click();
+    };
+  });
+
+  hiddenFileInp.onchange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || targetGoalIdxForPhoto === null) return;
+    const dataUrl = await compressGoalImageFile(file);
+    if (goals[targetGoalIdxForPhoto]) {
+      goals[targetGoalIdxForPhoto].img = dataUrl;
+      OSProStore.set("goals_v3", goals);
+      renderGoalsView();
+      toast("تم تحديث صورة الهدف من جهازك بنجاح! 📸✨");
+    }
+  };
+
+  // نافذة إضافة هدف جديد مع رفع صورة من الجهاز أو رابط أو ثيم جاهز
   sec.querySelector("#btn-add-life-goal").onclick = () => {
-    B().openFormModal("🎯 إضافة هدف جديد في Vision Board", `
-      <div class="form-group"><label>عنوان الهدف أو الطموح</label><input name="title" required placeholder="مثال: إتقان الأمن السيبراني / شراء لابتوب جديد..." /></div>
-      <div class="form-group"><label>المستوى الزمني</label>
+    let uploadedCustomDataUrl = "";
+
+    B().openFormModal("🎯 إضافة هدف جديد في Vision Board (مع رفع صورتك الخاصة)", `
+      <div class="form-group">
+        <label>عنوان الهدف أو الطموح</label>
+        <input name="title" required placeholder="مثال: إتقان الأمن السيبراني / شراء لابتوب جديد..." autofocus />
+      </div>
+      <div class="form-group">
+        <label>المستوى الزمني</label>
         <select name="level">
           <option value="أهداف سنوية">أهداف سنوية</option>
           <option value="أهداف ربع سنوية">أهداف ربع سنوية</option>
@@ -2813,30 +3006,62 @@ function renderGoalsView() {
           <option value="أهداف أسبوعية">أهداف أسبوعية</option>
         </select>
       </div>
-      <div class="form-group"><label>صورة ملهمة للهدف (أو اختر ثيم جاهز)</label>
+
+      <div class="form-group">
+        <label class="gold-text"><i class="fa-solid fa-camera"></i> 1. ارفع صورة خاصة للهدف من جهازك (اختياري):</label>
+        <label class="goal-upload-zone d-block">
+          <i class="fa-solid fa-cloud-arrow-up gold-text" style="font-size:1.5rem;"></i>
+          <span id="goal-file-upload-lbl" class="d-block mt-1">اضغط هنا لاختيار صورة من كمبيوترك</span>
+          <input type="file" id="modal-goal-file-inp" accept="image/*" class="hidden" />
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label>2. أو الصق رابط صورة مباشر (اختياري):</label>
+        <input type="url" name="customUrl" dir="ltr" placeholder="https://example.com/my-goal-image.jpg" />
+      </div>
+
+      <div class="form-group">
+        <label>3. أو اختر من الثيمات الجاهزة المحترمة:</label>
         <select name="img">
           <option value="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=900&q=80">💻 هندسة البرمجيات والكود</option>
-          <option value="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=900&q=80">🎓 التفوق الجامعي والأكاديمي</option>
-          <option value="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=900&q=80">🏋️‍♂️ اللياقة البدنية والجيم</option>
+          <option value="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=900&q=80">🎓 التفوق الجامعي والأكاديمي</option>
+          <option value="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=900&q=80">🏋️‍♂️ معدات الجيم واللياقة</option>
           <option value="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=900&q=80">💰 الحرية المالية والادخار</option>
+          <option value="https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=900&q=80">🕋 الحرم المكي والعمرة</option>
+          <option value="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=900&q=80">🛡️ الأمن السيبراني والشبكات</option>
         </select>
       </div>
+
       <div class="form-group"><label>الموعد النهائي</label><input type="date" name="deadline" value="${today()}" required /></div>
       <div class="form-group"><label>المحطات المرحلية (افصل بينها بفاصلة)</label><input name="milestones" required placeholder="المرحلة الأولى, المرحلة الثانية, المشروع النهائي" /></div>
     `, async (data) => {
+      const finalImg = uploadedCustomDataUrl || (data.customUrl && data.customUrl.trim()) || data.img;
       goals.unshift({
         id: Date.now().toString(),
         title: data.title,
         level: data.level,
-        img: data.img,
+        img: finalImg,
         deadline: data.deadline,
         milestones: data.milestones.split(",").map(s => s.trim()).filter(Boolean),
         doneMilestones: []
       });
       OSProStore.set("goals_v3", goals);
       renderGoalsView();
-      toast("تمت إضافة الهدف في لوحة الرؤية البصرية 🎯");
+      toast("تمت إضافة الهدف بصورتك المخصصة في Vision Board 🎯📸");
     });
+
+    const fileInp = document.getElementById("modal-goal-file-inp");
+    const fileLbl = document.getElementById("goal-file-upload-lbl");
+    if (fileInp) {
+      fileInp.onchange = async (e) => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+        if (fileLbl) fileLbl.textContent = `⏳ جاري تجهيز الصورة: ${f.name}...`;
+        uploadedCustomDataUrl = await compressGoalImageFile(f);
+        if (fileLbl) fileLbl.innerHTML = `<strong style="color:#19B889;">✅ تم تجهيز صورتك بنجاح: ${esc(f.name)}</strong>`;
+      };
+    }
   };
 
   sec.querySelector("#btn-ai-goal-coach").onclick = () => {
