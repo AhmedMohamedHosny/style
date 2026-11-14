@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ar" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CodeMasr Studio — Eng:Ahmed M Hosny</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body data-ide-theme="vscode-dark">
+
+  <!-- 1. TOP TITLE BAR (PURE ICONS WITH HOVER TOOLTIPS) -->
+  <header class="vsc-titlebar">
+    <div class="vsc-titlebar-left">
+      <a href="../index.html" class="vsc-icon-btn back-os-btn" data-tip="العودة إلى منظومة حياتي (MY LIFE OS)">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      <div class="vsc-logo-badge" data-tip="Visual Studio Code Pro — Multi-Language IDE">
+        <i class="fa-solid fa-code"></i>
+      </div>
+      <!-- كبسولة المشروع المفتوح والتبديل السريع -->
+      <div class="vsc-project-pill" id="btn-open-project-switcher" data-tip="اضغط للتبديل بين مشاريعك أو تعديل بيانات المشروع الحالي">
+        <i class="fa-solid fa-folder-tree gold-icon"></i>
+        <strong id="top-proj-name">مشروعي</strong>
+        <span id="top-proj-type" class="vsc-mini-tag">Web</span>
+        <i class="fa-solid fa-chevron-down" style="font-size:10px; opacity:0.7;"></i>
+      </div>
+      <button type="button" id="btn-new-project-wizard" class="vsc-icon-btn" data-tip="إنشاء مشروع جديد (تحديد الاسم، النوع، والوصف)">
+        <i class="fa-solid fa-folder-plus gold-icon"></i>
+      </button>
+    </div>
+
+    <!-- أزرار التحكم الوسطى: التشغيل التلقائي + التشغيل اليدوي + تقسيم الشاشة -->
+    <div class="vsc-titlebar-center">
+      <button type="button" id="btn-toggle-autorun" class="vsc-icon-btn active-emerald" data-tip="التشغيل التلقائي الفوري أثناء الكتابة (Auto-Run: ON)">
+        <i class="fa-solid fa-bolt"></i>
+      </button>
+      <button type="button" id="btn-run-code" class="vsc-run-pill" data-tip="تشغيل وفحص الكود الآن (Ctrl + Enter)">
+        <i class="fa-solid fa-play"></i>
+        <span>Run</span>
+      </button>
+
+      <div class="vsc-divider-v"></div>
+
+      <button type="button" class="vsc-icon-btn layout-btn" data-layout="code" data-tip="عرض شاشة الكود فقط (Code Only)">
+        <i class="fa-solid fa-laptop-code"></i>
+      </button>
+      <button type="button" class="vsc-icon-btn layout-btn active" data-layout="split" data-tip="تقسيم الشاشة 50/50: الكود + المعاينة (Split View)">
+        <i class="fa-solid fa-table-columns"></i>
+      </button>
+      <button type="button" class="vsc-icon-btn layout-btn" data-layout="preview" data-tip="عرض شاشة النتيجة والمعاينة فقط (Output Only)">
+        <i class="fa-solid fa-desktop"></i>
+      </button>
+    </div>
+
+    <!-- أزرار الأدوات اليمنى (رموز احترافية مع شرح عند الوقوف عليها) -->
+    <div class="vsc-titlebar-right">
+      <label class="vsc-icon-btn" data-tip="رفع صور أو أيقونات للمشروع (يتعرف عليها الكود تلقائياً بمجرد كتابة اسمها)">
+        <i class="fa-regular fa-images gold-icon"></i>
+        <input type="file" id="inp-upload-assets" accept="image/*" multiple hidden />
+      </label>
+
+      <button type="button" id="btn-open-snippets" class="vsc-icon-btn" data-tip="موسوعة الاختصارات والأكواد الجاهزة لكل اللغات (Snippets)">
+        <i class="fa-solid fa-wand-magic-sparkles gold-icon"></i>
+      </button>
+
+      <button type="button" id="btn-format-code" class="vsc-icon-btn" data-tip="تنظيف وتنسيق المسافات والأقواس تلقائياً (Clean Code)">
+        <i class="fa-solid fa-broom"></i>
+      </button>
+
+      <button type="button" id="btn-toggle-intellisense" class="vsc-icon-btn active" data-tip="تفعيل/إيقاف الاقتراحات الذكية وتكملة الكود (IntelliSense)">
+        <i class="fa-regular fa-lightbulb"></i>
+      </button>
+
+      <button type="button" id="btn-download-zip" class="vsc-icon-btn emerald-icon" data-tip="تحميل ملفات المشروع بالكامل مع الصور في ملف مضغوط واحد (.ZIP)">
+        <i class="fa-solid fa-file-zipper"></i>
+      </button>
+
+      <div class="vsc-theme-box" data-tip="تغيير ثيم بيئة VS Code Studio">
+        <i class="fa-solid fa-palette gold-icon"></i>
+        <select id="sel-ide-theme" aria-label="Theme">
+          <option value="vscode-dark">VS Code Dark+</option>
+          <option value="cyberpunk-neon">Cyberpunk Neon</option>
+          <option value="dracula-pro">Dracula Pro</option>
+          <option value="emerald-matrix">Emerald Matrix</option>
+          <option value="aurora-light">Aurora Light</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. MAIN WORKSPACE BODY -->
+  <div class="vsc-main-body">
+
+    <!-- A. ACTIVITY BAR (FAR LEFT ICON STRIP) -->
+    <aside class="vsc-activity-bar">
+      <button type="button" class="vsc-act-btn active" data-sidebar-tab="explorer" data-tip="مستكشف ملفات وصور المشروع (Explorer)">
+        <i class="fa-regular fa-copy"></i>
+      </button>
+      <button type="button" class="vsc-act-btn" data-sidebar-tab="projects" data-tip="إدارة مشاريعي والتبديل بينها (Projects Manager)">
+        <i class="fa-solid fa-layer-group"></i>
+      </button>
+      <button type="button" class="vsc-act-btn" data-sidebar-tab="assets" data-tip="مكتبة صور ووسائط المشروع (Uploaded Assets)">
+        <i class="fa-regular fa-image"></i>
+      </button>
+      <button type="button" class="vsc-act-btn" data-sidebar-tab="snippets" data-tip="قوالب وأكواد جاهزة للإدراج الفوري (Code Snippets)">
+        <i class="fa-solid fa-bolt-lightning"></i>
+      </button>
+
+      <div class="vsc-act-spacer"></div>
+
+      <button type="button" id="btn-code-zoom-in" class="vsc-act-btn" data-tip="تكبير خط الكود (Zoom In Code)">
+        <i class="fa-solid fa-magnifying-glass-plus"></i>
+      </button>
+      <button type="button" id="btn-code-zoom-out" class="vsc-act-btn" data-tip="تصغير خط الكود (Zoom Out Code)">
+        <i class="fa-solid fa-magnifying-glass-minus"></i>
+      </button>
+      <a href="../index.html" class="vsc-act-btn" data-tip="الرجوع إلى منظومة حياتي (MY LIFE OS)">
+        <i class="fa-solid fa-house"></i>
+      </a>
+    </aside>
+
+    <!-- B. COLLAPSIBLE SIDEBAR (EXPLORER / PROJECTS / ASSETS / SNIPPETS) -->
+    <aside class="vsc-sidebar" id="vsc-sidebar">
+      <div class="vsc-sidebar-header">
+        <span id="sidebar-title-lbl">EXPLORER</span>
+        <div class="vsc-sidebar-actions">
+          <button type="button" id="btn-side-new-file" class="vsc-mini-icon" data-tip="إضافة ملف كود جديد (+ New File)">
+            <i class="fa-solid fa-file-circle-plus"></i>
+          </button>
+          <button type="button" id="btn-side-upload-img" class="vsc-mini-icon" data-tip="رفع صورة للمشروع (+ Upload Image)">
+            <i class="fa-solid fa-image"></i>
+          </button>
+          <button type="button" id="btn-side-zip" class="vsc-mini-icon" data-tip="تحميل المشروع كملف ZIP">
+            <i class="fa-solid fa-download"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="vsc-sidebar-content" id="vsc-sidebar-content"></div>
+    </aside>
+
+    <!-- C. SPLIT WORKBENCH: CODE EDITOR + LIVE PREVIEW / TERMINAL -->
+    <main class="vsc-workbench" id="vsc-workbench">
+
+      <!-- LEFT PANE: MONACO / CODE EDITOR -->
+      <section class="vsc-editor-pane" id="vsc-editor-pane">
+        <div class="vsc-tabs-bar" id="vsc-tabs-bar"></div>
+
+        <div class="vsc-breadcrumbs">
+          <span id="crumb-proj-name">Project</span>
+          <i class="fa-solid fa-chevron-right" style="font-size:9px; opacity:0.5;"></i>
+          <strong id="crumb-file-name" class="gold-icon">index.html</strong>
+          <span id="crumb-lang-badge" class="vsc-lang-pill">HTML5</span>
+        </div>
+
+        <div class="vsc-editor-host" id="vsc-editor-host">
+          <div id="monaco-mount"></div>
+          <textarea id="fallback-code-area" spellcheck="false" hidden></textarea>
+        </div>
+      </section>
+
+      <!-- DRAGGABLE SPLITTER -->
+      <div class="vsc-resizer" id="vsc-resizer" data-tip="اسحب بالماوس يميناً ويساراً لتغيير مساحة الكود والمعاينة">
+        <span>⋮</span>
+      </div>
+
+      <!-- RIGHT PANE: LIVE BROWSER PREVIEW + SMART DEBUGGER CONSOLE -->
+      <section class="vsc-preview-pane" id="vsc-preview-pane">
+        <div class="vsc-preview-header">
+          <div class="vsc-address-pill">
+            <span class="pulse-green"></span>
+            <i class="fa-solid fa-lock" style="font-size:10px; color:#10b981;"></i>
+            <span id="preview-url-lbl">localhost:3000/index.html</span>
+          </div>
+
+          <div class="vsc-preview-actions">
+            <button type="button" id="btn-prev-zoom-out" class="vsc-mini-icon" data-tip="تصغير شاشة المعاينة">
+              <i class="fa-solid fa-minus"></i>
+            </button>
+            <span id="prev-zoom-lbl" class="vsc-zoom-txt">100%</span>
+            <button type="button" id="btn-prev-zoom-in" class="vsc-mini-icon" data-tip="تكبير شاشة المعاينة">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+            <button type="button" id="btn-prev-reload" class="vsc-mini-icon" data-tip="تحديث المعاينة الحية">
+              <i class="fa-solid fa-rotate-right"></i>
+            </button>
+            <button type="button" id="btn-prev-ext" class="vsc-mini-icon" data-tip="فتح النتيجة في نافذة متصفح كاملة">
+              <i class="fa-solid fa-up-right-from-square"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="vsc-iframe-container" id="vsc-iframe-container">
+          <iframe id="vsc-preview-iframe" sandbox="allow-scripts allow-forms allow-modals allow-same-origin allow-popups"></iframe>
+        </div>
+
+        <!-- SMART CONSOLE & DIAGNOSTICS DRAWER -->
+        <div class="vsc-console-drawer" id="vsc-console-drawer">
+          <div class="vsc-console-header">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <i class="fa-solid fa-terminal gold-icon"></i>
+              <strong>CONSOLE & SMART AUTO-FIX DEBUGGER</strong>
+              <span id="console-badge-count" class="vsc-count-pill">0</span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button type="button" id="btn-clear-console" class="vsc-mini-icon" data-tip="مسح الكونسول">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+              <button type="button" id="btn-toggle-console-height" class="vsc-mini-icon" data-tip="تكبير/تصغير لوحة الكونسول">
+                <i class="fa-solid fa-chevron-up"></i>
+              </button>
+            </div>
+          </div>
+          <div class="vsc-console-body" id="vsc-console-body"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- 3. NEON GLOWING FOOTER STATUS BAR -->
+  <footer class="vsc-statusbar">
+    <div class="vsc-status-left">
+      <span class="status-item"><span class="pulse-cyan"></span> READY</span>
+      <span class="status-item" id="status-cursor">Ln 1, Col 1</span>
+      <span class="status-item" id="status-lang">HTML5</span>
+    </div>
+
+    <div class="vsc-status-center">
+      <span class="neon-spark">✦</span>
+      <span class="neon-label">ENGINEERED & DEVELOPED BY</span>
+      <strong class="neon-eng-name">Eng:Ahmed M Hosny</strong>
+      <span class="neon-spark">✦</span>
+    </div>
+
+    <div class="vsc-status-right">
+      <span class="status-item" id="status-autorun">⚡ Auto-Run: ON</span>
+      <span class="status-item">UTF-8</span>
+    </div>
+  </footer>
+
+  <!-- UNIVERSAL MODAL FOR PROJECT WIZARD & NEW FILE -->
+  <div class="vsc-modal-backdrop" id="vsc-modal" hidden>
+    <div class="vsc-modal-card" dir="rtl">
+      <div class="vsc-modal-header">
+        <h3 id="vsc-modal-title">مشروع جديد</h3>
+        <button type="button" id="btn-close-vsc-modal" class="vsc-mini-icon"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="vsc-modal-body" class="vsc-modal-body"></div>
+    </div>
+  </div>
+
+  <div id="vsc-toast-box" class="vsc-toast-box"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js" crossorigin="anonymous"></script>
+  <script src="./script.js"></script>
+</body>
+</html>
