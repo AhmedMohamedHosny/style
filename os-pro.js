@@ -9660,3 +9660,1411 @@ function bindWB3CanvasPointerEvents(ctx, canvas, redraw) {
     redraw();
   }, { passive: false });
 }
+/* ============================================================================
+   SMART DOUBLE-CLICK DEFINITION & SUB-TEXT ENGINE (WHITEBOARD 3.1)
+   - دبل كليك على أي (نص حر / مستطيل / دائرة / عقدة) = كتابة تعريف يظهر بخط صغير تحته مباشرة
+   - يدعم تعدد الأسطر تلقائياً + كتابة "AI" لتوليد التعريف بالذكاء الاصطناعي فوراً
+   - للتعديل على العنوان الرئيسي نفسه: اضغط (Shift + دبل كليك)
+   ============================================================================ */
+
+// 1. تطوير رسم العقد الشجرية والهندسية لدعم التعريف متعدد الأسطر بخط صغير ومنسق تحت العنوان
+const _origDrawWB2SmartNode = drawWB2SmartNode;
+drawWB2SmartNode = function(ctx, nd, isWhite) {
+  if (nd.shape === "math_plot" || nd.shape === "truth_table") {
+    return _origDrawWB2SmartNode(ctx, nd, isWhite);
+  }
+
+  // تقسيم التعريف الطويل إلى أسطر متناسقة تحت العنوان الرئيسي
+  const defText = String(nd.val || "").trim();
+  const defLines = [];
+  if (defText) {
+    const words = defText.split(/\s+/);
+    let curLine = "";
+    words.forEach(w => {
+      const test = curLine ? curLine + " " + w : w;
+      if (test.length > 34 && curLine) {
+        defLines.push(curLine);
+        curLine = w;
+      } else {
+        curLine = test;
+      }
+    });
+    if (curLine) defLines.push(curLine);
+  }
+
+  // ضبط حجم الصندوق تلقائياً ليحتوي العنوان + التعريف الصغير تحته بأناقة
+  const maxDefLen = defLines.reduce((m, l) => Math.max(m, l.length), 0);
+  nd.w = Math.max(nd.w || 140, nd.text.length * 9 + 44, maxDefLen * 6.8 + 46);
+  nd.h = Math.max(50, 38 + defLines.length * 16);
+
+  const isSel = nd.id === WBState.selectedNodeId;
+  ctx.save();
+  ctx.translate(nd.x, nd.y);
+  if (nd.rotation) ctx.rotate((nd.rotation * Math.PI) / 180);
+
+  const hw = nd.w / 2;
+  const hh = nd.h / 2;
+  const col = nd.color || "#D4A72C";
+
+  if (isSel) {
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = col;
+  }
+
+  if (nd.shape === "sticky") {
+    ctx.fillStyle = "#FEF08A";
+    ctx.strokeStyle = "#CA8A04";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(-hw, -hh, nd.w, nd.h, 8);
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = isWhite ? "#FFFFFF" : "#11192E";
+    ctx.strokeStyle = isSel ? "#19B889" : col;
+    ctx.lineWidth = isSel ? 3.2 : 2.2;
+
+    ctx.beginPath();
+    if (nd.shape === "circle" || nd.shape === "elec_ac" || nd.shape === "elec_dc") {
+      ctx.arc(0, 0, Math.max(hw, hh), 0, Math.PI * 2);
+    } else if (nd.shape === "diamond") {
+      ctx.moveTo(0, -hh - 8); ctx.lineTo(hw + 12, 0); ctx.lineTo(0, hh + 8); ctx.lineTo(-hw - 12, 0); ctx.closePath();
+    } else if (nd.shape === "hexagon") {
+      ctx.moveTo(-hw + 16, -hh); ctx.lineTo(hw - 16, -hh); ctx.lineTo(hw + 8, 0);
+      ctx.lineTo(hw - 16, hh); ctx.lineTo(-hw + 16, hh); ctx.lineTo(-hw - 8, 0); ctx.closePath();
+    } else if (nd.shape === "round_rect") {
+      ctx.roundRect(-hw, -hh, nd.w, nd.h, 22);
+    } else {
+      ctx.roundRect(-hw, -hh, nd.w, nd.h, 10);
+    }
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  ctx.shadowBlur = 0;
+
+  // رسم العنوان الرئيسي
+  const titleY = defLines.length ? -hh + 20 : 0;
+  ctx.fillStyle = nd.shape === "sticky" ? "#0F172A" : (isWhite ? "#0F172A" : "#F8FAFC");
+  ctx.font = nd.shape === "code_block" ? "bold 12.5px monospace" : "bold 13.5px Alexandria, Cairo, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText((nd.locked ? "🔒 " : "") + nd.text, 0, titleY);
+
+  // رسم خط فاصل خفيف + التعريف بخط أصغر تحت العنوان مباشرة
+  if (defLines.length) {
+    ctx.strokeStyle = nd.shape === "sticky" ? "rgba(15,23,42,0.18)" : "rgba(255,255,255,0.12)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-hw + 14, titleY + 11);
+    ctx.lineTo(hw - 14, titleY + 11);
+    ctx.stroke();
+
+    ctx.fillStyle = nd.shape === "sticky" ? "#334155" : (isWhite ? "#475569" : "#93C5FD");
+    ctx.font = "600 11px Alexandria, Cairo, Inter, sans-serif";
+    defLines.forEach((line, i) => {
+      ctx.fillText(line, 0, titleY + 23 + i * 15);
+    });
+  }
+
+  ctx.restore();
+};
+
+// 2. رسم التعريف المصغر (subText) تحت النصوص الحرة والمستطيلات والدوائر المرسومة
+const _origRenderWBScene = renderWhiteboardScene;
+renderWhiteboardScene = function(ctx, W, H) {
+  _origRenderWBScene(ctx, W, H);
+
+  const isWhite = WBState.bgMode === "white";
+  ctx.save();
+  ctx.translate(WBState.panX, WBState.panY);
+  ctx.scale(WBState.zoom, WBState.zoom);
+
+  WBState.strokes.forEach(s => {
+    if (s.hidden || !s.subText) return;
+    const defLines = String(s.subText).split("\n");
+    const subFontSize = Math.max(11, Math.round((s.size || 4) * 2.4));
+
+    ctx.save();
+    ctx.font = `600 ${subFontSize}px Alexandria, Cairo, sans-serif`;
+
+    if (s.type === "text") {
+      // رسم التعريف بخط صغير أنيق تحت النص الحر مباشرة مع خط جانبي ذهبي
+      const startY = s.y + 10;
+      ctx.strokeStyle = s.color || "#D4A72C";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(s.x, startY - 4);
+      ctx.lineTo(s.x, startY + defLines.length * (subFontSize + 5) - 4);
+      ctx.stroke();
+
+      ctx.fillStyle = isWhite ? "#334155" : "#CBD5E1";
+      ctx.textAlign = "start";
+      ctx.textBaseline = "top";
+      defLines.forEach((ln, idx) => {
+        ctx.fillText(`↳ ${ln}`, s.x + 8, startY + idx * (subFontSize + 5));
+      });
+    } else if (s.type === "rect" || s.type === "circle") {
+      // رسم التعريف بخط صغير تحت الكلمة الموجودة داخل المستطيل أو الدائرة
+      const cx = s.type === "circle" ? s.x1 : s.x1 + (s.x2 - s.x1) / 2;
+      const cy = s.type === "circle" ? s.y1 + 18 : s.y1 + (s.y2 - s.y1) / 2 + 18;
+      ctx.fillStyle = isWhite ? "#475569" : "#93C5FD";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      defLines.forEach((ln, idx) => {
+        ctx.fillText(ln, cx, cy + idx * (subFontSize + 4));
+      });
+    }
+    ctx.restore();
+  });
+
+  ctx.restore();
+};
+
+// 3. تفعيل الدبل كليك الذكي: يفهم تلقائياً أنك تريد كتابة تعريف تحت النص (أو تعديل العنوان مع Shift)
+const _origBindWB3Pointer = bindWB3CanvasPointerEvents;
+bindWB3CanvasPointerEvents = function(ctx, canvas, redraw) {
+  _origBindWB3Pointer(ctx, canvas, redraw);
+
+  const screenToWorld = (sx, sy) => ({
+    x: (sx - WBState.panX) / WBState.zoom,
+    y: (sy - WBState.panY) / WBState.zoom
+  });
+
+  canvas.ondblclick = async (e) => {
+    const r = canvas.getBoundingClientRect();
+    const wx = (e.clientX - r.left - WBState.panX) / WBState.zoom;
+    const wy = (e.clientY - r.top - WBState.panY) / WBState.zoom;
+
+    // أولاً: فحص إذا ضغط مرتين على عقدة أو صندوق شجري
+    for (let i = WBState.nodes.length - 1; i >= 0; i--) {
+      const nd = WBState.nodes[i];
+      if (!nd.hidden && wx >= nd.x - nd.w / 2 && wx <= nd.x + nd.w / 2 && wy >= nd.y - nd.h / 2 && wy <= nd.y + nd.h / 2) {
+        WBState.selectedNodeId = nd.id;
+        if (e.shiftKey) {
+          const newTitle = prompt("✏️ تعديل العنوان الرئيسي:", nd.text);
+          if (newTitle !== null && newTitle.trim()) nd.text = newTitle.trim();
+        } else {
+          const def = prompt(
+            `📖 اكتب التعريف أو الشرح الفرعي ليظهر بخط صغير تحت "${nd.text}":\n(💡 اكتب AI ليقوم الذكاء الاصطناعي بكتابة التعريف تلقائياً، أو اضغط Shift+دبل كليك لتعديل العنوان الرئيسي)`,
+            nd.val || ""
+          );
+          if (def !== null) {
+            if (def.trim().toLowerCase() === "ai") {
+              toast(`🤖 جاري توليد تعريف علمي مختصر لـ "${nd.text}"...`, "info");
+              const aiReply = await B().askAI?.(`اكتب تعريفاً علمياً أو هندسياً مختصراً جداً (في سطر واحد لا يتجاوز 12 كلمة) للمصطلح التالي: "${nd.text}"`);
+              nd.val = String(aiReply || "").replace(/\n+/g, " ").trim().slice(0, 90);
+            } else {
+              nd.val = def.trim();
+            }
+          }
+        }
+        autoSaveWB2Board();
+        redraw();
+        return;
+      }
+    }
+
+    // ثانياً: فحص إذا ضغط مرتين على نص حر أو مستطيل أو دائرة
+    for (let i = WBState.strokes.length - 1; i >= 0; i--) {
+      const s = WBState.strokes[i];
+      if (s.hidden) continue;
+
+      let hit = false;
+      if (s.type === "text") {
+        const w = Math.max(70, (s.text || "").length * (s.size * 2.8));
+        const h = Math.max(32, s.size * 5.5);
+        if (wx >= s.x - 12 && wx <= s.x + w + 20 && wy >= s.y - h && wy <= s.y + 45) hit = true;
+      } else if (s.type === "rect") {
+        const minX = Math.min(s.x1, s.x2) - 8, maxX = Math.max(s.x1, s.x2) + 8;
+        const minY = Math.min(s.y1, s.y2) - 8, maxY = Math.max(s.y1, s.y2) + 8;
+        if (wx >= minX && wx <= maxX && wy >= minY && wy <= maxY) hit = true;
+      } else if (s.type === "circle") {
+        const rad = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+        if (Math.hypot(wx - s.x1, wy - s.y1) <= rad + 10) hit = true;
+      }
+
+      if (hit) {
+        WBState.selectedStrokeIdx = i;
+        const mainTitle = s.type === "text" ? s.text : (s.innerText || "");
+
+        // إذا كان الشكل فارغاً تماماً أو ضغط المستخدم Shift، يعدل العنوان الرئيسي
+        if (!mainTitle || e.shiftKey) {
+          const nextMain = prompt("✏️ اكتب العنوان الأساسي:", mainTitle);
+          if (nextMain !== null) {
+            if (s.type === "text") s.text = nextMain.trim();
+            else s.innerText = nextMain.trim();
+          }
+        } else {
+          // النظام يفهم تلقائياً أن الدبل كليك هو لتعريف الكلمة بخط صغير تحتها!
+          const def = prompt(
+            `📖 تعريف "${mainTitle}" (سيظهر بخط صغير تحت الكلمة مباشرة):\n(💡 اكتب AI لتوليد التعريف تلقائياً، أو اضغط Shift+دبل كليك لتعديل الكلمة نفسها)`,
+            s.subText || ""
+          );
+          if (def !== null) {
+            pushWB2Undo();
+            if (def.trim().toLowerCase() === "ai") {
+              toast(`🤖 جاري تعريف "${mainTitle}" بالذكاء الاصطناعي...`, "info");
+              const aiReply = await B().askAI?.(`اكتب تعريفاً مختصراً جداً (في سطر واحد لا يتجاوز 12 كلمة) للمصطلح: "${mainTitle}"`);
+              s.subText = String(aiReply || "").replace(/\n+/g, " ").trim().slice(0, 95);
+            } else {
+              s.subText = def.trim();
+            }
+          }
+        }
+        autoSaveWB2Board();
+        redraw();
+        return;
+      }
+    }
+  };
+};
+/* ============================================================================
+   WHITEBOARD STUDIO 4.0 — 11 SUPER-POWERS & INTERACTIVE SIMULATION ENGINE
+   (APPEND-ONLY • ZERO DELETION)
+   1. Smart Double-Click Definition Sub-Text (With AI Auto-Definition)
+   2. Live Logic & Electrical Circuit Simulator + Animated Current Particles
+   3. Interactive Voice-Note Pins (Record & Click Pin on Board to Play Audio)
+   4. Code-to-Flowchart Automatic Visualizer
+   5. Collapsible Deep-Dive Branches (+ / - Progressive Reveal)
+   6. Live On-Board Interactive Quiz Card with 15s Timer
+   7. Vanishing Ink Pen (Auto-Fades After 4 Seconds)
+   8. Interactive 4-Variable Karnaugh Map (K-Map Clickable Grid)
+   9. Smart Editable Table / Matrix Node
+   10. Live Code Block Runner (Execute JS/Math On-Board)
+   11. 1-Click Complete Lecture Handout PDF Exporter
+   ============================================================================ */
+
+Object.assign(WBState, {
+  simFlowActive: false,
+  simParticleOffset: 0,
+  simAnimFrameId: null,
+  vanishingStrokes: [],
+  voicePinsAudioMap: {},
+  isRecordingVoicePin: false,
+  voicePinRecorder: null,
+  voicePinChunks: [],
+  quizInterval: null
+});
+
+function injectWB4SuperStyles() {
+  if (document.getElementById("wb4-super-pack-styles")) return;
+  const st = document.createElement("style");
+  st.id = "wb4-super-pack-styles";
+  st.textContent = `
+    .wb4-super-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 5px 8px;
+      background: linear-gradient(90deg, rgba(16, 24, 45, 0.98), rgba(11, 29, 38, 0.98));
+      border: 1px solid rgba(25, 184, 137, 0.45);
+      border-radius: 12px;
+      padding: 5px 10px;
+      margin-bottom: 6px;
+      flex-shrink: 0;
+    }
+    .wb-presentation-active .wb4-super-bar {
+      display: none !important;
+    }
+    .wb4-sim-active-btn {
+      background: linear-gradient(135deg, #19B889, #059669) !important;
+      color: #040811 !important;
+      font-weight: 800 !important;
+      box-shadow: 0 0 18px rgba(25, 184, 137, 0.5) !important;
+    }
+
+    /* بطاقة الاختبار التفاعلي المباشر فوق السبورة (On-Board Quiz Overlay) */
+    .wb4-quiz-overlay-card {
+      position: fixed;
+      top: 110px;
+      right: 36px;
+      width: 390px;
+      max-width: 92vw;
+      background: linear-gradient(160deg, rgba(13, 19, 36, 0.97), rgba(7, 11, 22, 0.99));
+      border: 2px solid var(--gold-primary);
+      border-radius: 20px;
+      padding: 18px;
+      z-index: 1000030;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 30px rgba(212, 167, 44, 0.25);
+      backdrop-filter: blur(16px);
+    }
+    .wb4-quiz-opt-btn {
+      width: 100%;
+      text-align: right;
+      padding: 10px 14px;
+      margin-top: 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.05);
+      color: #f8fafc;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .wb4-quiz-opt-btn:hover {
+      border-color: var(--gold-primary);
+      background: rgba(212, 167, 44, 0.12);
+    }
+    .wb4-quiz-opt-btn.correct {
+      background: rgba(25, 184, 137, 0.28) !important;
+      border-color: #19B889 !important;
+      color: #6ee7b7 !important;
+    }
+    .wb4-quiz-opt-btn.wrong {
+      background: rgba(239, 68, 68, 0.25) !important;
+      border-color: #ef4444 !important;
+      color: #fca5a5 !important;
+    }
+  `;
+  document.head.appendChild(st);
+}
+
+/* ============================================================================
+   1. LOGIC & CIRCUIT SIMULATION ENGINE (COMPUTES GATES, SWITCHES & LEDS)
+   ============================================================================ */
+function evaluateWB4CircuitLogic() {
+  // تمرير الإشارات المنطقية والكهربائية من العقد الأب إلى الأبناء
+  const nodeMap = {};
+  WBState.nodes.forEach(n => { nodeMap[n.id] = n; });
+
+  WBState.nodes.forEach(n => {
+    if (n.shape === "elec_dc" || n.shape === "elec_ac") {
+      n.logicState = 1;
+    } else if (n.shape === "elec_gnd") {
+      n.logicState = 0;
+    } else if (n.shape === "elec_sw") {
+      if (n.logicState === undefined) n.logicState = 1;
+    }
+  });
+
+  // 3 دورات لتحديث البوابات المتسلسلة
+  for (let pass = 0; pass < 3; pass++) {
+    WBState.nodes.forEach(nd => {
+      const inputs = WBState.nodes.filter(p => p.id === nd.parentId || nd.extraParentId === p.id);
+      if (!inputs.length) return;
+      const inVals = inputs.map(p => Number(p.logicState ?? 1));
+      const a = inVals[0] ?? 1;
+      const b = inVals[1] ?? (nd.altInputB ?? 1);
+
+      if (nd.shape === "gate_and") nd.logicState = (a && b) ? 1 : 0;
+      else if (nd.shape === "gate_or") nd.logicState = (a || b) ? 1 : 0;
+      else if (nd.shape === "gate_not") nd.logicState = a ? 0 : 1;
+      else if (nd.shape === "gate_nand") nd.logicState = (a && b) ? 0 : 1;
+      else if (nd.shape === "gate_xor") nd.logicState = (a !== b) ? 1 : 0;
+      else if (nd.shape === "elec_led" || nd.shape === "elec_res" || nd.shape === "elec_cap" || nd.shape === "elec_ind") {
+        nd.logicState = a;
+      } else if (nd.logicState === undefined) {
+        nd.logicState = a;
+      }
+    });
+  }
+}
+
+// التحقق مما إذا كانت العقدة مخفية بسبب طي أحد آبائها (Collapsed Branch Check)
+function isNodeHiddenByCollapse(nd) {
+  let cur = nd;
+  let guard = 0;
+  while (cur && cur.parentId && guard < 15) {
+    guard++;
+    const parent = WBState.nodes.find(p => p.id === cur.parentId);
+    if (!parent) break;
+    if (parent.collapsed) return true;
+    cur = parent;
+  }
+  return false;
+}
+
+/* ============================================================================
+   2. CODE-TO-FLOWCHART AUTOMATIC GENERATOR
+   ============================================================================ */
+function openCodeToFlowchartModal(ctx, canvas, redraw) {
+  B().openFormModal("🔀 محول الكود البرمجي إلى مخطط تدفق هندسي (Code-to-Flowchart Visualizer)", `
+    <p class="small-muted mb-2">الصق أي كود برمجي (C++ / Python / JavaScript / Java) وسيتعرف النظام تلقائياً على الشروط (if/else) والحلقات (for/while) والعمليات ويرسمها كمخطط Flowchart مترابط على السبورة:</p>
+    <div class="form-group">
+      <textarea id="wb4-code-flow-inp" rows="8" dir="ltr" style="font-family:monospace;" placeholder="function checkSensor(temp) {\n  initSystem();\n  if (temp > 50) {\n    triggerAlarm();\n  } else {\n    normalMode();\n  }\n  while (temp > 40) {\n    coolDownFan();\n  }\n  return status;\n}">function checkSensor(temp) {
+  initSystem();
+  if (temp > 50) {
+    triggerAlarm();
+  } else {
+    normalMode();
+  }
+  while (temp > 40) {
+    coolDownFan();
+  }
+  return status;
+}</textarea>
+    </div>
+    <button type="button" id="btn-wb4-build-flowchart" class="btn btn-gold btn-block">
+      <i class="fa-solid fa-diagram-project"></i> توليد ورسم الـ Flowchart على السبورة الآن 🚀
+    </button>
+  `, async () => {});
+
+  const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
+  if (saveBtn) saveBtn.style.display = "none";
+
+  document.getElementById("btn-wb4-build-flowchart").onclick = () => {
+    const rawCode = document.getElementById("wb4-code-flow-inp")?.value || "";
+    const lines = rawCode.split("\n")
+      .map(l => l.trim().replace(/[{};]/g, "").trim())
+      .filter(l => l && !l.startsWith("//") && !l.startsWith("#") && l !== "else");
+
+    if (!lines.length) return;
+    pushWB2Undo();
+
+    const startX = (canvas.width / 2 - WBState.panX) / WBState.zoom;
+    let curY = (70 - WBState.panY) / WBState.zoom;
+    let prevId = "fc_start_" + Date.now();
+
+    WBState.nodes.push({
+      id: prevId,
+      text: "🟢 START / بداية الدالة",
+      val: lines[0].slice(0, 35),
+      shape: "round_rect",
+      x: startX,
+      y: curY,
+      w: 195,
+      h: 48,
+      color: "#19B889",
+      parentId: null
+    });
+
+    lines.slice(1, 10).forEach((ln, idx) => {
+      curY += 105;
+      const id = `fc_${Date.now()}_${idx}`;
+      const isCond = /^(if|else if|while|for|switch)\b/i.test(ln);
+      const isRet = /^return\b/i.test(ln);
+
+      WBState.nodes.push({
+        id,
+        text: isCond ? `❓ ${ln.slice(0, 32)}` : isRet ? `🏁 ${ln.slice(0, 32)}` : `⚙️ ${ln.slice(0, 32)}`,
+        val: isCond ? "شرط / تكرار (True ➔ False)" : isRet ? "مخرجات الدالة" : "عملية تنفيذية",
+        shape: isCond ? "diamond" : isRet ? "round_rect" : "rect",
+        x: startX + (idx % 2 === 1 && isCond ? 120 : 0),
+        y: curY,
+        w: 210,
+        h: 54,
+        color: isCond ? "#F59E0B" : isRet ? "#38BDF8" : "#D4A72C",
+        parentId: prevId
+      });
+      prevId = id;
+    });
+
+    openSmartWhiteboardModal(false);
+    toast("🔀 تم تحويل الكود البرمجي إلى مخطط Flowchart هندسي على السبورة!");
+  };
+}
+
+/* ============================================================================
+   3. LIVE ON-BOARD INTERACTIVE QUIZ CARD (WITH 15s COUNTDOWN TIMER)
+   ============================================================================ */
+function launchOnBoardQuizCard() {
+  let existing = document.getElementById("wb4-quiz-overlay-card");
+  if (existing) existing.remove();
+
+  const qTitle = prompt("❓ اكتب سؤال التحدي المباشر للطلاب (أو اتركه للسؤال الهندسي الافتراضي):", "ما هي البوابة المنطقية التي تعطي خرجاً (1) فقط عندما تختلف المداخل؟");
+  if (qTitle === null) return;
+
+  const optsRaw = prompt("اكتب 4 اختيارات مفصولة بفاصلة (وضع نجمة * قبل الإجابة الصحيحة):", "AND Gate, OR Gate, *XOR Gate, NAND Gate");
+  if (!optsRaw) return;
+
+  const parts = optsRaw.split(/[،,]/).map(s => s.trim()).filter(Boolean);
+  let timeLeft = 15;
+
+  const card = document.createElement("div");
+  card.id = "wb4-quiz-overlay-card";
+  card.className = "wb4-quiz-overlay-card";
+  card.innerHTML = `
+    <div class="flex-between mb-1">
+      <span class="badge badge-gold"><i class="fa-solid fa-bolt"></i> سؤال تفاعلي مباشر</span>
+      <div class="filters-row" style="gap:6px;">
+        <span id="wb4-quiz-timer-badge" class="badge badge-emerald">⏱️ ${timeLeft} ثانية</span>
+        <button type="button" id="btn-wb4-close-quiz" class="btn-icon-xs text-danger"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    <h4 class="gold-text mt-1" style="font-size:0.98rem; line-height:1.5;">${esc(qTitle)}</h4>
+    <div class="mt-2">
+      ${parts.map((p, i) => {
+        const isCorrect = p.startsWith("*");
+        const cleanTxt = p.replace(/^\*/, "").trim();
+        return `
+          <button type="button" class="wb4-quiz-opt-btn" data-quiz-correct="${isCorrect ? "1" : "0"}">
+            <span>${i + 1}. ${esc(cleanTxt)}</span>
+            <i class="fa-regular fa-circle"></i>
+          </button>
+        `;
+      }).join("")}
+    </div>
+  `;
+  document.body.appendChild(card);
+
+  if (WBState.quizInterval) clearInterval(WBState.quizInterval);
+  WBState.quizInterval = setInterval(() => {
+    timeLeft--;
+    const b = document.getElementById("wb4-quiz-timer-badge");
+    if (b) b.textContent = `⏱️ ${Math.max(0, timeLeft)} ثانية`;
+    if (timeLeft <= 0) {
+      clearInterval(WBState.quizInterval);
+      if (b) {
+        b.className = "badge badge-danger";
+        b.textContent = "⌛ انتهى الوقت!";
+      }
+    }
+  }, 1000);
+
+  card.querySelectorAll(".wb4-quiz-opt-btn").forEach(btn => {
+    btn.onclick = () => {
+      clearInterval(WBState.quizInterval);
+      const isRight = btn.dataset.quizCorrect === "1";
+      card.querySelectorAll(".wb4-quiz-opt-btn").forEach(b => {
+        if (b.dataset.quizCorrect === "1") {
+          b.classList.add("correct");
+          b.querySelector("i").className = "fa-solid fa-circle-check";
+        }
+      });
+      if (!isRight) {
+        btn.classList.add("wrong");
+        btn.querySelector("i").className = "fa-solid fa-circle-xmark";
+        toast("❌ إجابة غير صحيحة! تم توضيح الإجابة الصحيحة باللون الأخضر", "error");
+      } else {
+        toast("🎉 أحسنت! إجابة صحيحة 100%");
+      }
+    };
+  });
+
+  document.getElementById("btn-wb4-close-quiz").onclick = () => {
+    clearInterval(WBState.quizInterval);
+    card.remove();
+  };
+}
+
+/* ============================================================================
+   4. VOICE-NOTE PIN RECORDER ON WHITEBOARD (RECORD & CLICK PIN TO PLAY)
+   ============================================================================ */
+async function toggleVoicePinRecording(ctx, canvas, redraw) {
+  const btn = document.getElementById("btn-wb4-voice-pin");
+  if (WBState.isRecordingVoicePin && WBState.voicePinRecorder) {
+    WBState.voicePinRecorder.stop();
+    WBState.isRecordingVoicePin = false;
+    btn?.classList.remove("btn-danger");
+    if (btn) btn.innerHTML = `<i class="fa-solid fa-microphone-lines gold-text"></i> + دبوس صوتي`;
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    WBState.voicePinChunks = [];
+    WBState.voicePinRecorder = new MediaRecorder(stream);
+    WBState.voicePinRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) WBState.voicePinChunks.push(e.data);
+    };
+    WBState.voicePinRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(WBState.voicePinChunks, { type: "audio/webm" });
+      const audioUrl = URL.createObjectURL(blob);
+      const pinId = "vpin_" + Date.now();
+      WBState.voicePinsAudioMap[pinId] = audioUrl;
+
+      const label = prompt("🎤 اكتب عنواناً لهذا الدبوس الصوتي على السبورة:", "شرح صوتي للنقطة") || "شرح صوتي";
+      const cx = (canvas.width / 2 - WBState.panX) / WBState.zoom;
+      const cy = (canvas.height / 2 - WBState.panY) / WBState.zoom;
+
+      WBState.nodes.push({
+        id: pinId,
+        text: `🔊 ${label}`,
+        val: "اضغط دبل كليك لسماع التسجيل الصوتي 🎤",
+        shape: "voice_pin",
+        x: cx,
+        y: cy,
+        w: 205,
+        h: 54,
+        color: "#10B981",
+        parentId: WBState.selectedNodeId || null
+      });
+      redraw();
+      toast("🎤 تم تثبيت الدبوس الصوتي على السبورة! اضغط عليه مرتين في أي وقت لسماع شرحك");
+    };
+
+    WBState.voicePinRecorder.start();
+    WBState.isRecordingVoicePin = true;
+    btn?.classList.add("btn-danger");
+    if (btn) btn.innerHTML = `<i class="fa-solid fa-stop"></i> إيقاف وحفظ الدبوس 🔴`;
+    toast("🎙️ تحدث الآن لشرح النقطة... ثم اضغط (إيقاف وحفظ الدبوس)", "info");
+  } catch (err) {
+    toast("يرجى السماح بالمايكروفون لتسجيل الدبوس الصوتي", "error");
+  }
+}
+
+/* ============================================================================
+   5. 1-CLICK COMPLETE LECTURE HANDOUT PDF BUILDER (DIAGRAM + GLOSSARY)
+   ============================================================================ */
+async function exportCompleteLectureHandoutPDF(canvas) {
+  toast("⏳ جاري تجميع رسومات السبورة والتعريفات وبناء مذكرة المحاضرة PDF...", "info");
+  try {
+    if (!window.jspdf) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    // الصفحة الأولى: صورة السبورة والمخططات عالية الدقة
+    const boardImg = canvas.toDataURL("image/jpeg", 0.95);
+
+    // الصفحة الثانية: جدول المصطلحات والتعريفات والملاحظات المرسومة على اللوحة
+    const summaryCanv = document.createElement("canvas");
+    summaryCanv.width = 1200;
+    summaryCanv.height = 850;
+    const sCtx = summaryCanv.getContext("2d");
+
+    sCtx.fillStyle = "#080D1A";
+    sCtx.fillRect(0, 0, 1200, 850);
+    sCtx.strokeStyle = "#D4A72C";
+    sCtx.lineWidth = 4;
+    sCtx.strokeRect(20, 20, 1160, 810);
+
+    sCtx.fillStyle = "#D4A72C";
+    sCtx.font = "bold 28px Alexandria, Cairo, sans-serif";
+    sCtx.textAlign = "right";
+    sCtx.fillText(`📚 ملخص ومذكرة المحاضرة الهندسية — ${today()}`, 1140, 70);
+
+    sCtx.fillStyle = "#F8FAFC";
+    sCtx.font = "bold 18px Alexandria, Cairo, sans-serif";
+    let yPos = 130;
+
+    WBState.nodes.forEach((nd, idx) => {
+      if (yPos > 780) return;
+      sCtx.fillStyle = "#19B889";
+      sCtx.fillText(`${idx + 1}. ${nd.text}`, 1140, yPos);
+      if (nd.val) {
+        sCtx.fillStyle = "#CBD5E1";
+        sCtx.font = "16px Alexandria, Cairo, sans-serif";
+        sCtx.fillText(`   ↳ التعريف / القيمة: ${nd.val}`, 1110, yPos + 28);
+        yPos += 62;
+      } else {
+        yPos += 38;
+      }
+      sCtx.font = "bold 18px Alexandria, Cairo, sans-serif";
+    });
+
+    WBState.strokes.filter(s => s.type === "text" || s.subText).forEach((s) => {
+      if (yPos > 780) return;
+      const t = s.text || s.innerText || "ملاحظة";
+      sCtx.fillStyle = "#38BDF8";
+      sCtx.fillText(`• ${t} ${s.subText ? " — " + s.subText : ""}`, 1140, yPos);
+      yPos += 36;
+    });
+
+    const summaryImg = summaryCanv.toDataURL("image/jpeg", 0.95);
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: "l", unit: "mm", format: "a4" });
+    const pW = pdf.internal.pageSize.getWidth();
+    const pH = pdf.internal.pageSize.getHeight();
+
+    pdf.addImage(boardImg, "JPEG", 6, 6, pW - 12, pH - 12);
+    pdf.addPage();
+    pdf.addImage(summaryImg, "JPEG", 6, 6, pW - 12, pH - 12);
+
+    pdf.save(`Lecture-Handout-${today()}.pdf`);
+    toast("📄 تم تصدير مذكرة المحاضرة الشاملة (المخطط + جدول التعريفات) بصيغة PDF!");
+  } catch (e) {
+    toast("تعذر إنشاء ملف الـ PDF", "error");
+  }
+}
+
+/* ============================================================================
+   6. UPGRADE RENDER ENGINE FOR ALL 11 FEATURES (PARTICLES, K-MAP, TABLE, DEFINITIONS)
+   ============================================================================ */
+const _wb3BaseDrawSmartNode = drawWB2SmartNode;
+drawWB2SmartNode = function(ctx, nd, isWhite) {
+  if (nd.shape === "math_plot" || nd.shape === "truth_table") {
+    return _wb3BaseDrawSmartNode(ctx, nd, isWhite);
+  }
+
+  const isSel = nd.id === WBState.selectedNodeId;
+  ctx.save();
+  ctx.translate(nd.x, nd.y);
+  if (nd.rotation) ctx.rotate((nd.rotation * Math.PI) / 180);
+
+  // أ) رسم خريطة كارنو التفاعلية 4x4 (Interactive Karnaugh Map Node)
+  if (nd.shape === "kmap_4") {
+    nd.w = 230;
+    nd.h = 195;
+    const hw = nd.w / 2, hh = nd.h / 2;
+    nd.kmapCells = nd.kmapCells || Array(16).fill(0);
+
+    ctx.fillStyle = "rgba(10, 16, 30, 0.96)";
+    ctx.strokeStyle = isSel ? "#19B889" : "#D4A72C";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.roundRect(-hw, -hh, nd.w, nd.h, 12); ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = "#D4A72C";
+    ctx.font = "bold 12px Inter, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(nd.text || "4-Var K-Map (AB \\ CD)", 0, -hh + 18);
+
+    const headers = ["00", "01", "11", "10"];
+    const gridX = -hw + 44, gridY = -hh + 42, cellW = 40, cellH = 33;
+
+    ctx.fillStyle = "#94A3B8";
+    ctx.font = "bold 10px monospace";
+    headers.forEach((h, i) => {
+      ctx.fillText(h, gridX + i * cellW + cellW / 2, gridY - 6);
+      ctx.fillText(h, gridX - 18, gridY + i * cellH + cellH / 2 + 3);
+    });
+
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const idx = r * 4 + c;
+        const val = nd.kmapCells[idx];
+        const cx = gridX + c * cellW, cy = gridY + r * cellH;
+        ctx.fillStyle = val === 1 ? "rgba(25, 184, 137, 0.28)" : val === "X" ? "rgba(212, 167, 44, 0.22)" : "rgba(255,255,255,0.03)";
+        ctx.strokeStyle = "rgba(255,255,255,0.18)";
+        ctx.lineWidth = 1;
+        ctx.fillRect(cx, cy, cellW, cellH);
+        ctx.strokeRect(cx, cy, cellW, cellH);
+
+        ctx.fillStyle = val === 1 ? "#10B981" : val === "X" ? "#FBBF24" : "#F8FAFC";
+        ctx.font = "bold 13px monospace";
+        ctx.fillText(String(val), cx + cellW / 2, cy + cellH / 2 + 4);
+      }
+    }
+    ctx.restore();
+    return;
+  }
+
+  // ب) رسم الجدول أو المصفوفة الذكية (Smart Matrix / Table Node)
+  if (nd.shape === "smart_table") {
+    const rows = nd.tableRows || [
+      ["المعامل", "القيمة", "الوحدة"],
+      ["الجهد V", "12", "Volt"],
+      ["التيار I", "2.5", "Amp"]
+    ];
+    const colCount = Math.max(1, rows[0]?.length || 3);
+    const cellW = 74, cellH = 30;
+    nd.w = colCount * cellW + 20;
+    nd.h = rows.length * cellH + 38;
+    const hw = nd.w / 2, hh = nd.h / 2;
+
+    ctx.fillStyle = "rgba(12, 18, 34, 0.96)";
+    ctx.strokeStyle = isSel ? "#19B889" : (nd.color || "#38BDF8");
+    ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.roundRect(-hw, -hh, nd.w, nd.h, 10); ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = "#D4A72C";
+    ctx.font = "bold 12px Alexandria, Cairo, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(nd.text || "جدول بيانات هندسي", 0, -hh + 18);
+
+    rows.forEach((rArr, rIdx) => {
+      rArr.forEach((cellVal, cIdx) => {
+        const cx = -hw + 10 + cIdx * cellW;
+        const cy = -hh + 30 + rIdx * cellH;
+        ctx.fillStyle = rIdx === 0 ? "rgba(212, 167, 44, 0.18)" : "rgba(255,255,255,0.03)";
+        ctx.strokeStyle = "rgba(255,255,255,0.14)";
+        ctx.fillRect(cx, cy, cellW, cellH);
+        ctx.strokeRect(cx, cy, cellW, cellH);
+
+        ctx.fillStyle = rIdx === 0 ? "#FBBF24" : "#F8FAFC";
+        ctx.font = rIdx === 0 ? "bold 11.5px Alexandria, sans-serif" : "11px Alexandria, monospace";
+        ctx.fillText(String(cellVal).slice(0, 11), cx + cellW / 2, cy + cellH / 2 + 4);
+      });
+    });
+    ctx.restore();
+    return;
+  }
+
+  // ج) تقسيم التعريف الفرعي (Sub-Definition) بخط صغير تحت العنوان الرئيسي لجميع العقد
+  const defText = String(nd.val || "").trim();
+  const defLines = [];
+  if (defText) {
+    const words = defText.split(/\s+/);
+    let curLine = "";
+    words.forEach(w => {
+      const test = curLine ? curLine + " " + w : w;
+      if (test.length > 34 && curLine) {
+        defLines.push(curLine);
+        curLine = w;
+      } else {
+        curLine = test;
+      }
+    });
+    if (curLine) defLines.push(curLine);
+  }
+
+  const maxDefLen = defLines.reduce((m, l) => Math.max(m, l.length), 0);
+  nd.w = Math.max(nd.w || 140, nd.text.length * 9 + 46, maxDefLen * 6.8 + 48);
+  nd.h = Math.max(50, 38 + defLines.length * 16);
+
+  const hw = nd.w / 2, hh = nd.h / 2;
+  let col = nd.color || "#D4A72C";
+
+  // تلوين تفاعلي عند تشغيل محاكي الدوائر المنطقية والكهربائية!
+  if (WBState.simFlowActive && nd.logicState !== undefined) {
+    col = nd.logicState ? "#10B981" : "#EF4444";
+    ctx.shadowBlur = nd.logicState ? 22 : 6;
+    ctx.shadowColor = col;
+  } else if (isSel) {
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = col;
+  }
+
+  if (nd.shape === "sticky") {
+    ctx.fillStyle = "#FEF08A";
+    ctx.strokeStyle = "#CA8A04";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(-hw, -hh, nd.w, nd.h, 8); ctx.fill(); ctx.stroke();
+  } else {
+    ctx.fillStyle = isWhite ? "#FFFFFF" : "#11192E";
+    ctx.strokeStyle = isSel ? "#19B889" : col;
+    ctx.lineWidth = isSel ? 3.2 : 2.2;
+
+    ctx.beginPath();
+    if (nd.shape === "circle" || nd.shape === "elec_ac" || nd.shape === "elec_dc") {
+      ctx.arc(0, 0, Math.max(hw, hh), 0, Math.PI * 2);
+    } else if (nd.shape === "diamond") {
+      ctx.moveTo(0, -hh - 8); ctx.lineTo(hw + 12, 0); ctx.lineTo(0, hh + 8); ctx.lineTo(-hw - 12, 0); ctx.closePath();
+    } else if (nd.shape === "hexagon") {
+      ctx.moveTo(-hw + 16, -hh); ctx.lineTo(hw - 16, -hh); ctx.lineTo(hw + 8, 0);
+      ctx.lineTo(hw - 16, hh); ctx.lineTo(-hw + 16, hh); ctx.lineTo(-hw - 8, 0); ctx.closePath();
+    } else if (nd.shape === "round_rect" || nd.shape === "voice_pin") {
+      ctx.roundRect(-hw, -hh, nd.w, nd.h, 24);
+    } else {
+      ctx.roundRect(-hw, -hh, nd.w, nd.h, 10);
+    }
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  ctx.shadowBlur = 0;
+
+  // إظهار شارة الحالة المنطقية (1 / 0) في وضع المحاكاة
+  if (WBState.simFlowActive && nd.logicState !== undefined) {
+    ctx.fillStyle = nd.logicState ? "#10B981" : "#EF4444";
+    ctx.beginPath(); ctx.arc(hw - 12, -hh + 12, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#05070e"; ctx.font = "bold 10px monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(String(nd.logicState), hw - 12, -hh + 12);
+  }
+
+  // إظهار شارة الفروع المطوية (+ عدد الفروع المخفية)
+  const hiddenChildrenCount = WBState.nodes.filter(c => c.parentId === nd.id).length;
+  if (nd.collapsed && hiddenChildrenCount > 0) {
+    ctx.fillStyle = "#F59E0B";
+    ctx.beginPath(); ctx.roundRect(-hw + 6, -hh - 11, 46, 18, 9); ctx.fill();
+    ctx.fillStyle = "#05070e"; ctx.font = "bold 10px Inter, sans-serif";
+    ctx.fillText(`+${hiddenChildrenCount} فروع`, -hw + 29, -hh - 2);
+  }
+
+  // العنوان الرئيسي
+  const titleY = defLines.length ? -hh + 20 : 0;
+  ctx.fillStyle = nd.shape === "sticky" ? "#0F172A" : (isWhite ? "#0F172A" : "#F8FAFC");
+  ctx.font = nd.shape === "code_block" ? "bold 12.5px monospace" : "bold 13.5px Alexandria, Cairo, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText((nd.locked ? "🔒 " : "") + nd.text, 0, titleY);
+
+  // التعريف المصغر تحت العنوان
+  if (defLines.length) {
+    ctx.strokeStyle = nd.shape === "sticky" ? "rgba(15,23,42,0.18)" : "rgba(255,255,255,0.12)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-hw + 14, titleY + 11); ctx.lineTo(hw - 14, titleY + 11); ctx.stroke();
+
+    ctx.fillStyle = nd.shape === "sticky" ? "#334155" : (isWhite ? "#475569" : "#93C5FD");
+    ctx.font = "600 11px Alexandria, Cairo, Inter, sans-serif";
+    defLines.forEach((line, i) => {
+      ctx.fillText(line, 0, titleY + 23 + i * 15);
+    });
+  }
+
+  ctx.restore();
+};
+
+// ترقية محرك رسم المشهد لدعم: طي الفروع + نبضات التيار المتحركة + قلم التلاشي + التعريف تحت النصوص الحرة
+const _wb3BaseRenderScene = renderWhiteboardScene;
+renderWhiteboardScene = function(ctx, W, H) {
+  if (WBState.simFlowActive) evaluateWB4CircuitLogic();
+
+  // إخفاء العقد المطوية مؤقتاً أثناء الرسم
+  const tempHiddenIds = [];
+  WBState.nodes.forEach(n => {
+    if (!n.hidden && isNodeHiddenByCollapse(n)) {
+      n.hidden = true;
+      tempHiddenIds.push(n.id);
+    }
+  });
+
+  _wb3BaseRenderScene(ctx, W, H);
+
+  // إعادة حالة العقد بعد الرسم
+  tempHiddenIds.forEach(id => {
+    const nd = WBState.nodes.find(x => x.id === id);
+    if (nd) nd.hidden = false;
+  });
+
+  const isWhite = WBState.bgMode === "white";
+  ctx.save();
+  ctx.translate(WBState.panX, WBState.panY);
+  ctx.scale(WBState.zoom, WBState.zoom);
+
+  // 1. رسم التعريفات المصغرة (subText) تحت النصوص الحرة والمستطيلات والدوائر
+  WBState.strokes.forEach(s => {
+    if (s.hidden || !s.subText) return;
+    const defLines = String(s.subText).split("\n");
+    const subFontSize = Math.max(11, Math.round((s.size || 4) * 2.4));
+
+    ctx.save();
+    ctx.font = `600 ${subFontSize}px Alexandria, Cairo, sans-serif`;
+    if (s.type === "text") {
+      const startY = s.y + 10;
+      ctx.strokeStyle = s.color || "#D4A72C";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(s.x, startY - 4);
+      ctx.lineTo(s.x, startY + defLines.length * (subFontSize + 5) - 4);
+      ctx.stroke();
+
+      ctx.fillStyle = isWhite ? "#334155" : "#93C5FD";
+      ctx.textAlign = "start";
+      ctx.textBaseline = "top";
+      defLines.forEach((ln, idx) => {
+        ctx.fillText(`↳ ${ln}`, s.x + 8, startY + idx * (subFontSize + 5));
+      });
+    } else if (s.type === "rect" || s.type === "circle") {
+      const cx = s.type === "circle" ? s.x1 : s.x1 + (s.x2 - s.x1) / 2;
+      const cy = s.type === "circle" ? s.y1 + 18 : s.y1 + (s.y2 - s.y1) / 2 + 18;
+      ctx.fillStyle = isWhite ? "#475569" : "#93C5FD";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      defLines.forEach((ln, idx) => {
+        ctx.fillText(ln, cx, cy + idx * (subFontSize + 4));
+      });
+    }
+    ctx.restore();
+  });
+
+  // 2. رسم نبضات التيار وتدفق البيانات المتحركة في الأسلاك والروابط (Animated Signal Particles)
+  if (WBState.simFlowActive) {
+    const tBase = (WBState.simParticleOffset % 100) / 100;
+    WBState.nodes.forEach(nd => {
+      if (nd.hidden || isNodeHiddenByCollapse(nd) || !nd.parentId) return;
+      const parent = WBState.nodes.find(p => p.id === nd.parentId && !p.hidden);
+      if (!parent || parent.logicState === 0) return;
+
+      const sx = parent.x, sy = parent.y + parent.h / 2;
+      const ex = nd.x, ey = nd.y - nd.h / 2;
+
+      [0, 0.33, 0.66].forEach(offset => {
+        const t = (tBase + offset) % 1;
+        const px = sx + (ex - sx) * t;
+        const py = sy + (ey - sy) * t;
+        ctx.save();
+        ctx.fillStyle = "#00F0FF";
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = "#00F0FF";
+        ctx.beginPath();
+        ctx.arc(px, py, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    });
+  }
+
+  // 3. رسم خطوط قلم الحبر المتلاشي (Vanishing Laser Ink — يختفي بعد 4 ثوانٍ)
+  const now = Date.now();
+  WBState.vanishingStrokes = (WBState.vanishingStrokes || []).filter(vs => now - vs.createdAt < 4000);
+  WBState.vanishingStrokes.forEach(vs => {
+    const age = now - vs.createdAt;
+    const alpha = Math.max(0, 1 - age / 4000);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = vs.color || "#00F0FF";
+    ctx.shadowBlur = 16;
+    ctx.shadowColor = vs.color || "#00F0FF";
+    ctx.lineWidth = (vs.size || 4) * 1.4;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    if (vs.points.length > 0) {
+      ctx.beginPath();
+      ctx.moveTo(vs.points[0].x, vs.points[0].y);
+      vs.points.forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.stroke();
+    }
+    ctx.restore();
+  });
+
+  ctx.restore();
+};
+
+function startWB4AnimationLoop(ctx, canvas) {
+  if (WBState.simAnimFrameId) cancelAnimationFrame(WBState.simAnimFrameId);
+  const step = () => {
+    if (!document.getElementById("smart-whiteboard-canvas")) return;
+    if (WBState.simFlowActive || (WBState.vanishingStrokes && WBState.vanishingStrokes.length > 0)) {
+      WBState.simParticleOffset = (WBState.simParticleOffset + 1.8) % 100;
+      renderWhiteboardScene(ctx, canvas.width, canvas.height);
+      WBState.simAnimFrameId = requestAnimationFrame(step);
+    }
+  };
+  WBState.simAnimFrameId = requestAnimationFrame(step);
+}
+
+/* ============================================================================
+   7. HOOK ALL 11 SUPER-FEATURES INTO WHITEBOARD MODAL & POINTER EVENTS
+   ============================================================================ */
+const _wb3BaseOpenModal = openSmartWhiteboardModal;
+openSmartWhiteboardModal = function(autoStartPrivateRecord = false) {
+  injectWB4SuperStyles();
+  _wb3BaseOpenModal(autoStartPrivateRecord);
+
+  const canvas = document.getElementById("smart-whiteboard-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const redraw = () => renderWhiteboardScene(ctx, canvas.width, canvas.height);
+
+  // إضافة خيار خريطة كارنو والجدول الذكي في قائمة الرموز الهندسية
+  const symSelect = document.getElementById("wb2-eng-symbol-picker");
+  if (symSelect && !symSelect.querySelector('option[value="kmap_4"]')) {
+    symSelect.insertAdjacentHTML("beforeend", `
+      <optgroup label="🚀 أدوات متقدمة (K-Map وجداول)">
+        <option value="kmap_4">🔢 خريطة كارنو التفاعلية (4-Var K-Map)</option>
+        <option value="smart_table">📊 جدول / مصفوفة بيانات (Smart Table)</option>
+      </optgroup>
+    `);
+  }
+
+  // حقن شريط القوى الخارقة والمحاكاة (Super-Powers & Simulation Bar)
+  const ribbons = document.querySelectorAll(".wb3-ribbon-bar");
+  const secondRibbon = ribbons[1];
+  if (secondRibbon && !document.getElementById("wb4-super-bar")) {
+    const superBar = document.createElement("div");
+    superBar.id = "wb4-super-bar";
+    superBar.className = "wb4-super-bar";
+    superBar.innerHTML = `
+      <div class="wb3-pill-group">
+        <span class="badge badge-emerald"><i class="fa-solid fa-bolt"></i> أدوات القوى الخارقة 4.0:</span>
+        <button type="button" id="btn-wb4-sim-flow" class="wb-tool-btn ${WBState.simFlowActive ? "wb4-sim-active-btn" : ""}" title="تشغيل محاكي الدوائر المنطقية والكهربائية وسريان التيار في الأسلاك">
+          <i class="fa-solid fa-microchip"></i> محاكي الدوائر والتيار ⚡
+        </button>
+        <button type="button" id="btn-wb4-vanish-pen" class="wb-tool-btn ${WBState.tool === "vanish_pen" ? "active" : ""}" title="قلم الحبر المتلاشي: ارسم أو حدد أي نقطة وسيختفي الخط تلقائياً بعد 4 ثوانٍ">
+          <i class="fa-solid fa-wand-sparkles gold-text"></i> قلم متلاشي (4ث)
+        </button>
+        <button type="button" id="btn-wb4-collapse-branch" class="wb-tool-btn" title="طي أو توسيع الفروع الفرعية للعقدة المحددة حالياً (+ / -)">
+          <i class="fa-solid fa-folder-tree gold-text"></i> طي/توسيع الفروع (+/-)
+        </button>
+        <button type="button" id="btn-wb4-code-to-flow" class="wb-tool-btn" title="تحويل أي كود برمجي إلى مخطط تدفق Flowchart تلقائياً">
+          <i class="fa-solid fa-code-commit gold-text"></i> كود ➔ Flowchart
+        </button>
+        <button type="button" id="btn-wb4-run-code-node" class="wb-tool-btn" title="تشغيل بلوك الكود المحدد وإظهار الناتج تحته مباشرة">
+          <i class="fa-solid fa-play gold-text"></i> تشغيل الكود ▶️
+        </button>
+      </div>
+
+      <div class="wb3-pill-group">
+        <button type="button" id="btn-wb4-voice-pin" class="wb-tool-btn" title="تسجيل دبوس صوتي وتثبيته على السبورة">
+          <i class="fa-solid fa-microphone-lines gold-text"></i> + دبوس صوتي 🎤
+        </button>
+        <button type="button" id="btn-wb4-insert-kmap" class="wb-tool-btn" title="إدراج خريطة كارنو التفاعلية 4x4">
+          <i class="fa-solid fa-table-cells gold-text"></i> + خريطة K-Map
+        </button>
+        <button type="button" id="btn-wb4-insert-table" class="wb-tool-btn" title="إدراج جدول أو مصفوفة بيانات">
+          <i class="fa-solid fa-table gold-text"></i> + جدول
+        </button>
+        <button type="button" id="btn-wb4-live-quiz" class="wb-tool-btn" title="إظهار سؤال اختبار تفاعلي بعداد 15 ثانية فوق السبورة">
+          <i class="fa-solid fa-circle-question gold-text"></i> + سؤال كويز مباشر
+        </button>
+        <button type="button" id="btn-wb4-handout-pdf" class="btn btn-xs btn-gold" title="تصدير مذكرة المحاضرة الشاملة (المخطط + جدول التعريفات) كملف PDF">
+          <i class="fa-solid fa-file-pdf"></i> مذكرة المحاضرة PDF
+        </button>
+      </div>
+    `;
+    secondRibbon.insertAdjacentElement("afterend", superBar);
+  }
+
+  // إضافة قلم التلاشي وسؤال الكويز في شريط المحاضر العائم أيضاً
+  const lecDock = document.getElementById("wb3-lecture-floating-dock");
+  if (lecDock && !document.getElementById("btn-wb4-lec-vanish")) {
+    const refBtn = document.getElementById("btn-wb3-lecture-light");
+    if (refBtn) {
+      refBtn.insertAdjacentHTML("beforebegin", `
+        <button type="button" id="btn-wb4-lec-vanish" class="wb-tool-btn" title="قلم الشرح المتلاشي بعد 4 ثوانٍ"><i class="fa-solid fa-wand-sparkles gold-text"></i> قلم متلاشي</button>
+        <button type="button" id="btn-wb4-lec-quiz" class="wb-tool-btn" title="إطلاق سؤال تفاعلي للطلاب"><i class="fa-solid fa-circle-question gold-text"></i> كويز</button>
+      `);
+      document.getElementById("btn-wb4-lec-vanish").onclick = () => document.getElementById("btn-wb4-vanish-pen")?.click();
+      document.getElementById("btn-wb4-lec-quiz").onclick = launchOnBoardQuizCard;
+    }
+  }
+
+  // ربط أزرار شريط القوى الخارقة
+  document.getElementById("btn-wb4-sim-flow")?.addEventListener("click", (e) => {
+    WBState.simFlowActive = !WBState.simFlowActive;
+    e.currentTarget.classList.toggle("wb4-sim-active-btn", WBState.simFlowActive);
+    if (WBState.simFlowActive) {
+      startWB4AnimationLoop(ctx, canvas);
+      toast("⚡ محاكي الدوائر المنطقية والتيار نشط! اضغط على أي مفتاح أو بوابة لتبديل حالتها (0 / 1)");
+    } else {
+      redraw();
+    }
+  });
+
+  document.getElementById("btn-wb4-vanish-pen")?.addEventListener("click", (e) => {
+    WBState.tool = "vanish_pen";
+    document.querySelectorAll("[data-wb-tool]").forEach(b => b.classList.remove("active"));
+    e.currentTarget.classList.add("active");
+    toast("✨ قلم التلاشي السريع مفعل: أي خط ترسمه سيختفي تلقائياً بعد 4 ثوانٍ!");
+  });
+
+  document.getElementById("btn-wb4-collapse-branch")?.addEventListener("click", () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (!nd) return;
+    nd.collapsed = !nd.collapsed;
+    redraw();
+    toast(nd.collapsed ? `📂 تم طي وإخفاء الفروع الفرعية لـ "${nd.text}"` : `🌿 تم توسيع وإظهار جميع فروع "${nd.text}"`);
+  });
+
+  document.getElementById("btn-wb4-code-to-flow")?.addEventListener("click", () => openCodeToFlowchartModal(ctx, canvas, redraw));
+
+  document.getElementById("btn-wb4-run-code-node")?.addEventListener("click", () => {
+    const nd = WBState.nodes.find(n => n.id === WBState.selectedNodeId);
+    if (!nd) {
+      toast("حدد عقدة كود برمجي أولاً لتشغيلها!", "error");
+      return;
+    }
+    const codeToRun = nd.val || nd.text;
+    try {
+      const logs = [];
+      const customConsole = { log: (...args) => logs.push(args.join(" ")) };
+      const res = Function("console", `"use strict"; ${codeToRun}`)(customConsole);
+      const out = logs.length ? logs.join(" | ") : (res !== undefined ? String(res) : "Executed OK ✅");
+      nd.val = `▶ Output: ${out}`;
+      redraw();
+      toast(`▶ ناتج تشغيل الكود: ${out}`);
+    } catch (err) {
+      nd.val = `❌ Error: ${err.message}`;
+      redraw();
+    }
+  });
+
+  document.getElementById("btn-wb4-voice-pin")?.addEventListener("click", () => toggleVoicePinRecording(ctx, canvas, redraw));
+
+  document.getElementById("btn-wb4-insert-kmap")?.addEventListener("click", () => {
+    pushWB2Undo();
+    const cx = (canvas.width / 2 - WBState.panX) / WBState.zoom;
+    const cy = (canvas.height / 2 - WBState.panY) / WBState.zoom;
+    WBState.nodes.push({
+      id: "kmap_" + Date.now(),
+      text: "4-Var Karnaugh Map (AB \\ CD)",
+      shape: "kmap_4",
+      kmapCells: [0, 1, 1, 0, 0, 1, "X", 0, 0, 0, 1, 1, 0, 0, 0, 0],
+      x: cx,
+      y: cy,
+      w: 230,
+      h: 195,
+      color: "#D4A72C",
+      parentId: null
+    });
+    redraw();
+    toast("🔢 تم إدراج خريطة كارنو التفاعلية! اضغط دبل كليك على أي خلية داخلها لتغييرها بين (0 ➔ 1 ➔ X)");
+  });
+
+  document.getElementById("btn-wb4-insert-table")?.addEventListener("click", () => {
+    const rInput = prompt("📊 اكتب صفوف الجدول (افصل بين الأعمدة بفاصلة , وبين الصفوف بعلامة | ):", "المتغير, الدخل, الخرج | X1, 12V, 5V | X2, 24V, 12V");
+    if (!rInput) return;
+    const tableRows = rInput.split("|").map(row => row.split(/[،,]/).map(c => c.trim()));
+    pushWB2Undo();
+    const cx = (canvas.width / 2 - WBState.panX) / WBState.zoom;
+    const cy = (canvas.height / 2 - WBState.panY) / WBState.zoom;
+    WBState.nodes.push({
+      id: "tbl_" + Date.now(),
+      text: "📊 جدول المقارنة الهندسي",
+      shape: "smart_table",
+      tableRows,
+      x: cx,
+      y: cy,
+      w: 240,
+      h: 140,
+      color: "#38BDF8",
+      parentId: null
+    });
+    redraw();
+  });
+
+  document.getElementById("btn-wb4-live-quiz")?.addEventListener("click", launchOnBoardQuizCard);
+  document.getElementById("btn-wb4-handout-pdf")?.addEventListener("click", () => exportCompleteLectureHandoutPDF(canvas));
+};
+
+// ربط أحداث الماوس والدبل كليك الذكي (التعريف تحت النص + خريطة كارنو + الدبابيس الصوتية + قلم التلاشي)
+const _wb3BasePointerEvents = bindWB3CanvasPointerEvents;
+bindWB3CanvasPointerEvents = function(ctx, canvas, redraw) {
+  _wb3BasePointerEvents(ctx, canvas, redraw);
+
+  let activeVanishStroke = null;
+  const origDown = canvas.onmousedown;
+  const origMove = canvas.onmousemove;
+  const origUp = window.onmouseup;
+
+  canvas.onmousedown = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const wx = (e.clientX - r.left - WBState.panX) / WBState.zoom;
+    const wy = (e.clientY - r.top - WBState.panY) / WBState.zoom;
+
+    if (WBState.tool === "vanish_pen") {
+      activeVanishStroke = {
+        color: document.getElementById("wb-color")?.value || "#00F0FF",
+        size: Number(document.getElementById("wb-size")?.value || 5),
+        points: [{ x: wx, y: wy }],
+        createdAt: Date.now()
+      };
+      WBState.vanishingStrokes.push(activeVanishStroke);
+      startWB4AnimationLoop(ctx, canvas);
+      return;
+    }
+
+    if (origDown) origDown(e);
+  };
+
+  canvas.onmousemove = (e) => {
+    if (WBState.tool === "vanish_pen" && activeVanishStroke) {
+      const r = canvas.getBoundingClientRect();
+      const wx = (e.clientX - r.left - WBState.panX) / WBState.zoom;
+      const wy = (e.clientY - r.top - WBState.panY) / WBState.zoom;
+      activeVanishStroke.points.push({ x: wx, y: wy });
+      activeVanishStroke.createdAt = Date.now();
+      return;
+    }
+    if (origMove) origMove(e);
+  };
+
+  window.addEventListener("mouseup", () => {
+    activeVanishStroke = null;
+  });
+
+  // نظام الدبل كليك الذكي الشامل (تعريف تحت النص + تشغيل الدبوس الصوتي + تبديل خلايا K-Map + تبديل المفاتيح المنطقية)
+  canvas.ondblclick = async (e) => {
+    const r = canvas.getBoundingClientRect();
+    const wx = (e.clientX - r.left - WBState.panX) / WBState.zoom;
+    const wy = (e.clientY - r.top - WBState.panY) / WBState.zoom;
+
+    for (let i = WBState.nodes.length - 1; i >= 0; i--) {
+      const nd = WBState.nodes[i];
+      if (nd.hidden || isNodeHiddenByCollapse(nd)) continue;
+
+      if (wx >= nd.x - nd.w / 2 && wx <= nd.x + nd.w / 2 && wy >= nd.y - nd.h / 2 && wy <= nd.y + nd.h / 2) {
+        WBState.selectedNodeId = nd.id;
+
+        // 1. إذا كانت العقدة دبوساً صوتياً: يشغل التسجيل الصوتي فوراً!
+        if (nd.shape === "voice_pin" && WBState.voicePinsAudioMap[nd.id]) {
+          const audio = new Audio(WBState.voicePinsAudioMap[nd.id]);
+          audio.play();
+          toast(`🔊 جاري تشغيل الشرح الصوتي: "${nd.text}"`);
+          return;
+        }
+
+        // 2. إذا كانت العقدة خريطة كارنو 4x4: يبدل الخلية التي ضغطت عليها بين (0 ➔ 1 ➔ X)!
+        if (nd.shape === "kmap_4") {
+          const localX = wx - (nd.x - nd.w / 2 + 44);
+          const localY = wy - (nd.y - nd.h / 2 + 42);
+          const colIdx = Math.floor(localX / 40);
+          const rowIdx = Math.floor(localY / 33);
+          if (colIdx >= 0 && colIdx < 4 && rowIdx >= 0 && rowIdx < 4) {
+            const cellIdx = rowIdx * 4 + colIdx;
+            const cycle = [0, 1, "X"];
+            const curVal = nd.kmapCells[cellIdx];
+            nd.kmapCells[cellIdx] = cycle[(cycle.indexOf(curVal) + 1) % cycle.length];
+            redraw();
+            return;
+          }
+        }
+
+        // 3. إذا كان محاكي الدوائر نشطاً وضغط على مفتاح أو مدخل منطقي: يبدله بين 0 و 1!
+        if (WBState.simFlowActive && (nd.shape === "elec_sw" || !nd.parentId)) {
+          nd.logicState = nd.logicState ? 0 : 1;
+          redraw();
+          toast(`⚡ تم تبديل حالة (${nd.text}) إلى: ${nd.logicState}`);
+          return;
+        }
+
+        // 4. الميزة الأساسية: دبل كليك على أي عقدة = كتابة تعريفها ليظهر بخط صغير تحتها!
+        if (e.shiftKey) {
+          const newTitle = prompt("✏️ تعديل العنوان الرئيسي:", nd.text);
+          if (newTitle !== null && newTitle.trim()) nd.text = newTitle.trim();
+        } else {
+          const def = prompt(
+            `📖 اكتب التعريف أو الشرح ليظهر بخط صغير تحت "${nd.text}":\n(💡 اكتب AI ليولده الذكاء الاصطناعي تلقائياً، أو اضغط Shift+دبل كليك لتعديل العنوان الرئيسي)`,
+            nd.val || ""
+          );
+          if (def !== null) {
+            if (def.trim().toLowerCase() === "ai") {
+              toast(`🤖 جاري توليد تعريف علمي مختصر لـ "${nd.text}"...`, "info");
+              const aiReply = await B().askAI?.(`اكتب تعريفاً علمياً مختصراً جداً (في سطر واحد لا يتجاوز 12 كلمة) للمصطلح: "${nd.text}"`);
+              nd.val = String(aiReply || "").replace(/\n+/g, " ").trim().slice(0, 95);
+            } else {
+              nd.val = def.trim();
+            }
+          }
+        }
+        autoSaveWB2Board();
+        redraw();
+        return;
+      }
+    }
+
+    // فحص إذا ضغط مرتين على نص حر أو مستطيل أو دائرة لكتابة تعريف تحته بخط صغير
+    for (let i = WBState.strokes.length - 1; i >= 0; i--) {
+      const s = WBState.strokes[i];
+      if (s.hidden) continue;
+      let hit = false;
+      if (s.type === "text") {
+        const w = Math.max(70, (s.text || "").length * (s.size * 2.8));
+        const h = Math.max(32, s.size * 5.5);
+        if (wx >= s.x - 12 && wx <= s.x + w + 20 && wy >= s.y - h && wy <= s.y + 45) hit = true;
+      } else if (s.type === "rect") {
+        const minX = Math.min(s.x1, s.x2) - 8, maxX = Math.max(s.x1, s.x2) + 8;
+        const minY = Math.min(s.y1, s.y2) - 8, maxY = Math.max(s.y1, s.y2) + 8;
+        if (wx >= minX && wx <= maxX && wy >= minY && wy <= maxY) hit = true;
+      } else if (s.type === "circle") {
+        const rad = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+        if (Math.hypot(wx - s.x1, wy - s.y1) <= rad + 10) hit = true;
+      }
+
+      if (hit) {
+        WBState.selectedStrokeIdx = i;
+        const mainTitle = s.type === "text" ? s.text : (s.innerText || "");
+        if (!mainTitle || e.shiftKey) {
+          const nextMain = prompt("✏️ اكتب العنوان الأساسي:", mainTitle);
+          if (nextMain !== null) {
+            if (s.type === "text") s.text = nextMain.trim();
+            else s.innerText = nextMain.trim();
+          }
+        } else {
+          const def = prompt(
+            `📖 تعريف "${mainTitle}" (سيظهر بخط صغير تحت الكلمة مباشرة):\n(💡 اكتب AI لتوليد التعريف تلقائياً، أو اضغط Shift+دبل كليك لتعديل الكلمة نفسها)`,
+            s.subText || ""
+          );
+          if (def !== null) {
+            pushWB2Undo();
+            if (def.trim().toLowerCase() === "ai") {
+              toast(`🤖 جاري تعريف "${mainTitle}" بالذكاء الاصطناعي...`, "info");
+              const aiReply = await B().askAI?.(`اكتب تعريفاً مختصراً جداً (في سطر واحد لا يتجاوز 12 كلمة) للمصطلح: "${mainTitle}"`);
+              s.subText = String(aiReply || "").replace(/\n+/g, " ").trim().slice(0, 95);
+            } else {
+              s.subText = def.trim();
+            }
+          }
+        }
+        autoSaveWB2Board();
+        redraw();
+        return;
+      }
+    }
+  };
+};
