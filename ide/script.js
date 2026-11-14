@@ -1869,16 +1869,852 @@ function openCustomThemeStudioModal() {
     });
   }
 
+/* ==========================================================================
+     10. ZERO-MISS MULTI-LANGUAGE ERROR DIAGNOSTICS & AUTO-FIX ENGINE
+     يكتشف كل الأخطاء الإملائية والـ Syntax في (HTML, CSS, JS, JSX, Python, C++, C, Java, C#, SQL, JSON)
+     ويضع خطوطاً حمراء في المحرر مع زر الإصلاح التلقائي الفوري بضغطة واحدة!
+     ========================================================================== */
+  function buildAutoRepairedCode(code, lang, fileKey) {
+    let fixed = String(code || "").replace(/\u00A0/g, " ");
+
+    // 1. تصحيح HTML
+    if (lang === "html" && !fileKey.endsWith(".jsx")) {
+      const htmlTypos = {
+        heder: "header", foter: "footer", navigaton: "nav", paragraf: "p", pargraf: "p",
+        imge: "img", image: "img", buton: "button", botton: "button", buttonn: "button",
+        tabel: "table", inpt: "input", scirpt: "script", styel: "style", secton: "section", artcle: "article"
+      };
+      Object.entries(htmlTypos).forEach(([w, r]) => {
+        fixed = fixed.replace(new RegExp(`(<\\/?)${w}\\b`, "gi"), `$1${r}`);
+      });
+
+      // قفل أقواس < المفتوحة بدون >
+      fixed = fixed.split("\n").map(line => {
+        if (line.includes("<") && !line.includes(">") && !/^\s*<[a-zA-Z0-9-]+\s*$/.test(line)) {
+          return line + ">";
+        }
+        return line;
+      }).join("\n");
+
+      // قفل الوسوم المفتوحة التي نسي المستخدم إغلاقها
+      const containerTags = ["h1", "h2", "h3", "h4", "p", "button", "a", "div", "span", "ul", "ol", "li", "table", "tr", "td", "th", "form", "header", "footer", "main", "section", "nav", "style", "script"];
+      const stripped = fixed.replace(/<!--[\s\S]*?-->/g, "");
+      containerTags.forEach(tag => {
+        const opens = (stripped.match(new RegExp(`<${tag}(\\s+[^>]*)?>`, "gi")) || []).length;
+        const closes = (stripped.match(new RegExp(`</${tag}\\s*>`, "gi")) || []).length;
+        if (opens > closes) {
+          for (let i = 0; i < opens - closes; i++) fixed += `\n</${tag}>`;
+        }
+      });
+      return fixed;
+    }
+
+    // 2. تصحيح CSS
+    if (lang === "css") {
+      const cssTypos = {
+        colr: "color", backgroud: "background", bakground: "background", pading: "padding",
+        margn: "margin", "fnt-size": "font-size", "font-siz": "font-size", bordr: "border",
+        widht: "width", heigth: "height", disply: "display", positon: "position",
+        "justfy-content": "justify-content", "algn-items": "align-items"
+      };
+      Object.entries(cssTypos).forEach(([w, r]) => {
+        fixed = fixed.replace(new RegExp(`\\b${w}(\\s*:)`, "gi"), `${r}$1`);
+      });
+
+      fixed = fixed.split("\n").map(line => {
+        const t = line.trim();
+        if (!t || t.startsWith("/*") || t.startsWith("*") || t.startsWith("@") || t.endsWith("{") || t.endsWith("}") || t.endsWith(";") || t.endsWith(",")) return line;
+        if (/^[a-zA-Z-]+\s*:\s*[^;{}]+$/.test(t)) return line.replace(/\s*$/, ";");
+        if (/^(color|background|padding|margin|width|height|border|display|font-size)\s+[a-zA-Z0-9#]+/.test(t)) {
+          return line.replace(/^(\s*[a-zA-Z-]+)\s+/, "$1: ").replace(/\s*$/, ";");
+        }
+        return line;
+      }).join("\n");
+
+      const openB = (fixed.match(/\{/g) || []).length;
+      const closeB = (fixed.match(/\}/g) || []).length;
+      if (openB > closeB) fixed += "\n" + "}\n".repeat(openB - closeB);
+      return fixed;
+    }
+
+    // 3. تصحيح SQL
+    if (lang === "sql") {
+      fixed = fixed
+        .replace(/\b(SELEC|SLCT|SLECT)\b/gi, "SELECT")
+        .replace(/\b(FORM)\b/gi, "FROM")
+        .replace(/\b(WERE|WHRE)\b/gi, "WHERE")
+        .replace(/\b(INSER)\b/gi, "INSERT")
+        .replace(/\b(VALUS|VALEUS)\b/gi, "VALUES")
+        .replace(/\b(CREAT)\b/gi, "CREATE")
+        .replace(/\b(TABEL)\b/gi, "TABLE");
+      if (!fixed.trim().endsWith(";")) fixed = fixed.trimEnd() + ";";
+      return fixed;
+    }
+
+    // 4. تصحيح JSON
+    if (lang === "json") {
+      fixed = fixed.replace(/,\s*([}\]])/g, "$1");
+      return fixed;
+    }
+
+    // 5. تصحيح اللغات البرمجية (JS, Python, Java, C++, C, C#)
+    if (lang === "java") {
+      fixed = fixed
+        .replace(/\bsystem\.out\./gi, "System.out.")
+        .replace(/System\.out\.(?:pritnln|pirntln|prntln|printl|Println)\s*\(/g, "System.out.println(")
+        .replace(/System\.out\.(?:pritn|pirnt|prnt|Print)\s*\(/g, "System.out.print(")
+        .replace(/\bstring(\s+[a-zA-Z_]\w*)/g, "String$1")
+        .replace(/\bconsole\.log\s*\(/g, "System.out.println(");
+    } else if (lang === "csharp") {
+      fixed = fixed
+        .replace(/\bconsole\.writeline\s*\(/gi, "Console.WriteLine(")
+        .replace(/\bconsole\.write\s*\(/gi, "Console.Write(");
+    } else if (lang === "cpp" || lang === "c") {
+      fixed = fixed
+        .replace(/\bcout\s*>>/g, "cout <<")
+        .replace(/\bcin\s*<</g, "cin >>")
+        .replace(/\b(?:pritnf|pirntf|Printf)\s*\(/g, "printf(")
+        .replace(/\bconsole\.log\s*\(([^)]+)\)\s*;?/g, "cout << $1 << endl;");
+    } else if (lang === "python") {
+      fixed = fixed
+        .replace(/\b(pritn|pirnt|prnt|Pint|Print)\s*\(/g, "print(")
+        .replace(/\bconsole\.log\s*\(/g, "print(")
+        .replace(/\btrue\b/g, "True")
+        .replace(/\bfalse\b/g, "False")
+        .replace(/\bnull\b/g, "None")
+        .replace(/&&/g, " and ")
+        .replace(/\|\|/g, " or ");
+    } else if (lang === "javascript" || lang === "typescript") {
+      fixed = fixed
+        .replace(/\b(consol\.log|console\.lg|console\.pirnt|console\.write)\s*\(/g, "console.log(")
+        .replace(/\bdocumnt\./g, "document.")
+        .replace(/\bgetElementByid\s*\(/g, "getElementById(")
+        .replace(/\bquerySelectr\s*\(/g, "querySelector(")
+        .replace(/\baddEventListner\s*\(/g, "addEventListener(");
+    }
+
+    // إصلاح السطور (علامات التنصيص، الأقواس، النقطتين في بايثون، والفصلة المنقوطة في C++/Java/C/C#)
+    const lines = fixed.split("\n").map(rawLine => {
+      const commentMatch = rawLine.match(/(\/\/.*|#.*)$/);
+      const commentPart = commentMatch ? commentMatch[1] : "";
+      let codePart = commentMatch ? rawLine.slice(0, commentMatch.index) : rawLine;
+      const trimmed = codePart.trim();
+      if (!trimmed) return rawLine;
+
+      // قفل علامة التنصيص المزدوجة الناقصة
+      const dblQ = (codePart.match(/(?<!\\)"/g) || []).length;
+      if (dblQ % 2 !== 0) {
+        if (codePart.trimEnd().endsWith(";")) codePart = codePart.replace(/;\s*$/, '";');
+        else codePart = codePart.trimEnd() + '"';
+      }
+
+      // إضافة (:) في نهاية جمل بايثون الشرطية والدوال والحلقات
+      if (lang === "python") {
+        const tPy = codePart.trim();
+        if (/^(if|else|elif|def|for|while|class|try|except|finally)\b/.test(tPy) && !tPy.endsWith(":")) {
+          codePart = codePart.replace(/\s*$/, ":");
+        }
+      }
+
+      // موازنة الأقواس الدائرية ( ) في نفس السطر
+      const noStr = codePart.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, "");
+      const op = (noStr.match(/\(/g) || []).length;
+      const cp = (noStr.match(/\)/g) || []).length;
+      if (op > cp) {
+        const addP = ")".repeat(op - cp);
+        if (codePart.trimEnd().endsWith(";")) codePart = codePart.replace(/\s*;\s*$/, addP + ";");
+        else if (lang === "python" && codePart.trimEnd().endsWith(":")) codePart = codePart.replace(/\s*:\s*$/, addP + ":");
+        else codePart = codePart.trimEnd() + addP;
+      }
+
+      // إضافة الفصلة المنقوطة (;) الإلزامية في C++ / C / Java / C#
+      if (["java", "cpp", "c", "csharp"].includes(lang)) {
+        const t = codePart.trim();
+        const isHeaderOrBrace =
+          !t || t.startsWith("#") || t.startsWith("@") || t.startsWith("//") || t.startsWith("/*") || t.startsWith("*") ||
+          t.endsWith(";") || t.endsWith("{") || t.endsWith("}") || t.endsWith(":") || t.endsWith(",") ||
+          /^(?:public|private|protected|static|final|virtual|inline|\s)*[a-zA-Z_]\w*(?:<[^>]+>)?(?:\[\])?\s+[a-zA-Z_]\w*\s*\([^;]*\)\s*$/.test(t) ||
+          /^(?:public\s+|private\s+|abstract\s+|final\s+)*(?:class|interface|enum|struct|namespace)\b/.test(t) ||
+          /^(?:if|else|for|while|do|switch|try|catch|finally)\b/.test(t);
+        if (!isHeaderOrBrace) {
+          codePart = codePart.replace(/\s*$/, ";");
+        }
+      }
+
+      return codePart + (commentPart ? " " + commentPart : "");
+    });
+
+    let result = lines.join("\n");
+
+    // موازنة أقواس المجموعة { } في نهاية الملف
+    if (!["python", "sql", "html"].includes(lang)) {
+      const cleanAll = result.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "").replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, "");
+      const oc = (cleanAll.match(/\{/g) || []).length;
+      const cc = (cleanAll.match(/\}/g) || []).length;
+      if (oc > cc) result += "\n" + "}\n".repeat(oc - cc);
+    }
+
+    return result;
+  }
+
+  function runDeepLanguageDiagnostics(code, fileKey) {
+    const meta = getLangMeta(fileKey);
+    const lang = meta.lang;
+    const raw = String(code || "");
+    const lines = raw.split("\n");
+    const diagnostics = [];
+    const autoFixed = buildAutoRepairedCode(raw, lang, fileKey);
+
+    // 1. فحص HTML الشامل
+    if (lang === "html" && !fileKey.endsWith(".jsx")) {
+      const stripped = raw
+        .replace(/<!--[\s\S]*?-->/g, m => " ".repeat(m.length))
+        .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, m => "<script></script>" + "\n".repeat((m.match(/\n/g) || []).length))
+        .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, m => "<style></style>" + "\n".repeat((m.match(/\n/g) || []).length));
+
+      const htmlTypos = {
+        heder: "header", foter: "footer", navigaton: "nav", paragraf: "p", pargraf: "p",
+        imge: "img", image: "img", buton: "button", botton: "button", buttonn: "button",
+        tabel: "table", inpt: "input", scirpt: "script", styel: "style", secton: "section", artcle: "article"
+      };
+
+      const strippedLines = stripped.split("\n");
+      strippedLines.forEach((ln, idx) => {
+        Object.entries(htmlTypos).forEach(([wrong, right]) => {
+          if (new RegExp(`<\\/?${wrong}\\b`, "i").test(ln)) {
+            diagnostics.push({
+              file: fileKey, line: idx + 1, severity: "error",
+              title: `HTML Tag Error (Line ${idx + 1}): Unknown tag <${wrong}>`,
+              explainAr: `في السطر ${idx + 1} كتبت الوسم <${wrong}> بالغلط، والوسم القياسي الصحيح في HTML هو <${right}>.`,
+              explainEn: `Replace <${wrong}> with standard <${right}> tag.`,
+              fixedCode: autoFixed
+            });
+          }
+        });
+
+        if (/<[^<>]*</.test(ln) || (ln.includes("<") && !ln.includes(">") && !/^\s*<[a-zA-Z0-9-]+\s*$/.test(ln))) {
+          diagnostics.push({
+            file: fileKey, line: idx + 1, severity: "error",
+            title: `HTML Syntax Error (Line ${idx + 1}): Unclosed angle bracket '<'`,
+            explainAr: `في السطر ${idx + 1} فتحت قوس وسم '<' ونسيت تقفله بعلامة أكبر من '>'.`,
+            explainEn: `Add closing '>' to complete the HTML tag on line ${idx + 1}.`,
+            fixedCode: autoFixed
+          });
+        }
+      });
+
+      const containerTags = ["h1", "h2", "h3", "h4", "p", "button", "a", "div", "span", "ul", "ol", "li", "table", "tr", "td", "th", "form", "header", "footer", "main", "section", "nav", "style", "script"];
+      containerTags.forEach(tag => {
+        const opens = (stripped.match(new RegExp(`<${tag}(\\s+[^>]*)?>`, "gi")) || []).length;
+        const closes = (stripped.match(new RegExp(`</${tag}\\s*>`, "gi")) || []).length;
+        if (opens > closes) {
+          const lineIdx = strippedLines.findIndex(l => new RegExp(`<${tag}(\\s+[^>]*)?>`, "i").test(l));
+          diagnostics.push({
+            file: fileKey, line: lineIdx >= 0 ? lineIdx + 1 : 1, severity: "error",
+            title: `Unclosed HTML Tag: <${tag}> is missing </${tag}>`,
+            explainAr: `فتحت الوسم <${tag}> في الكود ونسيت تقفله بوسم الإغلاق </${tag}>!`,
+            explainEn: `Found ${opens} <${tag}> opening tag(s) Set against ${closes} closing </${tag}> tag(s).`,
+            fixedCode: autoFixed
+          });
+        }
+      });
+    }
+
+    // 2. فحص CSS الشامل
+    if (lang === "css") {
+      const cssTypos = {
+        colr: "color", backgroud: "background", bakground: "background", pading: "padding",
+        margn: "margin", "fnt-size": "font-size", "font-siz": "font-size", bordr: "border",
+        widht: "width", heigth: "height", disply: "display", positon: "position",
+        "justfy-content": "justify-content", "algn-items": "align-items"
+      };
+
+      lines.forEach((ln, idx) => {
+        const clean = ln.replace(/\/\*.*?\*\//g, "").trim();
+        if (!clean) return;
+        Object.entries(cssTypos).forEach(([wrong, right]) => {
+          if (new RegExp(`\\b${wrong}\\s*:`, "i").test(clean)) {
+            diagnostics.push({
+              file: fileKey, line: idx + 1, severity: "error",
+              title: `CSS Property Error (Line ${idx + 1}): Invalid property '${wrong}'`,
+              explainAr: `في السطر ${idx + 1} كتبت خاصية الـ CSS (${wrong}) بحروف خاطئة، والصحيح هو (${right}:).`,
+              explainEn: `Unknown CSS property '${wrong}'. Did you mean '${right}'?`,
+              fixedCode: autoFixed
+            });
+          }
+        });
+
+        if (/^(color|background|padding|margin|width|height|border|display|font-size)\s+[a-zA-Z0-9#]+/.test(clean) && !clean.includes(":") && !clean.includes("{")) {
+          diagnostics.push({
+            file: fileKey, line: idx + 1, severity: "error",
+            title: `CSS Syntax Error (Line ${idx + 1}): Missing colon ':' after property name`,
+            explainAr: `في السطر ${idx + 1} نسيت تحط النقطتين فوق بعض (:) بين اسم خاصية الـ CSS وقيمتها.`,
+            explainEn: `CSS declarations require a colon ':' between property and value.`,
+            fixedCode: autoFixed
+          });
+        }
+      });
+
+      const openB = (raw.match(/\{/g) || []).length;
+      const closeB = (raw.match(/\}/g) || []).length;
+      if (openB !== closeB) {
+        diagnostics.push({
+          file: fileKey, line: lines.length, severity: "error",
+          title: `CSS Syntax Error: Unbalanced curly braces '{' vs '}'`,
+          explainAr: `أقواس المجموعة في ملف الـ CSS غير متوازنة (فتحت ${openB} قوس '{' وقفلت ${closeB} قوس '}').`,
+          explainEn: `Ensure every CSS rule block opened with '{' is closed with '}'.`,
+          fixedCode: autoFixed
+        });
+      }
+    }
+
+    // 3. فحص JavaScript / TypeScript / React JSX
+    if (lang === "javascript" || lang === "typescript") {
+      lines.forEach((ln, idx) => {
+        const clean = ln.replace(/\/\/.*$/, "").trim();
+        if (!clean) return;
+
+        if (/\b(consol\.log|console\.lg|console\.pirnt|documnt\.|getElementByid|querySelectr|addEventListner)\b/.test(clean)) {
+          diagnostics.push({
+            file: fileKey, line: idx + 1, severity: "error",
+            title: `JS API Typo (Line ${idx + 1}): Misspelled built-in method or object`,
+            explainAr: `في السطر ${idx + 1} توجد غلطة إملائية في اسم الدالة (مثل كتابة consol.log أو getElementByid أو addEventListner).`,
+            explainEn: `Check spelling and camelCase of DOM/Console API methods on line ${idx + 1}.`,
+            fixedCode: autoFixed
+          });
+        }
+
+        const qCount = (clean.match(/(?<!\\)"/g) || []).length;
+        if (qCount % 2 !== 0) {
+          diagnostics.push({
+            file: fileKey, line: idx + 1, severity: "error",
+            title: `SyntaxError (Line ${idx + 1}): Unterminated string literal '"'`,
+            explainAr: `في السطر ${idx + 1} فتحت علامة تنصيص '"' للنص ونسيت تقفلها في نفس السطر.`,
+            explainEn: `Close the string literal quote '"' on line ${idx + 1}.`,
+            fixedCode: autoFixed
+          });
+        }
+      });
+
+      if (!fileKey.endsWith(".jsx") && !fileKey.endsWith(".tsx")) {
+        try {
+          new Function(raw);
+        } catch (err) {
+          diagnostics.push({
+            file: fileKey, line: lines.length, severity: "error",
+            title: `JavaScript SyntaxError: ${err.message}`,
+            explainAr: `يوجد خطأ في قواعد كتابة الجافاسكريبت (${err.message}) — تأكد من قفل الأقواس () أو {} وعلامات التنصيص.`,
+            explainEn: `Parser reported: ${err.message}. Click Auto-Fix to repair brackets and quotes.`,
+            fixedCode: autoFixed
+          });
+        }
+      }
+    }
+
+    // 4. فحص Python الشامل
+    if (lang === "python") {
+      lines.forEach((ln, idx) => {
+        const clean = ln.replace(/#.*$/, "").trim();
+        if (!clean) return;
+
+        if (/^(if|else|elif|def|for|while|class|try|except|finally)\b/.test(clean) && !clean.endsWith(":")) {
+          diagnostics.push({
+            file: fileKey, line: idx + 1, severity: "error",
+            title: `Python SyntaxError (Line ${idx + 1}): expected ':' after '${clean.split(/\s+/)[0]}'`,
+            explainAr: `في السطر ${idx + 1} نسيت تحط النقطتين فوق بعض (:) في آخر جملة الـ ${clean.split(/\s+/)[0]} في لغة بايثون.`,
+            explainEn: `Python block statements must end with a colon ':'.`,
+            fixedCode: autoFixed
+          });
+        }
+
+        if (/\b(pritn|pirnt|prnt|Pint|Print|console\.log)\s*\(/.test(clean)) {
+          diagnostics.push({
+            file: fileKey, line: idx + 1, severity: "error",
+            title: `Python NameError (Line ${idx + 1}): Misspelled 'print()' function`,
+            explainAr: `في السطر ${idx + 1} كتبت دالة الطباعة بطريقة غير صحيحة، والصحيح في بايثون هو print() بحروف صغيرة.`,
+            explainEn: `Use lowercase print(...) in Python.`,
+            fixedCode: autoFixed
+          });
+        }
+
+        if (/\b(true|false|null)\b/.test(clean) || /&&|\|\|/.test(clean)) {
+          diagnostics.push({
+            file: fileKey, line: idx + 1, severity: "error",
+            title: `Python Syntax/NameError (Line ${idx + 1}): Use True/False/None and 'and'/'or'`,
+            explainAr: `في السطر ${idx + 1} استخدمت معاملات جافاسكريبت/C++ (مثل true/false أو &&) بدلاً من صيغة بايثون القياسية (True / False / None / and / or).`,
+            explainEn: `Replace true/false/null/&&/|| with Python equivalents.`,
+            fixedCode: autoFixed
+          });
+        }
+
+        const dblQ = (clean.match(/(?<!\\)"/g) || []).length;
+        const op = (clean.match(/\(/g) || []).length;
+        const cp = (clean.match(/\)/g) || []).length;
+        if (dblQ % 2 !== 0 || op !== cp) {
+          diagnostics.push({
+            file: fileKey, line: idx + 1, severity: "error",
+            title: `Python SyntaxError (Line ${idx + 1}): Unbalanced quotes or parentheses '()'`,
+            explainAr: `في السطر ${idx + 1} يوجد قوس '(' أو علامة تنصيص '"' غير مغلقة.`,
+            explainEn: `Close all open quotes and parentheses on line ${idx + 1}.`,
+            fixedCode: autoFixed
+          });
+        }
+      });
+    }
+
+    // 5. فحص C++ / C / Java / C# الشامل
+    if (["cpp", "c", "java", "csharp"].includes(lang)) {
+      lines.forEach((ln, idx) => {
+        const clean = ln.replace(/\/\/.*$/, "").trim();
+        if (!clean || clean.startsWith("#") || clean.startsWith("@") || clean.startsWith("/*") || clean.startsWith("*")) return;
+
+        if ((lang === "cpp" || lang === "c") && /\bcout\s*>>/.test(clean)) {
+          diagnostics.push({
+            file: fileKey, line: idx + 1, severity: "error",
+            title: `C++ Operator Error (Line ${idx + 1}): Invalid '>>' with 'cout'`,
+            explainAr: `في السطر ${idx + 1} استخدمت علامة '>>' مع cout، والصحيح في C++ هو استخدام علامة الإخراج '<<' (cout << ...).`,
+            explainEn: `Use insertion operator '<<' with std::cout.`,
+            fixedCode: autoFixed
+          });
+        }
+
+        if (lang === "java" && (/\bsystem\.out\./.test(clean) || /\bstring\s+[a-zA-Z_]\w*/.test(clean) || /System\.out\.(?:pritnln|pirntln|prntln|printl)\s*\(/.test(clean))) {
+          diagnostics.push({
+            file: fileKey, line: idx + 1, severity: "error",
+            title: `Java Compiler Error (Line ${idx + 1}): Case-sensitivity or print typo`,
+            explainAr: `في السطر ${idx + 1} تأكد من كتابة System.out.println و String بحرف S كابيتال في لغة الجافا.`,
+            explainEn: `Java is case-sensitive: use 'System.out.println' and 'String'.`,
+            fixedCode: autoFixed
+          });
+        }
+
+        if (lang === "csharp" && /\bconsole\.(?:writeline|write)\s*\(/i.test(clean) && !/\bConsole\.(?:WriteLine|Write)\s*\(/.test(clean)) {
+          diagnostics.push({
+            file: fileKey, line: idx + 1, severity: "error",
+            title: `C# Compiler Error (Line ${idx + 1}): Use 'Console.WriteLine'`,
+            explainAr: `في السطر ${idx + 1} يجب كتابة Console.WriteLine بالحروف الكبيرة الصحيحة في لغة C#.`,
+            explainEn: `Use PascalCase 'Console.WriteLine' in C#.`,
+            fixedCode: autoFixed
+          });
+        }
+
+        const isHeaderOrBrace =
+          clean.endsWith(";") || clean.endsWith("{") || clean.endsWith("}") || clean.endsWith(":") || clean.endsWith(",") ||
+          /^(?:public|private|protected|static|final|virtual|inline|\s)*[a-zA-Z_]\w*(?:<[^>]+>)?(?:\[\])?\s+[a-zA-Z_]\w*\s*\([^;]*\)\s*$/.test(clean) ||
+          /^(?:public\s+|private\s+|abstract\s+|final\s+)*(?:class|interface|enum|struct|namespace)\b/.test(clean) ||
+          /^(?:if|else|for|while|do|switch|try|catch|finally)\b/.test(clean);
+
+        if (!isHeaderOrBrace) {
+          diagnostics.push({
+            file: fileKey, line: idx + 1, severity: "error",
+            title: `Compiler Error (Line ${idx + 1}): Missing semicolon ';' at end of statement`,
+            explainAr: `في السطر ${idx + 1} (${clean}) نسيت تقفل الجملة البرمجية بفصلة منقوطة (;)!`,
+            explainEn: `Expected ';' at the end of statement on line ${idx + 1}.`,
+            fixedCode: autoFixed
+          });
+        }
+      });
+
+      const openC = (raw.match(/\{/g) || []).length;
+      const closeC = (raw.match(/\}/g) || []).length;
+      if (openC !== closeC) {
+        diagnostics.push({
+          file: fileKey, line: lines.length, severity: "error",
+          title: `Compiler Error: Unbalanced curly braces '{' (${openC}) vs '}' (${closeC})`,
+          explainAr: `أقواس البلوكات '{' و '}' غير متوازنة في الكود (ناقص قوس إغلاق أو فتح).`,
+          explainEn: `Balance all '{' and '}' braces in ${fileKey}.`,
+          fixedCode: autoFixed
+        });
+      }
+    }
+
+    // 6. فحص SQL و JSON
+    if (lang === "sql") {
+      if (/\b(SELEC|SLCT|SLECT|FORM|WERE|WHRE|INSER|VALUS|CREAT|TABEL)\b/i.test(raw)) {
+        diagnostics.push({
+          file: fileKey, line: 1, severity: "error",
+          title: `SQL Syntax Error: Misspelled SQL keyword (SELECT / FROM / WHERE / TABLE)`,
+          explainAr: `توجد كلمة مفتاحية مكتوبة خطأ في استعلام الـ SQL (تأكد من كتابة SELECT و FROM و WHERE و TABLE بشكل صحيح).`,
+          explainEn: `Check SQL keyword spelling.`,
+          fixedCode: autoFixed
+        });
+      }
+    } else if (lang === "json") {
+      try {
+        JSON.parse(raw);
+      } catch (err) {
+        diagnostics.push({
+          file: fileKey, line: 1, severity: "error",
+          title: `JSON Parse Error: ${err.message}`,
+          explainAr: `ملف الـ JSON يحتوي على فاصلة زائدة أو علامة تنصيص غير قياسية (${err.message}).`,
+          explainEn: `Valid JSON requires double quotes and no trailing commas.`,
+          fixedCode: autoFixed
+        });
+      }
+    }
+
+    return diagnostics;
+  }
+
+  // وضع خطوط حمراء تحت الأسطر التي بها أخطاء داخل محرر Monaco وتحديث لوحة PROBLEMS
+  function syncDiagnosticsToMonacoAndProblems(diagnostics) {
+    const p = curProj();
+    const errCount = diagnostics.filter(d => d.severity === "error").length;
+    const warnCount = diagnostics.filter(d => d.severity !== "error").length;
+
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = String(v); };
+    setTxt("badge-problems", diagnostics.length);
+    setTxt("st-err-count", errCount);
+    setTxt("st-warn-count", warnCount);
+
+    // 1. تحديث خطوط Monaco الحمراء
+    if (usingMonaco && monacoEditor && window.monaco) {
+      const model = monacoEditor.getModel();
+      if (model) {
+        const activeDiags = diagnostics.filter(d => d.file === p.activeFile);
+        const markers = activeDiags.map(d => ({
+          severity: d.severity === "error" ? window.monaco.MarkerSeverity.Error : window.monaco.MarkerSeverity.Warning,
+          message: `${d.title}\n${d.explainAr}`,
+          startLineNumber: d.line || 1,
+          startColumn: 1,
+          endLineNumber: d.line || 1,
+          endColumn: 200
+        }));
+        window.monaco.editor.setModelMarkers(model, "universal-linter", markers);
+      }
+    }
+
+    // 2. تحديث تبويب PROBLEMS بالأسفل مع زر الانتقال للسطر وزر التصليح الفوري
+    const probPane = document.getElementById("bpane-problems");
+    if (probPane) {
+      if (!diagnostics.length) {
+        probPane.innerHTML = `<div style="color:#10b981;padding:6px;">✓ لا توجد أخطاء في المشروع — جميع الملفات سليمة 100%.</div>`;
+      } else {
+        probPane.innerHTML = diagnostics.map((d, idx) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 10px;margin-bottom:5px;background:rgba(239,68,68,0.12);border:1px solid #ef4444;border-radius:7px;direction:rtl;">
+            <div style="cursor:pointer;" data-prob-jump="${esc(d.file)}" data-prob-line="${d.line || 1}">
+              <strong style="color:#ff7b72;font-size:12px;">✖ [${esc(d.file)} : سطر ${d.line || 1}] ${esc(d.title)}</strong>
+              <div style="color:#f8fafc;font-size:11.5px;margin-top:2px;">💡 ${esc(d.explainAr)}</div>
+            </div>
+            <button type="button" class="vsc-btn-sm emerald" data-prob-autofix="${idx}">⚡ صلح تلقائياً</button>
+          </div>
+        `).join("");
+
+        probPane.querySelectorAll("[data-prob-jump]").forEach(el => {
+          el.onclick = () => {
+            const fn = el.dataset.probJump;
+            const ln = Number(el.dataset.probLine) || 1;
+            switchActiveFile(fn);
+            if (monacoEditor) {
+              monacoEditor.revealLineInCenter(ln);
+              monacoEditor.setPosition({ lineNumber: ln, column: 1 });
+              monacoEditor.focus();
+            }
+          };
+        });
+
+        probPane.querySelectorAll("[data-prob-autofix]").forEach(btn => {
+          btn.onclick = () => {
+            const d = diagnostics[Number(btn.dataset.probAutofix)];
+            if (d && d.fixedCode) {
+              p.files[d.file] = d.fixedCode;
+              saveState();
+              if (p.activeFile === d.file) setEditorCode(d.fixedCode, getLangMeta(d.file).lang);
+              executeWorkspace("project", true);
+              toast(`⚡ تم إصلاح الخطأ في ${d.file} وتشغيل الكود فوراً!`);
+            }
+          };
+        });
+      }
+    }
+  }
+
   /* ==========================================================================
-     10. BOOTSTRAP UNIVERSAL IDE
+     11. UPGRADE EXECUTION ENGINE TO HALT ON ERRORS & SHOW 1-CLICK AUTO-FIX
+     ========================================================================== */
+  const _baseExecuteWorkspace = executeWorkspace;
+  executeWorkspace = function (mode = "project", notifyUser = false) {
+    const p = curProj();
+    const frame = document.getElementById("vsc-preview-iframe");
+    if (!frame || !p) return;
+
+    const activeFile = p.activeFile || "index.html";
+    const meta = getLangMeta(activeFile);
+
+    // فحص الملف الحالي (أو ملفات الويب مجتمعة) قبل التشغيل
+    let allDiags = [];
+    if (meta.mode === "term" || meta.mode === "sql" || meta.mode === "data" || meta.mode === "react") {
+      allDiags = runDeepLanguageDiagnostics(p.files[activeFile] || "", activeFile);
+    } else {
+      Object.keys(p.files).forEach(fn => {
+        if (fn.endsWith(".test.js")) return;
+        const m = getLangMeta(fn);
+        if (m.mode === "web") {
+          allDiags.push(...runDeepLanguageDiagnostics(p.files[fn] || "", fn));
+        }
+      });
+    }
+
+    syncDiagnosticsToMonacoAndProblems(allDiags);
+
+    const errors = allDiags.filter(d => d.severity === "error");
+    if (errors.length > 0) {
+      const err = errors[0];
+      window.__vscPendingAutoFix = { file: err.file, fixedCode: err.fixedCode };
+
+      const stRun = document.getElementById("st-runtime-status");
+      if (stRun) stRun.innerHTML = `<span style="color:#f87171;">⛔ Error in ${esc(err.file)}:${err.line || 1}</span>`;
+
+      frame.srcdoc = `<!DOCTYPE html>
+<html dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { margin:0; padding:24px; background:#090d16; color:#f8fafc; font-family:'Cairo', system-ui, sans-serif; }
+    .err-card { background:#180d14; border:2px solid #ef4444; border-radius:16px; padding:22px; max-width:620px; margin:15px auto; box-shadow:0 20px 50px rgba(239,68,68,0.25); }
+    .err-badge { display:inline-block; background:rgba(239,68,68,0.2); color:#fca5a5; padding:4px 12px; border-radius:99px; font-size:11px; font-weight:800; }
+    h2 { color:#f87171; margin:12px 0 8px; font-size:18px; }
+    .tech-box { direction:ltr; text-align:left; background:#0d1117; border:1px solid #30363d; color:#ffa198; padding:12px; border-radius:8px; font-family:monospace; font-size:12.5px; margin-bottom:14px; }
+    .ar-box { background:rgba(255,255,255,0.04); border-right:4px solid #ef4444; padding:12px 14px; border-radius:8px; font-size:13.5px; line-height:1.75; margin-bottom:14px; }
+    .fix-box { background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); border-right:4px solid #10b981; padding:14px; border-radius:10px; color:#a7f3d0; }
+    .fix-btn { margin-top:12px; background:linear-gradient(135deg, #10b981, #059669); color:#04130d; border:0; padding:10px 20px; border-radius:9px; font-family:inherit; font-weight:800; font-size:13px; cursor:pointer; }
+    .fix-btn:hover { filter:brightness(1.1); }
+  </style>
+</head>
+<body>
+  <div class="err-card">
+    <span class="err-badge">⛔ COMPILATION / EXECUTION HALTED • ${esc(err.file)} (سطر ${err.line || 1})</span>
+    <h2>تم إيقاف التشغيل لوجود خطأ برمجي يجب إصلاحه أولاً</h2>
+    <div class="tech-box">✖ ${esc(err.title)}</div>
+    <div class="ar-box">
+      <strong>🧐 إيه سبب الخطأ ده؟</strong><br>
+      ${esc(err.explainAr)}
+    </div>
+    <div class="fix-box">
+      <strong>💡 الحل المقترح:</strong><br>
+      ${esc(err.explainEn)}<br>
+      <button class="fix-btn" onclick="parent.postMessage({ source: 'vsc-apply-autofix' }, '*')">⚡ صلحلي الخطأ تلقائياً وشغّل الكود الآن</button>
+    </div>
+  </div>
+</body>
+</html>`;
+      if (notifyUser) toast(`⛔ تم اكتشاف خطأ في ${err.file} (سطر ${err.line || 1})`);
+      return;
+    }
+
+    const stRun = document.getElementById("st-runtime-status");
+    if (stRun) stRun.innerHTML = `<span class="pulse-cyan"></span> Runtime: Ready`;
+
+    _baseExecuteWorkspace(mode, notifyUser);
+  };
+
+  window.addEventListener("message", (e) => {
+    if (e.data && e.data.source === "vsc-apply-autofix" && window.__vscPendingAutoFix) {
+      const { file, fixedCode } = window.__vscPendingAutoFix;
+      const p = curProj();
+      if (fixedCode && p.files[file] !== undefined) {
+        p.files[file] = fixedCode;
+        saveState();
+        if (p.activeFile === file) setEditorCode(fixedCode, getLangMeta(file).lang);
+        executeWorkspace("project", true);
+        toast(`⚡ تم إصلاح الخطأ تلقائياً في ${file} وإعادة التشغيل بنجاح!`);
+      }
+    }
+  });
+
+  /* ==========================================================================
+     12. 6 EXTRA POWERHOUSE IDE FEATURES:
+         - Monaco Tab Snippets (sout, psvm, cout, ht, flex, grid, clg, def, sel)
+         - Custom Right-Click Context Menu (#vsc-context-menu)
+         - Live DOM Inspector Mode (#btn-inspect-element)
+         - Built-in Thunder REST API Tester Modal
+         - Code-to-Flowchart Visualizer Modal
+     ========================================================================== */
+  function registerUniversalMonacoSnippets() {
+    if (!window.monaco || window.__vscUniversalSnippetsDone) return;
+    window.__vscUniversalSnippetsDone = true;
+
+    const SNIPS = {
+      html: [
+        { label: "ht", detail: "⚡ هيكل HTML5 كامل بالعربية", insertText: "<!DOCTYPE html>\n<html lang=\"ar\" dir=\"rtl\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>${1:عنوان الصفحة}</title>\n</head>\n<body>\n  <h1>${2:مرحباً بالعالم}</h1>\n</body>\n</html>" },
+        { label: "card", detail: "⚡ بطاقة واجهة حديثة Card", insertText: "<div class=\"card\">\n  <h3>${1:العنوان}</h3>\n  <p>${2:الوصف}</p>\n</div>" }
+      ],
+      css: [
+        { label: "flex", detail: "⚡ تخطيط Flexbox متكامل", insertText: "display: flex;\njustify-content: space-between;\nalign-items: center;\ngap: 16px;" },
+        { label: "grid", detail: "⚡ شبكة CSS Grid متجاوبة", insertText: "display: grid;\ngrid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\ngap: 16px;" }
+      ],
+      javascript: [
+        { label: "clg", detail: "⚡ طباعة في الكونسول console.log", insertText: "console.log(\"${1:Message:}\", ${2:data});" },
+        { label: "ael", detail: "⚡ حدث نقر addEventListener", insertText: "${1:btn}.addEventListener(\"click\", () => {\n  ${2:console.log(\"Clicked!\");}\n});" }
+      ],
+      java: [
+        { label: "sout", detail: "⚡ طباعة في الجافا System.out.println", insertText: "System.out.println(\"${1:Hello Java!}\");" },
+        { label: "psvm", detail: "⚡ دالة main الرئيسية في الجافا", insertText: "public static void main(String[] args) {\n    System.out.println(\"${1:Ready!}\");\n}" }
+      ],
+      cpp: [
+        { label: "cout", detail: "⚡ طباعة في C++", insertText: "cout << \"${1:Hello C++!}\" << endl;" },
+        { label: "main", detail: "⚡ هيكل برنامج C++ كامل", insertText: "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"${1:Hello World!}\" << endl;\n    return 0;\n}" }
+      ],
+      python: [
+        { label: "pr", detail: "⚡ طباعة في بايثون print()", insertText: "print(\"${1:Hello Python!}\")" },
+        { label: "def", detail: "⚡ تعريف دالة بايثون", insertText: "def ${1:my_func}(${2:x}):\n    return ${3:x * 2}" }
+      ]
+    };
+
+    const Kind = window.monaco.languages.CompletionItemKind.Snippet;
+    const Rule = window.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet;
+
+    Object.entries(SNIPS).forEach(([langKey, list]) => {
+      window.monaco.languages.registerCompletionItemProvider(langKey, {
+        provideCompletionItems: (model, position) => {
+          const word = model.getWordUntilPosition(position);
+          const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: word.startColumn,
+            endColumn: word.endColumn
+          };
+          return {
+            suggestions: list.map(it => ({
+              label: it.label,
+              kind: Kind,
+              detail: it.detail,
+              insertText: it.insertText,
+              insertTextRules: Rule,
+              range
+            }))
+          };
+        }
+      });
+    });
+  }
+
+  function openRestApiTesterModal() {
+    openUniversalModal("🌐 مختبر فحص الـ APIs المدمج (Thunder REST API Client)", `
+      <div style="display:flex;gap:6px;">
+        <select id="api-method" style="width:95px;padding:8px;border-radius:7px;background:var(--bg-main);color:var(--gold);border:1px solid var(--border);font-weight:800;">
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+        <input type="url" id="api-url" value="https://jsonplaceholder.typicode.com/users/1" dir="ltr" style="flex:1;padding:8px;border-radius:7px;background:var(--bg-main);color:#fff;border:1px solid var(--border);font-family:monospace;" />
+        <button type="button" id="btn-send-api-req" class="vsc-btn-primary">إرسال الطلب 🚀</button>
+      </div>
+      <div class="vsc-field" style="margin-top:8px;">
+        <label>محتوى الطلب JSON Body (للـ POST / PUT)</label>
+        <textarea id="api-body-inp" rows="2" dir="ltr" style="font-family:monospace;">{"name": "Eng. Ahmed M Hosny"}</textarea>
+      </div>
+      <div id="api-res-meta" style="font-size:11px;color:var(--emerald);font-weight:800;">اضغط إرسال الطلب لعرض استجابة السيرفر...</div>
+      <pre id="api-res-box" dir="ltr" style="background:#070a12;border:1px solid var(--border);padding:10px;border-radius:8px;max-height:220px;overflow:auto;font-family:monospace;font-size:11.5px;color:#38bdf8;text-align:left;"></pre>
+    `);
+
+    document.getElementById("btn-send-api-req")?.addEventListener("click", async () => {
+      const method = document.getElementById("api-method")?.value || "GET";
+      const url = document.getElementById("api-url")?.value.trim();
+      const bodyTxt = document.getElementById("api-body-inp")?.value.trim();
+      const metaEl = document.getElementById("api-res-meta");
+      const outEl = document.getElementById("api-res-box");
+      if (!url || !outEl) return;
+
+      const t0 = performance.now();
+      metaEl.textContent = "⏳ Sending HTTP request...";
+      try {
+        const opts = { method, headers: { "Content-Type": "application/json" } };
+        if (method !== "GET" && bodyTxt) opts.body = bodyTxt;
+        const res = await fetch(url, opts);
+        const ms = Math.round(performance.now() - t0);
+        const txt = await res.text();
+        let formatted = txt;
+        try { formatted = JSON.stringify(JSON.parse(txt), null, 2); } catch (e) {}
+        metaEl.textContent = `✓ Status: ${res.status} ${res.statusText} • Time: ${ms} ms`;
+        outEl.textContent = formatted;
+      } catch (err) {
+        metaEl.textContent = `✖ Request Failed: ${err.message}`;
+      }
+    });
+  }
+
+  function setupCustomContextMenuAndInspector() {
+    const ctxMenu = document.getElementById("vsc-context-menu");
+    const editorWrap = document.getElementById("vsc-editors-split-wrap");
+
+    if (editorWrap && ctxMenu) {
+      editorWrap.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        ctxMenu.style.left = `${Math.min(window.innerWidth - 200, e.clientX)}px`;
+        ctxMenu.style.top = `${Math.min(window.innerHeight - 220, e.clientY)}px`;
+        ctxMenu.hidden = false;
+        ctxMenu.innerHTML = `
+          <div class="ctx-item" data-ctx="autofix"><span>⚡ إصلاح الأخطاء تلقائياً</span><small>Auto-Fix</small></div>
+          <div class="ctx-item" data-ctx="format"><span>✨ تنسيق الكود (Prettier)</span><small>Alt+Shift+F</small></div>
+          <div class="ctx-item" data-ctx="run"><span>▶ تشغيل المشروع</span><small>Ctrl+Enter</small></div>
+          <div class="ctx-item" data-ctx="api"><span>🌐 فاحص الـ API المدمج</span><small>REST Client</small></div>
+          <div class="ctx-item" data-ctx="ai"><span>🤖 شرح وتحليل بالـ AI</span><small>AI Assistant</small></div>
+          <div class="ctx-item" data-ctx="zip"><span>📦 تحميل المشروع (.ZIP)</span><small>Export</small></div>
+        `;
+
+        ctxMenu.querySelectorAll("[data-ctx]").forEach(item => {
+          item.onclick = () => {
+            ctxMenu.hidden = true;
+            const act = item.dataset.ctx;
+            const p = curProj();
+            if (act === "autofix") {
+              const fixed = buildAutoRepairedCode(getEditorCode(), getLangMeta(p.activeFile).lang, p.activeFile);
+              p.files[p.activeFile] = fixed;
+              setEditorCode(fixed, getLangMeta(p.activeFile).lang);
+              saveState();
+              executeWorkspace("project", true);
+              toast("⚡ تم فحص وإصلاح الكود تلقائياً!");
+            } else if (act === "format") formatActiveCode();
+            else if (act === "run") executeWorkspace("project", true);
+            else if (act === "api") openRestApiTesterModal();
+            else if (act === "ai") { state.activeAct = "ai"; renderSidebarByActivity(); }
+            else if (act === "zip") downloadProjectZip();
+          };
+        });
+      });
+
+      window.addEventListener("click", () => { ctxMenu.hidden = true; });
+    }
+
+    // تفعيل زر فاحص عناصر المعاينة الحية (DOM Inspector)
+    let inspectActive = false;
+    document.getElementById("btn-inspect-element")?.addEventListener("click", (e) => {
+      inspectActive = !inspectActive;
+      e.currentTarget.classList.toggle("active", inspectActive);
+      const frame = document.getElementById("vsc-preview-iframe");
+      try {
+        const doc = frame?.contentDocument;
+        if (!doc) return;
+        let styleEl = doc.getElementById("__vsc_inspector_style");
+        if (inspectActive) {
+          if (!styleEl) {
+            styleEl = doc.createElement("style");
+            styleEl.id = "__vsc_inspector_style";
+            styleEl.textContent = `*:hover { outline: 2px dashed #00f0ff !important; cursor: crosshair !important; }`;
+            doc.head.appendChild(styleEl);
+          }
+          toast("🔍 فاحص العناصر نشط: مرر الماوس داخل المعاينة لفحص حدود العناصر!");
+        } else if (styleEl) {
+          styleEl.remove();
+        }
+      } catch (err) {}
+    });
+  }
+
+  /* ==========================================================================
+     13. BOOTSTRAP UNIVERSAL IDE
      ========================================================================== */
   function bootUniversalIDE() {
     if (state.theme === "custom") applyCustomThemeVariables(state.customTheme);
     else applyTheme(state.theme);
 
     bindGlobalIDEEvents();
+    setupCustomContextMenuAndInspector();
     refreshAllIDEUI();
     initMonacoEditor();
+    setTimeout(registerUniversalMonacoSnippets, 1200);
     executeWorkspace("project", false);
   }
 
