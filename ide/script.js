@@ -3030,13 +3030,328 @@ function openCustomThemeStudioModal() {
     });
   }
 
+/* ==========================================================================
+     15. REAL VS CODE TOP MENU BAR (File, Edit, Selection, View, Go, Run, Terminal, Help)
+         + TOP-RIGHT WINDOW LAYOUT TOGGLES + PERSISTENT LIVE SERVER EXTERNAL TAB
+     ========================================================================== */
+  let liveExternalWindow = null;
+  const livePreviewChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("mylifeos_vsc_live_server") : null;
+
+  // إرسال أي تعديل في الكود فوراً إلى التبويب الخارجي المفتوح (Hot Reloading)
+  function syncExternalLiveServerWindow() {
+    const frame = document.getElementById("vsc-preview-iframe");
+    if (!frame) return;
+    const currentHtml = frame.srcdoc || "";
+    try {
+      localStorage.setItem("__MYLIFEOS_LIVE_SERVER_HTML__", currentHtml);
+      localStorage.setItem("__MYLIFEOS_LIVE_SERVER_TS__", String(Date.now()));
+    } catch (e) {}
+
+    if (livePreviewChannel) {
+      try { livePreviewChannel.postMessage({ type: "reload", html: currentHtml }); } catch (e) {}
+    }
+
+    if (liveExternalWindow && !liveExternalWindow.closed) {
+      try {
+        const innerFrame = liveExternalWindow.document.getElementById("vsc-live-server-frame");
+        if (innerFrame) innerFrame.srcdoc = currentHtml;
+      } catch (e) {}
+    }
+  }
+
+  // فتح التبويب الخارجي بنظام Live Server المستمر (يتحدث تلقائياً ولا يختفي مع F5 ولا يظهر رابط GitHub)
+  function openPersistentExternalLiveServer() {
+    const frame = document.getElementById("vsc-preview-iframe");
+    const currentHtml = frame?.srcdoc || "";
+    try {
+      localStorage.setItem("__MYLIFEOS_LIVE_SERVER_HTML__", currentHtml);
+    } catch (e) {}
+
+    const p = curProj();
+    liveExternalWindow = window.open("about:blank", "MYLIFEOS_LIVE_SERVER_WIN");
+    if (!liveExternalWindow) {
+      return toast("⚠️ يرجى السماح بالنوافذ المنبثقة (Pop-ups)");
+    }
+
+    const shellHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>⚡ Live Server — ${esc(p.name)}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { width: 100vw; height: 100vh; overflow: hidden; display: flex; flex-direction: column; background: #090d16; font-family: 'Cairo', system-ui, sans-serif; }
+    .live-bar { height: 30px; background: #111827; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 11.5px; color: #94a3b8; user-select: none; }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 8px #10b981; margin-right: 6px; }
+    .live-btn { background: #1e293b; color: #f8fafc; border: 1px solid #334155; padding: 2px 10px; border-radius: 5px; font-family: inherit; font-size: 11px; cursor: pointer; }
+    .live-btn:hover { border-color: #d4a72c; color: #d4a72c; }
+    #vsc-live-server-frame { flex: 1; width: 100%; height: 100%; border: 0; background: #ffffff; }
+  </style>
+</head>
+<body>
+  <div class="live-bar">
+    <div><span class="live-dot"></span> <strong style="color:#fff;">Live Server Connected:</strong> <span id="sync-status">متصل بمحرر الأكواد لحظياً (أي تعديل في الكود يظهر هنا تلقائياً)</span></div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button type="button" class="live-btn" id="btn-manual-refresh">🔄 تحديث يدوي (F5)</button>
+    </div>
+  </div>
+  <iframe id="vsc-live-server-frame" sandbox="allow-scripts allow-forms allow-modals allow-same-origin allow-popups"></iframe>
+  <script>
+    const frame = document.getElementById('vsc-live-server-frame');
+    const statusEl = document.getElementById('sync-status');
+
+    function loadLatestCode() {
+      const html = localStorage.getItem('__MYLIFEOS_LIVE_SERVER_HTML__') || '';
+      frame.srcdoc = html;
+      if (statusEl) statusEl.textContent = '✓ تم التحديث التلقائي الساعة ' + new Date().toLocaleTimeString();
+    }
+
+    loadLatestCode();
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === '__MYLIFEOS_LIVE_SERVER_HTML__' || e.key === '__MYLIFEOS_LIVE_SERVER_TS__') {
+        loadLatestCode();
+      }
+    });
+
+    if (typeof BroadcastChannel !== 'undefined') {
+      const ch = new BroadcastChannel('mylifeos_vsc_live_server');
+      ch.onmessage = (e) => {
+        if (e.data && e.data.html) {
+          frame.srcdoc = e.data.html;
+          if (statusEl) statusEl.textContent = '⚡ تحديث حي فوري الساعة ' + new Date().toLocaleTimeString();
+        }
+      };
+    }
+
+    document.getElementById('btn-manual-refresh').onclick = loadLatestCode;
+
+    // اعتراض F5 و Ctrl+R داخل الصفحة لتحديث الكود من المحرر بدلاً من تفريغ about:blank!
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r')) {
+        e.preventDefault();
+        loadLatestCode();
+      }
+    });
+  <\/script>
+</body>
+</html>`;
+
+    liveExternalWindow.document.open();
+    liveExternalWindow.document.write(shellHtml);
+    liveExternalWindow.document.close();
+    toast("📡 تم فتح Live Server الخارجي! عدّل أي كود هنا وسيتحدث هناك تلقائياً في نفس اللحظة!");
+  }
+
+  // ربط الـ Live Server تلقائياً مع كل عملية تشغيل في المحرر
+  const _prevExec = executeWorkspace;
+  executeWorkspace = function (mode = "project", notifyUser = false) {
+    _prevExec(mode, notifyUser);
+    syncExternalLiveServerWindow();
+  };
+
+  // بناء شريط القوائم العلوي الكلاسيكي لـ VS Code + أزرار التحكم في النوافذ
+  function injectVSCodeClassicMenusAndShortcuts() {
+    const leftBar = document.querySelector(".vsc-titlebar-left");
+    const rightBar = document.querySelector(".vsc-titlebar-right");
+
+    // 1. حقن شريط القوائم (File | Edit | Selection | View | Go | Run | Terminal | Help)
+    if (leftBar && !document.getElementById("vsc-menubar-strip")) {
+      const menuStrip = document.createElement("div");
+      menuStrip.id = "vsc-menubar-strip";
+      menuStrip.className = "vsc-menubar-strip";
+
+      const MENUS = {
+        File: [
+          { label: "📄 ملف جديد (New File)", kbd: "Ctrl+N", act: openCreateFileModal },
+          { label: "🚀 مشروع جديد من القوالب (New Project)", kbd: "Ctrl+Shift+N", act: openNewProjectModal },
+          { sep: true },
+          { label: "💾 حفظ جميع الملفات (Save All)", kbd: "Ctrl+S", act: () => { saveState(); toast("💾 تم حفظ المشروع بالكامل!"); } },
+          { label: "🖼️ رفع صور وموارد للمشروع (Upload Assets)", kbd: "", act: () => document.getElementById("inp-upload-assets")?.click() },
+          { label: "📦 تحميل المشروع كاملاً (.ZIP)", kbd: "", act: downloadProjectZip },
+          { sep: true },
+          { label: "🔄 استعادة القالب الأصلي (Reset Template)", kbd: "", act: () => document.getElementById("btn-reset-proj-tpl")?.click() },
+          { label: "🏠 العودة لمنظومة حياتي (Exit to OS)", kbd: "", act: () => { window.location.href = "../index.html"; } }
+        ],
+        Edit: [
+          { label: "↩️ تراجع (Undo)", kbd: "Ctrl+Z", act: () => monacoEditor?.trigger("keyboard", "undo", null) },
+          { label: "↪️ إعادة (Redo)", kbd: "Ctrl+Y", act: () => monacoEditor?.trigger("keyboard", "redo", null) },
+          { sep: true },
+          { label: "🔍 بحث داخل الملف (Find)", kbd: "Ctrl+F", act: () => monacoEditor?.getAction("actions.find")?.run() },
+          { label: "🔄 استبدال داخل الملف (Replace)", kbd: "Ctrl+H", act: () => monacoEditor?.getAction("editor.action.startFindReplaceAction")?.run() },
+          { label: "🌐 بحث شامل في كل الملفات", kbd: "Ctrl+Shift+F", act: () => { state.activeAct = "search"; document.getElementById("vsc-sidebar")?.classList.remove("collapsed"); renderSidebarByActivity(); } },
+          { sep: true },
+          { label: "✨ تنسيق وتنظيف الكود (Prettier Format)", kbd: "Alt+Shift+F", act: formatActiveCode },
+          { label: "⚡ إصلاح الأخطاء تلقائياً (Auto-Fix Code)", kbd: "", act: () => {
+              const p = curProj();
+              const fixed = buildAutoRepairedCode(getEditorCode(), getLangMeta(p.activeFile).lang, p.activeFile);
+              p.files[p.activeFile] = fixed;
+              setEditorCode(fixed, getLangMeta(p.activeFile).lang);
+              saveState();
+              executeWorkspace("project", true);
+              toast("⚡ تم فحص وإصلاح الأخطاء تلقائياً!");
+            }
+          }
+        ],
+        Selection: [
+          { label: "تحديد الكل (Select All)", kbd: "Ctrl+A", act: () => monacoEditor?.setSelection(monacoEditor.getModel().getFullModelRange()) },
+          { label: "نسخ السطر للأسفل (Copy Line Down)", kbd: "Shift+Alt+↓", act: () => monacoEditor?.getAction("editor.action.copyLinesDownAction")?.run() },
+          { label: "تحريك السطر للأعلى (Move Line Up)", kbd: "Alt+↑", act: () => monacoEditor?.getAction("editor.action.moveLinesUpAction")?.run() },
+          { label: "تعليق / إلغاء تعليق السطر (Toggle Comment)", kbd: "Ctrl+/", act: () => monacoEditor?.getAction("editor.action.commentLine")?.run() }
+        ],
+        View: [
+          { label: "⌘ لوحة الأوامر الشاملة (Command Palette)", kbd: "Ctrl+Shift+P", act: openCommandPaletteModal },
+          { sep: true },
+          { label: "📁 مستكشف الملفات (Explorer)", kbd: "Ctrl+Shift+E", act: () => { state.activeAct = "explorer"; document.getElementById("vsc-sidebar")?.classList.remove("collapsed"); renderSidebarByActivity(); } },
+          { label: "🌿 إدارة المصدر (Git Source Control)", kbd: "Ctrl+Shift+G", act: () => { state.activeAct = "git"; document.getElementById("vsc-sidebar")?.classList.remove("collapsed"); renderSidebarByActivity(); } },
+          { label: "🤖 مساعد الذكاء الاصطناعي (AI Assistant)", kbd: "", act: () => { state.activeAct = "ai"; document.getElementById("vsc-sidebar")?.classList.remove("collapsed"); renderSidebarByActivity(); } },
+          { label: "🗄️ مستكشف قواعد البيانات (Database)", kbd: "", act: () => { state.activeAct = "database"; document.getElementById("vsc-sidebar")?.classList.remove("collapsed"); renderSidebarByActivity(); } },
+          { sep: true },
+          { label: "◫ تقسيم محرر الأكواد (Split Editor)", kbd: "Ctrl+\\", act: toggleSplitEditor },
+          { label: "🗺️ إظهار/إخفاء الخريطة المصغرة (Minimap)", kbd: "", act: () => document.getElementById("btn-toggle-minimap")?.click() },
+          { label: "🎯 وضع التركيز الكامل (Zen Focus Mode)", kbd: "", act: () => applyWorkspaceLayout("focus") },
+          { label: "🌐 وضع تطوير الويب المقسوم (Split Web Dev)", kbd: "", act: () => applyWorkspaceLayout("web-dev") }
+        ],
+        Go: [
+          { label: "📂 انتقال سريع لملف (Go to File...)", kbd: "Ctrl+P", act: openCommandPaletteModal },
+          { label: "🔢 انتقال إلى سطر محدد (Go to Line...)", kbd: "Ctrl+G", act: () => {
+              const ln = Number(prompt("🔢 اكتب رقم السطر للانتقال إليه:", "1"));
+              if (ln > 0 && monacoEditor) {
+                monacoEditor.revealLineInCenter(ln);
+                monacoEditor.setPosition({ lineNumber: ln, column: 1 });
+                monacoEditor.focus();
+              }
+            }
+          },
+          { label: "⚠️ الانتقال إلى لوحة المشكلات (Problems)", kbd: "F8", act: () => activateBottomTab("problems") }
+        ],
+        Run: [
+          { label: "▶ تشغيل المشروع وتحديث المعاينة", kbd: "Ctrl+Enter", act: () => executeWorkspace("project", true) },
+          { label: "📡 فتح المعاينة الحية في تبويب مستقل (Live Server)", kbd: "", act: openPersistentExternalLiveServer },
+          { sep: true },
+          { label: "🐞 بدء التصحيح وتتبع المتغيرات (Start Debugging)", kbd: "F5", act: () => document.getElementById("btn-start-debug")?.click() },
+          { label: "🧪 تشغيل جميع الاختبارات (Run Unit Tests)", kbd: "", act: () => { state.activeAct = "testing"; document.getElementById("vsc-sidebar")?.classList.remove("collapsed"); renderSidebarByActivity(); } }
+        ],
+        Terminal: [
+          { label: "›_ إظهار / إخفاء الطرفية (Toggle Terminal)", kbd: "Ctrl+`", act: () => document.getElementById("vsc-bottom-panel")?.classList.toggle("hidden-panel") },
+          { label: "🧹 مسح سجل الطرفية (Clear Terminal)", kbd: "", act: () => document.getElementById("btn-clear-bottom")?.click() },
+          { sep: true },
+          { label: "🐧 التبديل إلى Bash — Linux/Git", kbd: "", act: () => { const s = document.getElementById("sel-term-profile"); if (s) { s.value = "bash"; s.dispatchEvent(new Event("change")); } activateBottomTab("terminal"); } },
+          { label: "🟢 التبديل إلى Node.js Interactive REPL", kbd: "", act: () => { const s = document.getElementById("sel-term-profile"); if (s) { s.value = "js"; s.dispatchEvent(new Event("change")); } activateBottomTab("terminal"); } },
+          { label: "🐍 التبديل إلى Python 3 Interactive", kbd: "", act: () => { const s = document.getElementById("sel-term-profile"); if (s) { s.value = "py"; s.dispatchEvent(new Event("change")); } activateBottomTab("terminal"); } }
+        ],
+        Help: [
+          { label: "📦 مدير مكتبات الـ CDN السريع (Tailwind / Bootstrap)", kbd: "", act: openCDNPackageManagerModal },
+          { label: "🎨 استوديو التصميم البصري (CSS Glassmorphism)", kbd: "", act: openCSSVisualGeneratorModal },
+          { label: "🌐 فاحص الـ APIs المدمج (Thunder REST Client)", kbd: "", act: openRestApiTesterModal },
+          { label: "⚙️ إعدادات المحرر والثيم المخصص", kbd: "Ctrl+,", act: openSettingsCenterModal }
+        ]
+      };
+
+      const dropdown = document.createElement("div");
+      dropdown.id = "vsc-top-menu-dropdown";
+      dropdown.className = "vsc-menu-dropdown";
+      document.body.appendChild(dropdown);
+
+      Object.keys(MENUS).forEach(menuName => {
+        const item = document.createElement("div");
+        item.className = "vsc-menu-item";
+        item.textContent = menuName;
+        item.onclick = (e) => {
+          e.stopPropagation();
+          const rect = item.getBoundingClientRect();
+          dropdown.style.left = `${rect.left}px`;
+          dropdown.innerHTML = MENUS[menuName].map((opt, idx) =>
+            opt.sep ? `<div class="vsc-menu-sep"></div>` : `<div class="vsc-menu-opt" data-mopt="${idx}"><span>${opt.label}</span><kbd>${opt.kbd || ""}</kbd></div>`
+          ).join("");
+          dropdown.classList.add("show");
+
+          dropdown.querySelectorAll("[data-mopt]").forEach(el => {
+            el.onclick = () => {
+              dropdown.classList.remove("show");
+              MENUS[menuName][Number(el.dataset.mopt)]?.act();
+            };
+          });
+        };
+        menuStrip.appendChild(item);
+      });
+
+      window.addEventListener("click", () => dropdown.classList.remove("show"));
+      leftBar.insertBefore(menuStrip, document.getElementById("btn-title-project-switcher"));
+    }
+
+    // 2. حقن أزرار تقسيم النوافذ في أقصى يمين الشريط العلوي (مثل VS Code بالضبط) + كبسولة Go Live
+    if (rightBar && !document.getElementById("vsc-win-toggles")) {
+      const winToggles = document.createElement("div");
+      winToggles.id = "vsc-win-toggles";
+      winToggles.className = "vsc-window-layout-toggles";
+      winToggles.innerHTML = `
+        <button type="button" id="btn-top-go-live" class="vsc-live-server-pill" data-tip="فتح الموقع في تبويب خارجي متزامن لحظياً (Live Server Hot-Reload)">
+          <i class="fa-solid fa-tower-broadcast"></i>
+          <span>Go Live</span>
+        </button>
+        <button type="button" id="btn-win-toggle-side" class="vsc-icon-btn active-emerald" data-tip="إظهار/إخفاء القائمة الجانبية اليسرى (Toggle Primary Side Bar Ctrl+B)">
+          <i class="fa-solid fa-table-columns"></i>
+        </button>
+        <button type="button" id="btn-win-toggle-panel" class="vsc-icon-btn active-emerald" data-tip="إظهار/إخفاء لوحة الـ Terminal بالأسفل (Toggle Panel Ctrl+J)">
+          <i class="fa-solid fa-window-maximize" style="transform:rotate(180deg);"></i>
+        </button>
+        <button type="button" id="btn-win-toggle-preview" class="vsc-icon-btn active-emerald" data-tip="إظهار/إخفاء شاشة المعاينة اليمنى (Toggle Live Preview Pane)">
+          <i class="fa-solid fa-desktop"></i>
+        </button>
+      `;
+      rightBar.appendChild(winToggles);
+
+      document.getElementById("btn-top-go-live")?.addEventListener("click", openPersistentExternalLiveServer);
+
+      document.getElementById("btn-win-toggle-side")?.addEventListener("click", (e) => {
+        const sb = document.getElementById("vsc-sidebar");
+        const hidden = sb?.classList.toggle("collapsed");
+        e.currentTarget.classList.toggle("active-emerald", !hidden);
+        if (monacoEditor) setTimeout(() => monacoEditor.layout(), 50);
+      });
+
+      document.getElementById("btn-win-toggle-panel")?.addEventListener("click", (e) => {
+        const bp = document.getElementById("vsc-bottom-panel");
+        const hidden = bp?.classList.toggle("hidden-panel");
+        e.currentTarget.classList.toggle("active-emerald", !hidden);
+        if (monacoEditor) setTimeout(() => monacoEditor.layout(), 50);
+      });
+
+      document.getElementById("btn-win-toggle-preview")?.addEventListener("click", (e) => {
+        const pr = document.getElementById("vsc-preview-pane");
+        const ed = document.getElementById("vsc-editor-pane");
+        const rs = document.getElementById("vsc-resizer-v");
+        const hidden = pr?.classList.toggle("hidden-pane");
+        ed?.classList.toggle("full-pane", hidden);
+        if (rs) rs.style.display = hidden ? "none" : "grid";
+        e.currentTarget.classList.toggle("active-emerald", !hidden);
+        if (monacoEditor) setTimeout(() => monacoEditor.layout(), 50);
+      });
+    }
+
+    // ربط زر الفتح الخارجي الموجود في شريط المعاينة بنفس نظام الـ Live Server المتزامن
+    const extBtn = document.getElementById("btn-prev-external");
+    if (extBtn) {
+      const clone = extBtn.cloneNode(true);
+      extBtn.parentNode.replaceChild(clone, extBtn);
+      clone.addEventListener("click", openPersistentExternalLiveServer);
+    }
+  }
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       bootUniversalIDE();
-      setTimeout(initSuperIDEUpgrades, 150);
+      setTimeout(() => {
+        initSuperIDEUpgrades();
+        injectVSCodeClassicMenusAndShortcuts();
+      }, 150);
     });
   } else {
     bootUniversalIDE();
-    setTimeout(initSuperIDEUpgrades, 150);
+    setTimeout(() => {
+      initSuperIDEUpgrades();
+      injectVSCodeClassicMenusAndShortcuts();
+    }, 150);
   }
 })();
