@@ -1408,3 +1408,52 @@ body {
   height: 100%;
   object-fit: cover;
 }
+/* ============================================================================
+   4. UI COMPONENTS STUDIO & TIME-MACHINE SNAPSHOTS STYLING
+   ============================================================================ */
+.uilib-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+}
+.uilib-tab {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.uilib-tab.active {
+  background: rgba(212, 167, 44, 0.18);
+  border-color: var(--gold);
+  color: #ffffff;
+}
+.uilib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.uilib-card {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: border-color 0.2s ease, transform 0.15s ease;
+}
+.uilib-card:hover {
+  border-color: var(--gold);
+  transform: translateY(-2px);
+}
