@@ -656,85 +656,539 @@ function bindSuperTopbarDockEvents() {
 }
 
 /* ============================================================================
-   PRIVACY-FIRST .MP4 VIDEO RECORDER STUDIO (INTERNAL CANVAS OR SCREEN)
+   PRO VIDEO RECORDER STUDIO V2 (SCREEN / WINDOW / TAB / WHITEBOARD +
+   MIC & SYSTEM AUDIO MIXER + DRAGGABLE FACECAM PIP + .MP4 / .WEBM / .MKV)
    ============================================================================ */
+const ProRecState = {
+  targetSource: "monitor", // monitor | window | browser | whiteboard
+  extension: "mp4",        // mp4 | webm | mkv
+  micEnabled: true,
+  sysAudioEnabled: true,
+  facecamEnabled: true,
+  facecamShape: "rounded", // rounded | circle
+  facecamCorner: "br",     // br (أسفل يمين) | bl | tr | tl
+  facecamStream: null,
+  micStream: null,
+  displayStream: null,
+  audioCtx: null,
+  compositorCanvas: null,
+  compositorInterval: null
+};
+
+function getSupportedMimeForExt(ext) {
+  const candidates = ext === "mp4"
+    ? [
+        "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+        "video/mp4;codecs=h264,aac",
+        "video/mp4",
+        "video/webm;codecs=h264,opus",
+        "video/webm;codecs=vp9,opus",
+        "video/webm"
+      ]
+    : [
+        "video/x-matroska;codecs=avc1",
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp8,opus",
+        "video/webm"
+      ];
+  for (const t of candidates) {
+    if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(t)) {
+      return t;
+    }
+  }
+  return "";
+}
+
+function ensureFacecamOverlayWidget() {
+  let widget = document.getElementById("os-facecam-floating-box");
+  if (widget) return widget;
+
+  widget = document.createElement("div");
+  widget.id = "os-facecam-floating-box";
+  widget.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 210px;
+    height: 158px;
+    background: #05070e;
+    border: 3px solid var(--gold-primary, #d4af37);
+    border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.85), 0 0 25px rgba(212,175,55,0.35);
+    z-index: 2000000;
+    overflow: hidden;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    display: none;
+  `;
+
+  widget.innerHTML = `
+    <video id="os-facecam-video" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; transform:scaleX(-1); pointer-events:none;"></video>
+    <div style="position:absolute; top:6px; left:6px; right:6px; display:flex; justify-content:space-between; align-items:center; pointer-events:auto;">
+      <span style="background:rgba(9,13,25,0.8); color:#19B889; font-size:0.68rem; font-weight:800; padding:2px 8px; border-radius:99px; border:1px solid #19B889;">📷 LIVE CAM</span>
+      <div style="display:flex; gap:4px;">
+        <button type="button" id="btn-facecam-pip" title="تثبيت الكاميرا فوق البرامج الخارجية (PiP)" style="background:rgba(9,13,25,0.85); color:#d4af37; border:1px solid #d4af37; border-radius:6px; width:24px; height:24px; cursor:pointer; font-size:0.7rem;"><i class="fa-solid fa-up-right-from-square"></i></button>
+        <button type="button" id="btn-facecam-shape" title="تغيير الشكل (مربع / دائري)" style="background:rgba(9,13,25,0.85); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; width:24px; height:24px; cursor:pointer; font-size:0.7rem;"><i class="fa-solid fa-circle-half-stroke"></i></button>
+        <button type="button" id="btn-facecam-size" title="تكبير/تصغير الكاميرا" style="background:rgba(9,13,25,0.85); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; width:24px; height:24px; cursor:pointer; font-size:0.7rem;"><i class="fa-solid fa-expand"></i></button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(widget);
+
+  // سحب وتحريك الكاميرا في أي مكان على الشاشة
+  let isDrag = false, sx = 0, sy = 0, il = 0, it = 0;
+  const startDrag = (e) => {
+    if (e.target.closest("button")) return;
+    isDrag = true;
+    widget.style.cursor = "grabbing";
+    const cx = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+    const cy = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+    sx = cx; sy = cy;
+    const r = widget.getBoundingClientRect();
+    il = r.left; it = r.top;
+  };
+  const moveDrag = (e) => {
+    if (!isDrag) return;
+    const cx = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+    const cy = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+    const nl = Math.max(8, Math.min(window.innerWidth - widget.offsetWidth - 8, il + (cx - sx)));
+    const nt = Math.max(8, Math.min(window.innerHeight - widget.offsetHeight - 8, it + (cy - sy)));
+    widget.style.left = `${nl}px`;
+    widget.style.top = `${nt}px`;
+    widget.style.right = "auto";
+    widget.style.bottom = "auto";
+  };
+  const endDrag = () => {
+    isDrag = false;
+    widget.style.cursor = "grab";
+  };
+
+  widget.addEventListener("mousedown", startDrag);
+  window.addEventListener("mousemove", moveDrag);
+  window.addEventListener("mouseup", endDrag);
+  widget.addEventListener("touchstart", startDrag, { passive: true });
+  window.addEventListener("touchmove", moveDrag, { passive: true });
+  window.addEventListener("touchend", endDrag);
+
+  widget.querySelector("#btn-facecam-shape").onclick = () => {
+    ProRecState.facecamShape = ProRecState.facecamShape === "circle" ? "rounded" : "circle";
+    if (ProRecState.facecamShape === "circle") {
+      widget.style.width = "170px";
+      widget.style.height = "170px";
+      widget.style.borderRadius = "50%";
+    } else {
+      widget.style.width = "210px";
+      widget.style.height = "158px";
+      widget.style.borderRadius = "18px";
+    }
+  };
+
+  let sizeIdx = 0;
+  widget.querySelector("#btn-facecam-size").onclick = () => {
+    sizeIdx = (sizeIdx + 1) % 3;
+    const scales = [
+      { w: 210, h: 158 },
+      { w: 280, h: 210 },
+      { w: 160, h: 120 }
+    ];
+    const s = scales[sizeIdx];
+    widget.style.width = ProRecState.facecamShape === "circle" ? `${s.h}px` : `${s.w}px`;
+    widget.style.height = `${s.h}px`;
+  };
+
+  widget.querySelector("#btn-facecam-pip").onclick = async () => {
+    const v = widget.querySelector("#os-facecam-video");
+    try {
+      if (document.pictureInPictureElement) await document.exitPictureInPicture();
+      else if (v && v.srcObject) await v.requestPictureInPicture();
+    } catch (err) {
+      toast("نافذة الكاميرا العائمة جاهزة داخل الشاشة", "info");
+    }
+  };
+
+  return widget;
+}
+
+async function startFacecamOverlay() {
+  const widget = ensureFacecamOverlayWidget();
+  const videoEl = widget.querySelector("#os-facecam-video");
+  try {
+    if (!ProRecState.facecamStream) {
+      ProRecState.facecamStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
+        audio: false
+      });
+    }
+    videoEl.srcObject = ProRecState.facecamStream;
+    await videoEl.play().catch(() => {});
+
+    // ضبط الزاوية المختارة
+    widget.style.top = "auto"; widget.style.bottom = "auto";
+    widget.style.left = "auto"; widget.style.right = "auto";
+    if (ProRecState.facecamCorner === "br") { widget.style.bottom = "24px"; widget.style.right = "24px"; }
+    else if (ProRecState.facecamCorner === "bl") { widget.style.bottom = "24px"; widget.style.left = "24px"; }
+    else if (ProRecState.facecamCorner === "tr") { widget.style.top = "80px"; widget.style.right = "24px"; }
+    else { widget.style.top = "80px"; widget.style.left = "24px"; }
+
+    if (ProRecState.facecamShape === "circle") {
+      widget.style.width = "170px"; widget.style.height = "170px"; widget.style.borderRadius = "50%";
+    } else {
+      widget.style.width = "210px"; widget.style.height = "158px"; widget.style.borderRadius = "18px";
+    }
+    widget.style.display = "block";
+    return videoEl;
+  } catch (err) {
+    toast("تعذر فتح الكاميرا — تأكد من إعطاء صلاحية الكاميرا للمتصفح", "error");
+    return null;
+  }
+}
+
+function stopAllProRecordingStreams() {
+  if (ProRecState.compositorInterval) {
+    clearInterval(ProRecState.compositorInterval);
+    ProRecState.compositorInterval = null;
+  }
+  [ProRecState.facecamStream, ProRecState.micStream, ProRecState.displayStream, topbarScreenRecStream].forEach(st => {
+    if (st) {
+      try { st.getTracks().forEach(t => t.stop()); } catch (e) {}
+    }
+  });
+  ProRecState.facecamStream = null;
+  ProRecState.micStream = null;
+  ProRecState.displayStream = null;
+  topbarScreenRecStream = null;
+
+  if (ProRecState.audioCtx) {
+    try { ProRecState.audioCtx.close(); } catch (e) {}
+    ProRecState.audioCtx = null;
+  }
+  const camWidget = document.getElementById("os-facecam-floating-box");
+  if (camWidget) camWidget.style.display = "none";
+  if (document.pictureInPictureElement) {
+    document.exitPictureInPicture().catch(() => {});
+  }
+}
+
+async function buildCombinedVideoAndAudioStream(baseVideoStream) {
+  let finalVideoTrack = baseVideoStream.getVideoTracks()[0];
+  let camVideoEl = null;
+
+  if (ProRecState.facecamEnabled) {
+    camVideoEl = await startFacecamOverlay();
+  }
+
+  // دمج الكاميرا الشخصية (Facecam) داخل الفيديو المسجل نفسه في المربع السفلي الأيمن
+  if (ProRecState.facecamEnabled && camVideoEl && ProRecState.facecamStream) {
+    const srcVideo = document.createElement("video");
+    srcVideo.srcObject = new MediaStream([finalVideoTrack]);
+    srcVideo.muted = true;
+    srcVideo.playsInline = true;
+    await srcVideo.play().catch(() => {});
+
+    const compCanvas = document.createElement("canvas");
+    const settings = finalVideoTrack.getSettings?.() || {};
+    compCanvas.width = settings.width || 1280;
+    compCanvas.height = settings.height || 720;
+    const cCtx = compCanvas.getContext("2d");
+
+    ProRecState.compositorInterval = setInterval(() => {
+      if (srcVideo.readyState >= 2) {
+        cCtx.drawImage(srcVideo, 0, 0, compCanvas.width, compCanvas.height);
+      }
+      if (camVideoEl && camVideoEl.readyState >= 2) {
+        const cw = Math.round(compCanvas.width * 0.2);
+        const ch = ProRecState.facecamShape === "circle" ? cw : Math.round(cw * 0.75);
+        const pad = 28;
+        let cx = compCanvas.width - cw - pad;
+        let cy = compCanvas.height - ch - pad;
+        if (ProRecState.facecamCorner === "bl") { cx = pad; cy = compCanvas.height - ch - pad; }
+        else if (ProRecState.facecamCorner === "tr") { cx = compCanvas.width - cw - pad; cy = pad; }
+        else if (ProRecState.facecamCorner === "tl") { cx = pad; cy = pad; }
+
+        cCtx.save();
+        cCtx.beginPath();
+        if (ProRecState.facecamShape === "circle") {
+          cCtx.arc(cx + cw / 2, cy + ch / 2, cw / 2, 0, Math.PI * 2);
+        } else {
+          cCtx.roundRect(cx, cy, cw, ch, 18);
+        }
+        cCtx.clip();
+        // رسم الكاميرا معكوسة أفقياً كمرآة طبيعية
+        cCtx.translate(cx + cw, cy);
+        cCtx.scale(-1, 1);
+        cCtx.drawImage(camVideoEl, 0, 0, cw, ch);
+        cCtx.restore();
+
+        // إطار ذهبي حول الكاميرا داخل الفيديو
+        cCtx.save();
+        cCtx.strokeStyle = "#D4A72C";
+        cCtx.lineWidth = 4;
+        cCtx.beginPath();
+        if (ProRecState.facecamShape === "circle") {
+          cCtx.arc(cx + cw / 2, cy + ch / 2, cw / 2, 0, Math.PI * 2);
+        } else {
+          cCtx.roundRect(cx, cy, cw, ch, 18);
+        }
+        cCtx.stroke();
+        cCtx.restore();
+      }
+    }, 33); // 30 FPS
+
+    const compStream = compCanvas.captureStream(30);
+    if (compStream.getVideoTracks().length > 0) {
+      finalVideoTrack = compStream.getVideoTracks()[0];
+    }
+  }
+
+  // دمج صوت المايكروفون (صوتك وأنت بتشرح) + صوت الجهاز الداخلي في مسار صوتي واحد نقي
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  ProRecState.audioCtx = audioCtx;
+  const dest = audioCtx.createMediaStreamDestination();
+  let hasAnyAudio = false;
+
+  if (ProRecState.sysAudioEnabled && baseVideoStream.getAudioTracks().length > 0) {
+    const sysSrc = audioCtx.createMediaStreamSource(new MediaStream([baseVideoStream.getAudioTracks()[0]]));
+    const sysGain = audioCtx.createGain();
+    sysGain.gain.value = 0.85;
+    sysSrc.connect(sysGain).connect(dest);
+    hasAnyAudio = true;
+  }
+
+  if (ProRecState.micEnabled) {
+    try {
+      ProRecState.micStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
+        video: false
+      });
+      const micSrc = audioCtx.createMediaStreamSource(ProRecState.micStream);
+      const micGain = audioCtx.createGain();
+      micGain.gain.value = 1.35; // تقوية صوت الشرح ليكون واضحاً جداً
+      micSrc.connect(micGain).connect(dest);
+      hasAnyAudio = true;
+    } catch (micErr) {
+      toast("⚠️ لم يتم تفعيل المايكروفون — تأكد من السماح بالمايك من المتصفح", "error");
+    }
+  }
+
+  const finalTracks = [finalVideoTrack];
+  if (hasAnyAudio && dest.stream.getAudioTracks().length > 0) {
+    finalTracks.push(dest.stream.getAudioTracks()[0]);
+  }
+  return new MediaStream(finalTracks);
+}
+
 function openPrivateMP4RecorderModal() {
-  B().openFormModal("🎥 استوديو تسجيل الفيديو بصيغة (.MP4) — خصوصية كاملة", `
-    <p class="small-muted mb-2">اختر طريقة التسجيل المناسبة لك (يتم تصدير الفيديو بصيغة <strong>.mp4</strong> مباشرة لترسله لأي شخص بسهولة):</p>
+  B().openFormModal("🎥 استوديو تسجيل الشروحات والفيديو الاحترافي (صوت + صورة + كاميرا شخصية)", `
+    <p class="small-muted mb-2">حدد ماذا تريد أن تسجل، واختر امتداد الملف، وفعل المايك والكاميرا الشخصية في الزاوية أثناء الشرح:</p>
 
-    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap: 14px;">
-      <div class="item-card" style="border-color:#19B889!important;">
-        <div>
-          <span class="badge badge-emerald">🔒 خصوصية 100% (موصى به للشرح)</span>
-          <h4 class="mt-2 gold-text">1. تسجيل السبورة التفاعلية فقط + صوتك</h4>
-          <p class="small-muted mt-1">يسجل لوحة الشرح والرسومات والفروع مباشرة من داخل الموقع <strong>بدون فتح نافذة مشاركة المتصفح وبدون إظهار اسم حسابك على GitHub أو التابات المفتوحة نهائياً!</strong></p>
+    <!-- 1. اختيار مصدر التسجيل -->
+    <div class="form-group">
+      <label class="gold-text"><i class="fa-solid fa-desktop"></i> 1. ماذا تريد أن تسجل؟</label>
+      <div class="dashboard-grid" style="grid-template-columns: repeat(2, 1fr); gap:10px;">
+        <label class="check-pill ${ProRecState.targetSource === "monitor" ? "completed" : ""}" style="padding:12px;">
+          <input type="radio" name="rec_src" value="monitor" ${ProRecState.targetSource === "monitor" ? "checked" : ""} />
+          <span>🖥️ <strong>الشاشة كلها بالكامل</strong> (Entire Screen)</span>
+        </label>
+        <label class="check-pill ${ProRecState.targetSource === "window" ? "completed" : ""}" style="padding:12px;">
+          <input type="radio" name="rec_src" value="window" ${ProRecState.targetSource === "window" ? "checked" : ""} />
+          <span>🪟 <strong>تطبيق أو نافذة محددة</strong> (VS Code / برنامج)</span>
+        </label>
+        <label class="check-pill ${ProRecState.targetSource === "browser" ? "completed" : ""}" style="padding:12px;">
+          <input type="radio" name="rec_src" value="browser" ${ProRecState.targetSource === "browser" ? "checked" : ""} />
+          <span>🌐 <strong>موقع أو تاب محدد</strong> (Browser Tab)</span>
+        </label>
+        <label class="check-pill ${ProRecState.targetSource === "whiteboard" ? "completed" : ""}" style="padding:12px;">
+          <input type="radio" name="rec_src" value="whiteboard" ${ProRecState.targetSource === "whiteboard" ? "checked" : ""} />
+          <span>🎨 <strong>السبورة التفاعلية فقط</strong> (خصوصية 100%)</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 2. اختيار الامتداد والصوت -->
+    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr; gap:12px;">
+      <div class="form-group">
+        <label class="gold-text"><i class="fa-solid fa-file-video"></i> 2. اختر امتداد وصيغة الفيديو:</label>
+        <select id="pro-rec-ext-select">
+          <option value="mp4" ${ProRecState.extension === "mp4" ? "selected" : ""}>🎬 .MP4 (قياسي يشتغل على كل الأجهزة والموبايلات)</option>
+          <option value="webm" ${ProRecState.extension === "webm" ? "selected" : ""}>⚡ .WEBM (جودة فائقة للويب واليوتيوب)</option>
+          <option value="mkv" ${ProRecState.extension === "mkv" ? "selected" : ""}>🎞️ .MKV (Matroska HD للمحاضرات الطويلة)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="gold-text"><i class="fa-solid fa-microphone-lines"></i> 3. إعدادات الصوت أثناء التصوير:</label>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label class="check-pill ${ProRecState.micEnabled ? "completed" : ""}">
+            <input type="checkbox" id="pro-rec-mic-chk" ${ProRecState.micEnabled ? "checked" : ""} />
+            <span>🎙️ تسجيل صوتي بالمايكروفون وأنا بشرح</span>
+          </label>
+          <label class="check-pill ${ProRecState.sysAudioEnabled ? "completed" : ""}">
+            <input type="checkbox" id="pro-rec-sys-chk" ${ProRecState.sysAudioEnabled ? "checked" : ""} />
+            <span>🔊 تسجيل صوت الجهاز الداخلي مع الشرح</span>
+          </label>
         </div>
-        <button type="button" id="btn-rec-internal-wb" class="btn btn-gold btn-sm btn-block mt-2">
-          <i class="fa-solid fa-chalkboard-user"></i> افتح السبورة وابدأ تسجيل MP4 خاص
+      </div>
+    </div>
+
+    <!-- 3. إعدادات الكاميرا الشخصية (Facecam PIP) -->
+    <div class="subject-progress-box" style="border:1.5px solid var(--gold-primary);">
+      <div class="flex-between" style="flex-wrap:wrap; gap:8px;">
+        <label class="check-pill ${ProRecState.facecamEnabled ? "completed" : ""}" style="margin:0;">
+          <input type="checkbox" id="pro-rec-cam-chk" ${ProRecState.facecamEnabled ? "checked" : ""} />
+          <span>📷 <strong>إظهار الكاميرا الشخصية (Facecam) في مربع صغير أثناء الشرح</strong></span>
+        </label>
+        <button type="button" id="btn-test-facecam-now" class="btn btn-xs btn-outline">
+          <i class="fa-solid fa-camera gold-text"></i> معاينة وتحريك الكاميرا الآن
         </button>
       </div>
 
-      <div class="item-card">
+      <div class="dashboard-grid mt-2" style="grid-template-columns: 1fr 1fr; gap:10px;">
         <div>
-          <span class="badge badge-gold">🖥️ تسجيل نافذة أو شاشة كاملة</span>
-          <h4 class="mt-2">2. تسجيل شاشة الجهاز بصيغة MP4</h4>
-          <p class="small-muted mt-1">يسجل أي نافذة أو برنامج على جهازك مع الصوت ويحفظه كملف <strong>.mp4</strong> قياسي (يستخدم نافذة اختيار الشاشة الخاصة بالمتصفح).</p>
+          <label class="small-muted">مكان الكاميرا الافتراضي (قابلة للسحب بالماوس):</label>
+          <select id="pro-rec-cam-corner" class="select-sm" style="width:100%;">
+            <option value="br" ${ProRecState.facecamCorner === "br" ? "selected" : ""}>↘️ أسفل اليمين (Bottom-Right)</option>
+            <option value="bl" ${ProRecState.facecamCorner === "bl" ? "selected" : ""}>↙️ أسفل اليسار (Bottom-Left)</option>
+            <option value="tr" ${ProRecState.facecamCorner === "tr" ? "selected" : ""}>↗️ أعلى اليمين (Top-Right)</option>
+            <option value="tl" ${ProRecState.facecamCorner === "tl" ? "selected" : ""}>↖️ أعلى اليسار (Top-Left)</option>
+          </select>
         </div>
-        <button type="button" id="btn-rec-display-mp4" class="btn btn-outline btn-sm btn-block mt-2">
-          <i class="fa-solid fa-desktop gold-text"></i> تسجيل الشاشة بصيغة MP4
-        </button>
+        <div>
+          <label class="small-muted">شكل إطار الكاميرا:</label>
+          <select id="pro-rec-cam-shape" class="select-sm" style="width:100%;">
+            <option value="rounded" ${ProRecState.facecamShape === "rounded" ? "selected" : ""}>▭ مربع بحواف ذهبية ناعمة</option>
+            <option value="circle" ${ProRecState.facecamShape === "circle" ? "selected" : ""}>⭕ دائري احترافي</option>
+          </select>
+        </div>
       </div>
+    </div>
+
+    <div class="config-actions mt-4">
+      <button type="button" id="btn-start-pro-recording" class="btn btn-gold btn-block btn-luxury-shine" style="font-size:1.05rem; padding:14px;">
+        <i class="fa-solid fa-circle-dot"></i> ابدأ التسجيل الآن (فيديو + صوت + كاميرا) 🔴
+      </button>
     </div>
   `, async () => {});
 
+  document.querySelector("#universal-modal .modal-card")?.classList.add("wide-lab-modal");
   const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
   if (saveBtn) saveBtn.style.display = "none";
 
-  // الخيار 1: فتح السبورة وبدء التسجيل الداخلي الخاص 100% بدون نافذة المتصفح
-  document.getElementById("btn-rec-internal-wb")?.addEventListener("click", () => {
-    openSmartWhiteboardModal(true);
+  // تحديث الاختيارات عند التغيير
+  document.querySelectorAll('input[name="rec_src"]').forEach(rad => {
+    rad.onchange = () => {
+      ProRecState.targetSource = rad.value;
+      document.querySelectorAll('input[name="rec_src"]').forEach(r => r.closest(".check-pill")?.classList.toggle("completed", r.checked));
+    };
   });
 
-  // الخيار 2: تسجيل الشاشة بصيغة MP4 مع إخفاء التاب الحالي من الاقتراحات المزعجة
-  document.getElementById("btn-rec-display-mp4")?.addEventListener("click", async () => {
-    document.getElementById("universal-modal")?.classList.add("hidden");
+  document.getElementById("pro-rec-ext-select").onchange = (e) => { ProRecState.extension = e.target.value; };
+  document.getElementById("pro-rec-mic-chk").onchange = (e) => {
+    ProRecState.micEnabled = e.target.checked;
+    e.target.closest(".check-pill")?.classList.toggle("completed", e.target.checked);
+  };
+  document.getElementById("pro-rec-sys-chk").onchange = (e) => {
+    ProRecState.sysAudioEnabled = e.target.checked;
+    e.target.closest(".check-pill")?.classList.toggle("completed", e.target.checked);
+  };
+  document.getElementById("pro-rec-cam-chk").onchange = (e) => {
+    ProRecState.facecamEnabled = e.target.checked;
+    e.target.closest(".check-pill")?.classList.toggle("completed", e.target.checked);
+  };
+  document.getElementById("pro-rec-cam-corner").onchange = (e) => { ProRecState.facecamCorner = e.target.value; };
+  document.getElementById("pro-rec-cam-shape").onchange = (e) => { ProRecState.facecamShape = e.target.value; };
+
+  document.getElementById("btn-test-facecam-now").onclick = async () => {
+    ProRecState.facecamEnabled = true;
+    document.getElementById("pro-rec-cam-chk").checked = true;
+    await startFacecamOverlay();
+    toast("📷 الكاميرا ظهرت أسفل اليمين! يمكنك سحبها بالماوس لأي مكان", "success");
+  };
+
+  // بدء التسجيل الفعلي
+  document.getElementById("btn-start-pro-recording").onclick = async () => {
+    const ext = ProRecState.extension || "mp4";
+    const srcType = ProRecState.targetSource || "monitor";
     const recBtn = document.getElementById("btn-top-screen-rec");
     const lbl = document.getElementById("top-rec-label");
-    try {
-      topbarScreenRecStream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          displaySurface: "monitor",
-          selfBrowserSurface: "exclude"
-        },
-        audio: true
-      });
-      const mime = getBestMP4MimeType();
-      topbarScreenRecorder = mime
-        ? new MediaRecorder(topbarScreenRecStream, { mimeType: mime })
-        : new MediaRecorder(topbarScreenRecStream);
 
-      topbarScreenChunks = [];
-      topbarScreenRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) topbarScreenChunks.push(e.data);
+    document.getElementById("universal-modal")?.classList.add("hidden");
+
+    // إذا اختار تسجيل السبورة الداخلية فقط
+    if (srcType === "whiteboard") {
+      openSmartWhiteboardModal(false);
+      setTimeout(async () => {
+        const wbCanvas = document.getElementById("smart-whiteboard-canvas");
+        if (!wbCanvas) return;
+        const rawCanvasStream = wbCanvas.captureStream(30);
+        const finalStream = await buildCombinedVideoAndAudioStream(rawCanvasStream);
+        startMediaRecorderWithStream(finalStream, ext, recBtn, lbl);
+      }, 300);
+      return;
+    }
+
+    // تسجيل الشاشة كلها / نافذة تطبيق / تاب متصفح
+    try {
+      const displayConstraints = {
+        video: {
+          displaySurface: srcType, // monitor | window | browser
+          frameRate: { ideal: 30, max: 60 }
+        },
+        audio: ProRecState.sysAudioEnabled,
+        selfBrowserSurface: srcType === "browser" ? "include" : "exclude"
       };
-      topbarScreenRecorder.onstop = () => {
-        const blob = new Blob(topbarScreenChunks, { type: "video/mp4" });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `Explanation-Video-${today()}.mp4`;
-        a.click();
-        recBtn?.classList.remove("rec-active");
-        if (lbl) lbl.textContent = "تسجيل MP4";
-        toast("تم حفظ وتصدير الفيديو بصيغة .MP4 بنجاح! 🎬✅");
+
+      ProRecState.displayStream = await navigator.mediaDevices.getDisplayMedia(displayConstraints);
+      const finalStream = await buildCombinedVideoAndAudioStream(ProRecState.displayStream);
+
+      // لو المستخدم ضغط "Stop Sharing" من شريط المتصفح نفسه
+      ProRecState.displayStream.getVideoTracks()[0].onended = () => {
+        if (topbarScreenRecorder && topbarScreenRecorder.state === "recording") {
+          topbarScreenRecorder.stop();
+        }
       };
-      topbarScreenRecorder.start(200);
-      recBtn?.classList.add("rec-active");
-      if (lbl) lbl.textContent = "إيقاف وحفظ MP4 🔴";
-      toast("🔴 بدأ التسجيل! اضغط على (إيقاف وحفظ MP4) في الشريط العلوي عند الانتهاء", "info");
+
+      startMediaRecorderWithStream(finalStream, ext, recBtn, lbl);
     } catch (err) {
+      stopAllProRecordingStreams();
       toast("تم إلغاء بدء التسجيل", "info");
     }
-  });
+  };
+}
+
+function startMediaRecorderWithStream(finalStream, ext, recBtn, lbl) {
+  topbarScreenRecStream = finalStream;
+  const mime = getSupportedMimeForExt(ext);
+  topbarScreenRecorder = mime
+    ? new MediaRecorder(finalStream, { mimeType: mime, videoBitsPerSecond: 4500000 })
+    : new MediaRecorder(finalStream);
+
+  topbarScreenChunks = [];
+  topbarScreenRecorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) topbarScreenChunks.push(e.data);
+  };
+
+  topbarScreenRecorder.onstop = () => {
+    stopAllProRecordingStreams();
+    const blobType = ext === "mp4" ? "video/mp4" : ext === "mkv" ? "video/x-matroska" : "video/webm";
+    const blob = new Blob(topbarScreenChunks, { type: blobType });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `MY-LIFE-OS-Recording-${today()}.${ext}`;
+    a.click();
+    recBtn?.classList.remove("rec-active");
+    if (lbl) lbl.textContent = "تسجيل فيديو";
+    toast(`🎬 تم حفظ وتصدير الفيديو بالصوت والكاميرا بصيغة (.${ext.toUpperCase()}) بنجاح!`);
+  };
+
+  topbarScreenRecorder.start(200);
+  recBtn?.classList.add("rec-active");
+  if (lbl) lbl.textContent = `إيقاف وحفظ .${ext.toUpperCase()} 🔴`;
+  toast(`🔴 بدأ التسجيل الآن (فيديو + صوت ${ProRecState.facecamEnabled ? "+ كاميرا" : ""})! اضغط على زر الشريط العلوي للإيقاف والحفظ.`, "success");
 }
 
 /* ============================================================================
@@ -5493,194 +5947,625 @@ function openImageToPdfConverterModal() {
 }
 
 /* ============================================================================
-   6. LIVE CO-STUDY & SHARED WHITEBOARD ROOM (REAL-TIME FIRESTORE SYNC)
+   6. DRAGGABLE MINI POMODORO + LIVE CO-STUDY ROOM V2 (TIMER, CHAT, TASKS & WB)
    ============================================================================ */
+
+// أ) جعل نافذة البومودورو المصغرة (#mini-floating-pomo) سهلة السحب والتحريك في أي جنب
+function initDraggableMiniPomodoro() {
+  const miniPomo = document.getElementById("mini-floating-pomo");
+  if (!miniPomo || miniPomo.dataset.dragBound === "1") return;
+  miniPomo.dataset.dragBound = "1";
+
+  miniPomo.style.cursor = "grab";
+  miniPomo.style.userSelect = "none";
+  miniPomo.style.touchAction = "none";
+  miniPomo.style.zIndex = "99995";
+
+  // استرجاع آخر مكان تم سحب البومودورو الصغير إليه
+  const savedPos = localStorage.getItem("MY_LIFE_OS_MINI_POMO_POS");
+  if (savedPos) {
+    try {
+      const { x, y } = JSON.parse(savedPos);
+      miniPomo.style.left = `${ Math.max(8, Math.min(window.innerWidth - 220, x)) }px`;
+      miniPomo.style.top = `${ Math.max(8, Math.min(window.innerHeight - 80, y)) }px`;
+      miniPomo.style.right = "auto";
+      miniPomo.style.bottom = "auto";
+    } catch (e) {}
+  }
+
+  // إضافة أيقونة قبضة تحريك واضحة في بداية النافذة المصغرة
+  const topRow = miniPomo.querySelector(".mini-hud-top");
+  if (topRow && !topRow.querySelector(".mini-drag-grip")) {
+    const grip = document.createElement("span");
+    grip.className = "mini-drag-grip gold-text";
+    grip.title = "اسحب لتحريك المؤقت في أي مكان";
+    grip.style.cssText = "cursor:grab; padding:0 4px; font-size:0.9rem;";
+    grip.innerHTML = `<i class="fa-solid fa-grip-vertical"></i>`;
+    topRow.prepend(grip);
+  }
+
+  let isDragging = false, startX = 0, startY = 0, initLeft = 0, initTop = 0;
+
+  const onDown = (e) => {
+    if (e.target.closest("button")) return;
+    isDragging = true;
+    miniPomo.style.cursor = "grabbing";
+    miniPomo.style.transition = "none";
+    const cx = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+    const cy = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+    startX = cx;
+    startY = cy;
+    const rect = miniPomo.getBoundingClientRect();
+    initLeft = rect.left;
+    initTop = rect.top;
+  };
+
+  const onMove = (e) => {
+    if (!isDragging) return;
+    const cx = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+    const cy = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+    const newLeft = Math.max(6, Math.min(window.innerWidth - miniPomo.offsetWidth - 6, initLeft + (cx - startX)));
+    const newTop = Math.max(6, Math.min(window.innerHeight - miniPomo.offsetHeight - 6, initTop + (cy - startY)));
+    miniPomo.style.left = `${newLeft}px`;
+    miniPomo.style.top = `${newTop}px`;
+    miniPomo.style.right = "auto";
+    miniPomo.style.bottom = "auto";
+  };
+
+  const onUp = () => {
+    if (!isDragging) return;
+    isDragging = false;
+    miniPomo.style.cursor = "grab";
+    const rect = miniPomo.getBoundingClientRect();
+    localStorage.setItem("MY_LIFE_OS_MINI_POMO_POS", JSON.stringify({ x: rect.left, y: rect.top }));
+  };
+
+  miniPomo.addEventListener("mousedown", onDown);
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("mouseup", onUp);
+  miniPomo.addEventListener("touchstart", onDown, { passive: true });
+  window.addEventListener("touchmove", onMove, { passive: true });
+  window.addEventListener("touchend", onUp);
+}
+setTimeout(initDraggableMiniPomodoro, 500);
+
+// ب) محرك الغرفة المشتركة الحية (يعمل عبر Firebase + BroadcastChannel + LocalStorage بلا أي أعطال)
+const CoStudyEngine = {
+  roomData: null,
+  bc: null,
+  tickInterval: null,
+  firestoreDocId: null
+};
+
 async function getFirestoreMod() {
   return await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+}
+
+function getDefaultRoomObject(code, userName) {
+  return {
+    roomCode: code,
+    hostName: userName,
+    members: [userName],
+    pomoDuration: 25 * 60,
+    pomoTimeLeft: 25 * 60,
+    pomoTargetTs: 0,
+    pomoRunning: false,
+    pomoMode: "تركيز جماعي 🔥",
+    tasks: [
+      { id: "rt_1", text: "مراجعة المحاضرة الأساسية وحل الشيت", done: false, by: userName }
+    ],
+    messages: [
+      { id: "rm_1", sender: "النظام 🤖", text: `تم تفعيل غرفة المذاكرة المشتركة (${code}) بنجاح!`, time: new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }) }
+    ],
+    wbNodes: JSON.stringify(WBState.nodes || []),
+    wbStrokes: JSON.stringify(WBState.strokes || []),
+    updatedAtMs: Date.now()
+  };
+}
+
+function saveAndBroadcastRoomState(roomObj, syncWhiteboard = false) {
+  if (!roomObj || !roomObj.roomCode) return;
+  roomObj.updatedAtMs = Date.now();
+  if (syncWhiteboard) {
+    roomObj.wbNodes = JSON.stringify(WBState.nodes || []);
+    roomObj.wbStrokes = JSON.stringify(WBState.strokes || []);
+  }
+  CoStudyEngine.roomData = roomObj;
+
+  // 1. حفظ محلي فوري ومزامنة بين التابات
+  try {
+    localStorage.setItem("MY_LIFE_OS_ROOM_DATA_" + roomObj.roomCode, JSON.stringify(roomObj));
+  } catch (e) {}
+
+  if (CoStudyEngine.bc) {
+    try { CoStudyEngine.bc.postMessage(roomObj); } catch (e) {}
+  }
+
+  // 2. مزامنة سحابية عبر Firebase Firestore (مع حماية كاملة ضد أخطاء الصلاحيات)
+  const db = B().getAppState?.()?.db;
+  const user = B().getAppState?.()?.user;
+  if (db && user) {
+    getFirestoreMod().then(async ({ doc, setDoc }) => {
+      try {
+        await setDoc(doc(db, "co_study_rooms", roomObj.roomCode), {
+          ...roomObj,
+          ownerUid: user.uid
+        }, { merge: true });
+      } catch (err) {
+        // في حال كانت قواعد Firestore تقيد الكولكشن الخارجي، يستمر المحرك المحلي والـ Broadcast بالعمل فوراً دون توقف
+      }
+    }).catch(() => {});
+  }
+
+  refreshRoomUIElements();
+}
+
+function applyIncomingRoomState(data) {
+  if (!data || !data.roomCode) return;
+  CoStudyEngine.roomData = data;
+
+  // مزامنة السبورة إذا تغيرت
+  if (data.wbNodes && data.wbStrokes) {
+    try {
+      V6ExpansionState.isApplyingRemoteWB = true;
+      WBState.nodes = JSON.parse(data.wbNodes);
+      WBState.strokes = JSON.parse(data.wbStrokes);
+      const canvas = document.getElementById("smart-whiteboard-canvas");
+      if (canvas) {
+        renderWhiteboardScene(canvas.getContext("2d"), canvas.width, canvas.height);
+      }
+      V6ExpansionState.isApplyingRemoteWB = false;
+    } catch (e) {}
+  }
+
+  // مزامنة المؤقت مع المؤقت الرئيسي والمصغر للموقع
+  const pState = B().getPomodoroState?.();
+  if (pState) {
+    if (data.pomoRunning && data.pomoTargetTs > Date.now()) {
+      const rem = Math.max(1, Math.round((data.pomoTargetTs - Date.now()) / 1000));
+      pState.duration = data.pomoDuration || 1500;
+      pState.timeLeft = rem;
+      if (!pState.isRunning) B().startPomodoro?.();
+    } else if (!data.pomoRunning && pState.isRunning) {
+      B().pausePomodoro?.();
+      pState.timeLeft = data.pomoTimeLeft || data.pomoDuration || 1500;
+      B().updatePomodoroDisplays?.();
+    }
+  }
+
+  refreshRoomUIElements();
+}
+
+function startRoomLiveTicker() {
+  if (CoStudyEngine.tickInterval) clearInterval(CoStudyEngine.tickInterval);
+  CoStudyEngine.tickInterval = setInterval(() => {
+    const rm = CoStudyEngine.roomData;
+    if (!rm || !V6ExpansionState.activeRoomCode) return;
+
+    if (rm.pomoRunning && rm.pomoTargetTs > 0) {
+      const rem = Math.max(0, Math.round((rm.pomoTargetTs - Date.now()) / 1000));
+      rm.pomoTimeLeft = rem;
+      if (rem <= 0) {
+        rm.pomoRunning = false;
+        rm.pomoTargetTs = 0;
+        saveAndBroadcastRoomState(rm);
+        toast("🎉 انتهت جلسة التركيز المشتركة في الغرفة! عاش يا أبطال ☕", "success");
+      }
+    }
+
+    // تحديث شاشة المؤقت داخل نافذة الغرفة المشتركة وفي الشريط العلوي لحظياً
+    const timerEl = document.getElementById("room-live-timer-display");
+    const barEl = document.getElementById("room-live-timer-bar");
+    const statusEl = document.getElementById("room-live-timer-status");
+    const topRoomBtn = document.getElementById("btn-top-costudy-room");
+
+    const secs = rm.pomoTimeLeft ?? rm.pomoDuration ?? 1500;
+    const mStr = String(Math.floor(secs / 60)).padStart(2, "0");
+    const sStr = String(secs % 60).padStart(2, "0");
+    const formatted = `${mStr}:${sStr}`;
+
+    if (timerEl) timerEl.textContent = formatted;
+    if (statusEl) {
+      statusEl.textContent = rm.pomoRunning ? `⚡ المؤقت يعمل الآن (${rm.pomoMode || "تركيز"})` : "⏸️ المؤقت متوقف مؤقتاً — اضغط تشغيل للبدء";
+    }
+    if (barEl) {
+      const total = Math.max(1, rm.pomoDuration || 1500);
+      const pct = Math.min(100, Math.round(((total - secs) / total) * 100));
+      barEl.style.width = `${pct}%`;
+    }
+    if (topRoomBtn) {
+      topRoomBtn.classList.add("costudy-live-pill");
+      topRoomBtn.innerHTML = `<span class="live-dot"></span> <span>غرفة ${esc(rm.roomCode)} (${formatted})</span>`;
+    }
+  }, 1000);
+}
+
+function refreshRoomUIElements() {
+  const rm = CoStudyEngine.roomData;
+  if (!rm) return;
+
+  // تحديث قائمة المهام المشتركة داخل المودال إن كان مفتوحاً
+  const tasksBox = document.getElementById("room-shared-tasks-list");
+  if (tasksBox) {
+    tasksBox.innerHTML = (rm.tasks || []).map((t, idx) => `
+      <label class="check-pill ${t.done ? "completed" : ""}" style="display:flex; justify-content:space-between; margin-bottom:6px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" data-room-task-idx="${idx}" ${t.done ? "checked" : ""} />
+          <span>${esc(t.text)} <small class="small-muted">(${esc(t.by || "")})</small></span>
+        </div>
+        <button type="button" class="btn-icon-xs text-danger" data-room-task-del="${idx}">&times;</button>
+      </label>
+    `).join("") || `<p class="small-muted">لا توجد مهام مشتركة بعد. أضف أول مهمة للفريق!</p>`;
+
+    tasksBox.querySelectorAll("[data-room-task-idx]").forEach(chk => {
+      chk.onchange = () => {
+        const i = Number(chk.dataset.roomTaskIdx);
+        if (rm.tasks[i]) {
+          rm.tasks[i].done = chk.checked;
+          saveAndBroadcastRoomState(rm);
+        }
+      };
+    });
+    tasksBox.querySelectorAll("[data-room-task-del]").forEach(btn => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        rm.tasks.splice(Number(btn.dataset.roomTaskDel), 1);
+        saveAndBroadcastRoomState(rm);
+      };
+    });
+  }
+
+  // تحديث شات الغرفة الفوري
+  const chatBox = document.getElementById("room-shared-chat-box");
+  if (chatBox) {
+    chatBox.innerHTML = (rm.messages || []).slice(-25).map(msg => `
+      <div style="background:rgba(15,22,38,0.9); border:1px solid rgba(212,167,44,0.25); padding:7px 11px; border-radius:10px; margin-bottom:6px;">
+        <div class="flex-between">
+          <strong class="gold-text" style="font-size:0.78rem;">${esc(msg.sender)}</strong>
+          <small class="small-muted" style="font-size:0.7rem;">${esc(msg.time)}</small>
+        </div>
+        <p style="font-size:0.86rem; margin-top:2px; word-break:break-word;">${esc(msg.text)}</p>
+      </div>
+    `).join("");
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  // تحديث زر التشغيل/الإيقاف المؤقت داخل الغرفة
+  const startBtn = document.getElementById("btn-room-pomo-toggle");
+  if (startBtn) {
+    startBtn.innerHTML = rm.pomoRunning
+      ? `<i class="fa-solid fa-pause"></i> إيقاف مؤقت للغرفة`
+      : `<i class="fa-solid fa-play"></i> تشغيل المؤقت المشترك الآن`;
+  }
 }
 
 async function joinOrCreateCoStudyRoom(roomCodeInput, isCreating = false) {
   const cleanCode = String(roomCodeInput || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
   if (!cleanCode) {
-    toast("أدخل كود غرفة صحيح", "error");
+    toast("أدخل كود غرفة صحيح (مثال: MUC-202)", "error");
     return;
   }
 
-  const db = B().getAppState?.()?.db;
   const user = B().getAppState?.()?.user;
-  if (!db) {
-    toast("جاري الاتصال بـ Firebase...", "info");
-    return;
-  }
-
-  const { doc, setDoc, onSnapshot, serverTimestamp } = await getFirestoreMod();
-  const roomRef = doc(db, "co_study_rooms", cleanCode);
-
-  if (isCreating) {
-    await setDoc(roomRef, {
-      roomCode: cleanCode,
-      hostName: user?.displayName || "Eng. Ahmed M Hosny",
-      wbNodes: JSON.stringify(WBState.nodes || []),
-      wbStrokes: JSON.stringify(WBState.strokes || []),
-      pomoDuration: 50 * 60,
-      pomoTargetTs: Date.now() + 50 * 60 * 1000,
-      pomoRunning: false,
-      sharedNote: "مرحباً بكم في غرفة المذاكرة والشرح المشترك 🚀",
-      updatedBy: user?.displayName || "Host",
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-  }
+  const userName = user?.displayName || "Eng. Ahmed M Hosny";
 
   V6ExpansionState.activeRoomCode = cleanCode;
   localStorage.setItem("MY_LIFE_OS_COSTUDY_ROOM", cleanCode);
 
-  if (V6ExpansionState.roomUnsub) V6ExpansionState.roomUnsub();
+  // تحميل بيانات الغرفة المحفوظة أو إنشاء غرفة جديدة فوراً
+  let existingLocal = null;
+  try {
+    const raw = localStorage.getItem("MY_LIFE_OS_ROOM_DATA_" + cleanCode);
+    if (raw) existingLocal = JSON.parse(raw);
+  } catch (e) {}
 
-  V6ExpansionState.roomUnsub = onSnapshot(roomRef, (snap) => {
-    if (!snap.exists()) return;
-    const data = snap.data();
+  const roomObj = existingLocal || getDefaultRoomObject(cleanCode, userName);
+  if (!roomObj.members) roomObj.members = [userName];
+  if (!roomObj.members.includes(userName)) roomObj.members.push(userName);
 
-    // تحديث شارة الغرفة في الشريط العلوي
-    const topRoomBtn = document.getElementById("btn-top-costudy-room");
-    if (topRoomBtn) {
-      topRoomBtn.classList.add("costudy-live-pill");
-      topRoomBtn.innerHTML = `<span class="live-dot"></span> <span>غرفة: ${esc(cleanCode)}</span>`;
-    }
-
-    // مزامنة السبورة الهندسية الحية لكل المتصلين في الغرفة
-    if (data.wbNodes && data.wbStrokes) {
-      try {
-        V6ExpansionState.isApplyingRemoteWB = true;
-        WBState.nodes = JSON.parse(data.wbNodes);
-        WBState.strokes = JSON.parse(data.wbStrokes);
-        const canvas = document.getElementById("smart-whiteboard-canvas");
-        if (canvas) {
-          const ctx = canvas.getContext("2d");
-          renderWhiteboardScene(ctx, canvas.width, canvas.height);
-        }
-        V6ExpansionState.isApplyingRemoteWB = false;
-      } catch (e) {}
-    }
-
-    // مزامنة مؤقت البومودورو المشترك إذا كان مفعلاً
-    if (data.pomoRunning && data.pomoTargetTs > Date.now()) {
-      const remSecs = Math.max(1, Math.round((data.pomoTargetTs - Date.now()) / 1000));
-      const pState = B().getPomodoroState?.();
-      if (pState && Math.abs(pState.timeLeft - remSecs) > 4) {
-        pState.timeLeft = remSecs;
-        if (!pState.isRunning) B().startPomodoro?.();
+  // تفعيل قناة البث اللحظي بين النوافذ والتابات
+  if (CoStudyEngine.bc) {
+    try { CoStudyEngine.bc.close(); } catch (e) {}
+  }
+  if ("BroadcastChannel" in window) {
+    CoStudyEngine.bc = new BroadcastChannel("MY_LIFE_OS_ROOM_" + cleanCode);
+    CoStudyEngine.bc.onmessage = (ev) => {
+      if (ev.data && ev.data.roomCode === cleanCode) {
+        applyIncomingRoomState(ev.data);
       }
-    }
-  });
+    };
+  }
 
-  toast(`🟢 متصل الآن بغرفة المذاكرة والسبورة المشتركة (${cleanCode})!`);
+  // تفعيل الاستماع السحابي من Firestore إن كان متاحاً
+  const db = B().getAppState?.()?.db;
+  if (V6ExpansionState.roomUnsub) {
+    try { V6ExpansionState.roomUnsub(); } catch (e) {}
+    V6ExpansionState.roomUnsub = null;
+  }
+  if (db) {
+    try {
+      const { doc, onSnapshot } = await getFirestoreMod();
+      const roomRef = doc(db, "co_study_rooms", cleanCode);
+      V6ExpansionState.roomUnsub = onSnapshot(roomRef, (snap) => {
+        if (snap.exists()) {
+          applyIncomingRoomState(snap.data());
+        }
+      }, () => {});
+    } catch (e) {}
+  }
+
+  saveAndBroadcastRoomState(roomObj, isCreating);
+  startRoomLiveTicker();
+  toast(`🟢 تم الاتصال وتفعيل الغرفة المشتركة (${cleanCode}) بنجاح!`);
 }
 
 async function broadcastWhiteboardToRoom() {
-  const code = V6ExpansionState.activeRoomCode;
-  const db = B().getAppState?.()?.db;
-  const user = B().getAppState?.()?.user;
-  if (!code || !db || V6ExpansionState.isApplyingRemoteWB) return;
-
-  try {
-    const { doc, setDoc, serverTimestamp } = await getFirestoreMod();
-    await setDoc(doc(db, "co_study_rooms", code), {
-      wbNodes: JSON.stringify(WBState.nodes || []),
-      wbStrokes: JSON.stringify(WBState.strokes || []),
-      updatedBy: user?.displayName || "Member",
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-    toast(`📡 تم بث تحديث السبورة لحظياً لجميع زملائك في الغرفة (${code})!`);
-  } catch (e) {}
+  if (!V6ExpansionState.activeRoomCode || !CoStudyEngine.roomData) {
+    openCoStudyRoomModal();
+    return;
+  }
+  saveAndBroadcastRoomState(CoStudyEngine.roomData, true);
+  toast(`📡 تم بث ومزامنة السبورة مع جميع أعضاء الغرفة (${V6ExpansionState.activeRoomCode})!`);
 }
 
 function openCoStudyRoomModal() {
   const curCode = V6ExpansionState.activeRoomCode;
   const generatedCode = "MUC-" + Math.floor(100 + Math.random() * 900);
 
-  B().openFormModal("🟢 غرفة المذاكرة والسبورة الهندسية المشتركة الحية (Live Co-Study Room)", `
-    <p class="small-muted mb-2">أنشئ كود غرفة وشاركه مع زميلك في الكلية أو فريق مشروع التخرج، لترسموا معاً على نفس السبورة وتذاكروا على نفس مؤقت البومودورو عبر Firebase لحظياً:</p>
+  if (curCode && !CoStudyEngine.roomData) {
+    const userName = B().getAppState?.()?.user?.displayName || "Eng. Ahmed M Hosny";
+    CoStudyEngine.roomData = getDefaultRoomObject(curCode, userName);
+    startRoomLiveTicker();
+  }
+  const rm = CoStudyEngine.roomData;
 
-    <div class="subject-progress-box mb-2" style="border:1.5px solid #19B889;">
-      <div class="flex-between">
-        <div>
-          <span class="badge ${curCode ? "badge-emerald" : "badge-gold"}">${curCode ? "🟢 متصل حالياً بالغرفة" : "⚪ غير متصل بغرفة"}</span>
-          <h3 class="gold-text mt-1" dir="ltr">${curCode || "No Active Room"}</h3>
+  B().openFormModal("🟢 استوديو الغرفة المشتركة الحية (مؤقت جماعي + مهام + شات + سبورة)", `
+    ${!curCode ? `
+      <p class="small-muted mb-2">أنشئ غرفة مذاكرة ومشاريع جديدة بضغطة زر أو ادخل كود غرفة زميلك لتعملوا معاً على نفس المؤقت، المهام، الشات، والسبورة:</p>
+      <div class="dashboard-grid" style="grid-template-columns:1fr 1fr; gap:14px;">
+        <div class="item-card" style="border-color:#19B889!important;">
+          <h4>🚀 1. إنشاء غرفة مشتركة جديدة</h4>
+          <p class="small-muted mt-1">اختر كود الغرفة أو اترك الكود التلقائي وابدأ فوراً:</p>
+          <input type="text" id="new-room-code-inp" dir="ltr" value="${generatedCode}" style="text-align:center; font-weight:800; font-size:1.2rem;" class="mt-2" />
+          <button type="button" id="btn-create-room-now" class="btn btn-gold btn-sm btn-block mt-2">
+            <i class="fa-solid fa-plus-circle"></i> إنشاء وفتح الغرفة الآن
+          </button>
         </div>
-        ${curCode ? `
-          <div class="filters-row">
-            <button type="button" id="btn-copy-room-code" class="btn btn-xs btn-gold"><i class="fa-regular fa-copy"></i> نسخ الكود لزميلي</button>
-            <button type="button" id="btn-open-shared-wb" class="btn btn-xs btn-outline"><i class="fa-solid fa-diagram-project gold-text"></i> فتح السبورة المشتركة</button>
-            <button type="button" id="btn-sync-shared-pomo" class="btn btn-xs btn-outline"><i class="fa-solid fa-stopwatch gold-text"></i> بدء بومودورو مشترك (50د)</button>
-            <button type="button" id="btn-leave-room" class="btn btn-xs btn-danger">مغادرة الغرفة</button>
+
+        <div class="item-card">
+          <h4>🤝 2. الانضمام لغرفة بالكود</h4>
+          <p class="small-muted mt-1">أدخل كود الغرفة الذي أرسله لك زميلك للاتصال الفوري:</p>
+          <input type="text" id="join-room-code-inp" dir="ltr" placeholder="مثال: MUC-482" style="text-align:center; font-weight:800; font-size:1.2rem;" class="mt-2" />
+          <button type="button" id="btn-join-room-now" class="btn btn-outline btn-sm btn-block mt-2" style="border-color:#19B889;">
+            <i class="fa-solid fa-right-to-bracket gold-text"></i> انضمام للغرفة الآن
+          </button>
+        </div>
+      </div>
+    ` : `
+      <!-- هيدر الغرفة النشطة -->
+      <div class="subject-progress-box mb-2" style="border:1.5px solid #19B889;">
+        <div class="flex-between" style="flex-wrap:wrap; gap:10px;">
+          <div>
+            <span class="badge badge-emerald"><span class="live-dot"></span> غرفة نشطة ومتصلة الآن</span>
+            <h3 class="gold-text mt-1" dir="ltr" style="display:inline-block; margin-inline-start:10px;">${esc(curCode)}</h3>
+            <small class="small-muted d-block mt-1">الأعضاء المتصلون: ${esc((rm?.members || ["أنت"]).join(" ، "))}</small>
           </div>
-        ` : ""}
-      </div>
-    </div>
-
-    <div class="dashboard-grid" style="grid-template-columns:1fr 1fr; gap:14px;">
-      <div class="item-card">
-        <h4>🚀 1. إنشاء غرفة جديدة كقائد للفريق</h4>
-        <p class="small-muted mt-1">سيتم توليد كود غرفة فوري وتفعيل المزامنة اللحظية لسبورتك الحالية:</p>
-        <input type="text" id="new-room-code-inp" dir="ltr" value="${generatedCode}" style="text-align:center; font-weight:800; font-size:1.1rem;" class="mt-2" />
-        <button type="button" id="btn-create-room-now" class="btn btn-gold btn-sm btn-block mt-2">
-          <i class="fa-solid fa-plus-circle"></i> إنشاء وتفعيل الغرفة الآن
-        </button>
+          <div class="filters-row">
+            <button type="button" id="btn-copy-room-code" class="btn btn-xs btn-gold"><i class="fa-regular fa-copy"></i> نسخ كود الغرفة</button>
+            <button type="button" id="btn-open-shared-wb" class="btn btn-xs btn-outline"><i class="fa-solid fa-diagram-project gold-text"></i> السبورة المشتركة</button>
+            <button type="button" id="btn-room-ping-sound" class="btn btn-xs btn-outline" title="إرسال نغمة تنبيه لأعضاء الغرفة"><i class="fa-solid fa-bell gold-text"></i> تنبيه الزملاء</button>
+            <button type="button" id="btn-leave-room" class="btn btn-xs btn-danger"><i class="fa-solid fa-power-off"></i> مغادرة الغرفة</button>
+          </div>
+        </div>
       </div>
 
-      <div class="item-card">
-        <h4>🤝 2. الانضمام لغرفة زميلك بالكود</h4>
-        <p class="small-muted mt-1">أدخل كود الغرفة الذي أرسله لك زميلك للاتصال بسبورته ومؤقته فوراً:</p>
-        <input type="text" id="join-room-code-inp" dir="ltr" placeholder="مثال: MUC-482" style="text-align:center; font-weight:800; font-size:1.1rem;" class="mt-2" />
-        <button type="button" id="btn-join-room-now" class="btn btn-outline btn-sm btn-block mt-2" style="border-color:#19B889;">
-          <i class="fa-solid fa-right-to-bracket gold-text"></i> انضمام للغرفة الحية الآن
-        </button>
+      <!-- 1. مؤقت البومودورو المشترك الحي داخل الغرفة -->
+      <div class="card mb-2" style="text-align:center; padding:16px; border:1px solid rgba(212,167,44,0.45);">
+        <span id="room-live-timer-status" class="badge badge-gold">⏱️ مؤقت التركيز الجماعي</span>
+        <div id="room-live-timer-display" style="font-size:3.4rem; font-family:'Inter',monospace; font-weight:900; color:#fff; margin:6px 0; text-shadow:0 0 25px rgba(212,167,44,0.5);">25:00</div>
+        <div class="progress-bar-track" style="max-width:460px; margin:0 auto 12px;">
+          <div id="room-live-timer-bar" class="progress-bar-fill" style="width:0%"></div>
+        </div>
+
+        <div class="filters-row" style="justify-content:center; margin-bottom:10px;">
+          <button type="button" class="btn btn-xs btn-outline" data-room-preset="25">25 دقيقة</button>
+          <button type="button" class="btn btn-xs btn-outline" data-room-preset="45">45 دقيقة</button>
+          <button type="button" class="btn btn-xs btn-gold" data-room-preset="50">50 دقيقة (عميق)</button>
+          <button type="button" class="btn btn-xs btn-outline" data-room-preset="5">☕ راحة 5 د</button>
+          <button type="button" id="btn-room-custom-mins" class="btn btn-xs btn-outline">⚙️ وقت مخصص</button>
+        </div>
+
+        <div class="filters-row" style="justify-content:center;">
+          <button type="button" id="btn-room-pomo-toggle" class="btn btn-gold btn-sm">
+            <i class="fa-solid ${rm?.pomoRunning ? "fa-pause" : "fa-play"}"></i>
+            ${rm?.pomoRunning ? "إيقاف مؤقت للغرفة" : "تشغيل المؤقت المشترك الآن"}
+          </button>
+          <button type="button" id="btn-room-pomo-reset" class="btn btn-outline btn-sm">
+            <i class="fa-solid fa-rotate-right"></i> تصفير وإعادة ضبط
+          </button>
+          <button type="button" id="btn-room-show-mini-pomo" class="btn btn-outline btn-sm" title="إظهار المؤقت العائم الصغير لتحريكه في أي مكان">
+            <i class="fa-solid fa-window-restore gold-text"></i> إظهار المصغر العائم
+          </button>
+        </div>
       </div>
-    </div>
+
+      <!-- 2. مهام الغرفة المشتركة + شات وملاحظات الغرفة -->
+      <div class="dashboard-grid" style="grid-template-columns:1fr 1fr; gap:14px;">
+        <div class="item-card">
+          <h4>✅ مهام الفريق المشتركة في الجلسة</h4>
+          <div class="input-action-row mt-2">
+            <input type="text" id="room-new-task-inp" placeholder="أضف مهمة مشتركة للغرفة..." />
+            <button type="button" id="btn-room-add-task" class="btn btn-gold btn-xs">+ إضافة</button>
+          </div>
+          <div id="room-shared-tasks-list" style="max-height:175px; overflow-y:auto; margin-top:10px;"></div>
+        </div>
+
+        <div class="item-card">
+          <h4>💬 شات وملاحظات الغرفة اللحظية</h4>
+          <div id="room-shared-chat-box" style="height:155px; overflow-y:auto; background:rgba(5,8,15,0.65); padding:8px; border-radius:10px; margin-top:8px;"></div>
+          <div class="input-action-row mt-2">
+            <input type="text" id="room-chat-inp" placeholder="اكتب رسالة أو ملاحظة لزملائك..." />
+            <button type="button" id="btn-room-send-msg" class="btn btn-gold btn-xs"><i class="fa-solid fa-paper-plane"></i> إرسال</button>
+          </div>
+        </div>
+      </div>
+    `}
   `, async () => {});
 
   document.querySelector("#universal-modal .modal-card")?.classList.add("wide-lab-modal");
   const saveBtn = document.querySelector('#universal-modal-form button[type="submit"]');
   if (saveBtn) saveBtn.style.display = "none";
 
-  document.getElementById("btn-create-room-now").onclick = async () => {
+  // أزرار الإنشاء والانضمام
+  document.getElementById("btn-create-room-now")?.addEventListener("click", async () => {
     const code = document.getElementById("new-room-code-inp")?.value;
     await joinOrCreateCoStudyRoom(code, true);
     openCoStudyRoomModal();
-  };
+  });
 
-  document.getElementById("btn-join-room-now").onclick = async () => {
+  document.getElementById("btn-join-room-now")?.addEventListener("click", async () => {
     const code = document.getElementById("join-room-code-inp")?.value;
     await joinOrCreateCoStudyRoom(code, false);
     openCoStudyRoomModal();
+  });
+
+  if (!curCode) return;
+
+  refreshRoomUIElements();
+
+  // التحكم في مؤقت البومودورو المشترك
+  document.querySelectorAll("[data-room-preset]").forEach(btn => {
+    btn.onclick = () => {
+      const mins = Number(btn.dataset.roomPreset) || 25;
+      rm.pomoDuration = mins * 60;
+      rm.pomoTimeLeft = mins * 60;
+      rm.pomoTargetTs = Date.now() + mins * 60 * 1000;
+      rm.pomoRunning = true;
+      rm.pomoMode = mins === 5 ? "استراحة قصيرة ☕" : `تركيز ${mins}د 🔥`;
+      B().setCustomPomodoroTime?.(mins, mins === 5 ? "break" : "work");
+      B().startPomodoro?.();
+      saveAndBroadcastRoomState(rm);
+      toast(`⏱️ تم ضبط وتشغيل مؤقت الغرفة على ${mins} دقيقة!`);
+    };
+  });
+
+  document.getElementById("btn-room-custom-mins")?.addEventListener("click", () => {
+    const mins = Number(prompt("⏱️ أدخل عدد دقائق جلسة الغرفة المشتركة:", "40"));
+    if (!mins || mins <= 0) return;
+    rm.pomoDuration = mins * 60;
+    rm.pomoTimeLeft = mins * 60;
+    rm.pomoTargetTs = Date.now() + mins * 60 * 1000;
+    rm.pomoRunning = true;
+    B().setCustomPomodoroTime?.(mins, "work");
+    B().startPomodoro?.();
+    saveAndBroadcastRoomState(rm);
+  });
+
+  document.getElementById("btn-room-pomo-toggle")?.addEventListener("click", () => {
+    if (rm.pomoRunning) {
+      const rem = Math.max(1, Math.round((rm.pomoTargetTs - Date.now()) / 1000));
+      rm.pomoTimeLeft = rem;
+      rm.pomoRunning = false;
+      rm.pomoTargetTs = 0;
+      B().pausePomodoro?.();
+      toast("⏸️ تم إيقاف مؤقت الغرفة مؤقتاً", "info");
+    } else {
+      const secs = rm.pomoTimeLeft > 0 ? rm.pomoTimeLeft : (rm.pomoDuration || 1500);
+      rm.pomoTargetTs = Date.now() + secs * 1000;
+      rm.pomoRunning = true;
+      const pState = B().getPomodoroState?.();
+      if (pState) pState.timeLeft = secs;
+      B().startPomodoro?.();
+      toast("▶️ انطلق مؤقت الغرفة المشترك الآن! 🔥");
+    }
+    saveAndBroadcastRoomState(rm);
+  });
+
+  document.getElementById("btn-room-pomo-reset")?.addEventListener("click", () => {
+    rm.pomoRunning = false;
+    rm.pomoTargetTs = 0;
+    rm.pomoTimeLeft = rm.pomoDuration || 1500;
+    B().resetPomodoro?.();
+    saveAndBroadcastRoomState(rm);
+    toast("🔄 تمت إعادة ضبط مؤقت الغرفة", "info");
+  });
+
+  document.getElementById("btn-room-show-mini-pomo")?.addEventListener("click", () => {
+    if (!rm.pomoRunning) {
+      document.getElementById("btn-room-pomo-toggle")?.click();
+    }
+    document.getElementById("universal-modal")?.classList.add("hidden");
+    const mini = document.getElementById("mini-floating-pomo");
+    if (mini) mini.classList.remove("hidden");
+    initDraggableMiniPomodoro();
+    toast("اسحب المؤقت الصغير بالماوس وضعه في أي جنب تفضله! ✥⏱️");
+  });
+
+  // إضافة مهمة مشتركة للغرفة
+  const addTaskFn = () => {
+    const inp = document.getElementById("room-new-task-inp");
+    const val = inp?.value.trim();
+    if (!val) return;
+    inp.value = "";
+    const userName = B().getAppState?.()?.user?.displayName || "عضو";
+    rm.tasks = rm.tasks || [];
+    rm.tasks.push({ id: "rt_" + Date.now(), text: val, done: false, by: userName });
+    saveAndBroadcastRoomState(rm);
   };
+  document.getElementById("btn-room-add-task")?.addEventListener("click", addTaskFn);
+  document.getElementById("room-new-task-inp")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); addTaskFn(); }
+  });
+
+  // إرسال رسالة في شات الغرفة
+  const sendMsgFn = () => {
+    const inp = document.getElementById("room-chat-inp");
+    const val = inp?.value.trim();
+    if (!val) return;
+    inp.value = "";
+    const userName = B().getAppState?.()?.user?.displayName || "Eng. Ahmed";
+    rm.messages = rm.messages || [];
+    rm.messages.push({
+      id: "rm_" + Date.now(),
+      sender: userName,
+      text: val,
+      time: new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })
+    });
+    saveAndBroadcastRoomState(rm);
+  };
+  document.getElementById("btn-room-send-msg")?.addEventListener("click", sendMsgFn);
+  document.getElementById("room-chat-inp")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); sendMsgFn(); }
+  });
+
+  document.getElementById("btn-room-ping-sound")?.addEventListener("click", () => {
+    playGentleAdhanChime();
+    const userName = B().getAppState?.()?.user?.displayName || "Eng. Ahmed";
+    rm.messages = rm.messages || [];
+    rm.messages.push({
+      id: "rm_" + Date.now(),
+      sender: userName,
+      text: "🔔 أرسل نغمة تنبيه للتركيز!",
+      time: new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })
+    });
+    saveAndBroadcastRoomState(rm);
+    toast("🔔 تم إرسال نغمة تنبيه التركيز لأعضاء الغرفة!");
+  });
 
   document.getElementById("btn-copy-room-code")?.addEventListener("click", () => {
-    copyTextSafely(curCode, `تم نسخ كود الغرفة (${curCode})! أرسله لزميلك الآن 📋`);
+    copyTextSafely(curCode, `تم نسخ كود الغرفة (${curCode}) بنجاح! 📋`);
   });
 
   document.getElementById("btn-open-shared-wb")?.addEventListener("click", () => {
     openSmartWhiteboardModal(false);
   });
 
-  document.getElementById("btn-sync-shared-pomo")?.addEventListener("click", async () => {
-    const db = B().getAppState?.()?.db;
-    if (db && curCode) {
-      const { doc, setDoc } = await getFirestoreMod();
-      await setDoc(doc(db, "co_study_rooms", curCode), {
-        pomoRunning: true,
-        pomoTargetTs: Date.now() + 50 * 60 * 1000
-      }, { merge: true });
-    }
-    B().setCustomPomodoroTime?.(50, "work");
-    B().openPomodoroModal?.();
-    B().startPomodoro?.();
-    toast("بدأ مؤقت البومودورو المشترك (50 دقيقة) لكل أعضاء الغرفة! ⏱️🔥");
-  });
-
   document.getElementById("btn-leave-room")?.addEventListener("click", () => {
     if (V6ExpansionState.roomUnsub) V6ExpansionState.roomUnsub();
+    if (CoStudyEngine.bc) { try { CoStudyEngine.bc.close(); } catch (e) {} }
+    if (CoStudyEngine.tickInterval) clearInterval(CoStudyEngine.tickInterval);
     V6ExpansionState.activeRoomCode = "";
+    CoStudyEngine.roomData = null;
     localStorage.removeItem("MY_LIFE_OS_COSTUDY_ROOM");
     const topRoomBtn = document.getElementById("btn-top-costudy-room");
     if (topRoomBtn) {
