@@ -1679,13 +1679,16 @@ function openCustomThemeStudioModal() {
 
     // Tab Header Tools
     document.getElementById("btn-pin-active-tab")?.addEventListener("click", () => togglePinFile(curProj().activeFile));
-    document.getElementById("btn-close-other-tabs")?.addEventListener("click", () => {
+document.getElementById("btn-close-other-tabs")?.addEventListener("click", () => {
       const p = curProj();
       const keep = p.activeFile;
-      p.files = { [keep]: p.files[keep] };
-      saveState();
-      refreshAllIDEUI();
-      toast("تم إغلاق التبويبات الأخرى");
+      p.closedTabs = p.closedTabs || [];
+      Object.keys(p.files).forEach(fn => {
+        if (fn !== keep && !(p.pinnedTabs || []).includes(fn)) {
+          p.closedTabs.push({ name: fn, content: p.files[fn] });
+        }
+      });
+      toast("📌 تم الاحتفاظ بالتبويب النشط والمثبتة فقط");
     });
     document.getElementById("btn-toggle-minimap")?.addEventListener("click", () => {
       state.minimap = !state.minimap;
@@ -1698,8 +1701,11 @@ function openCustomThemeStudioModal() {
       saveState();
     });
 
-    // Inline AI Bar
+// Inline AI Bar (Smart Fix + Accept / Reject Diff)
     const inlineBar = document.getElementById("vsc-inline-ai-bar");
+    const btnAiAccept = document.getElementById("btn-inline-ai-accept");
+    const btnAiReject = document.getElementById("btn-inline-ai-reject");
+
     document.getElementById("btn-inline-ai-edit")?.addEventListener("click", () => {
       if (inlineBar) inlineBar.hidden = !inlineBar.hidden;
     });
@@ -1710,12 +1716,40 @@ function openCustomThemeStudioModal() {
       const promptVal = document.getElementById("inp-inline-ai-prompt")?.value.trim();
       if (!promptVal) return;
       const p = curProj();
-      const comment = p.activeFile.endsWith(".html") ? `<!-- AI Applied: ${promptVal} -->\n` : `// AI Applied: ${promptVal}\n`;
-      p.files[p.activeFile] = comment + getEditorCode();
-      setEditorCode(p.files[p.activeFile], getLangMeta(p.activeFile).lang);
-      saveState();
+      inlineAIBackupCode = getEditorCode();
+
+      const diags = runDeepLanguageDiagnostics(inlineAIBackupCode, p.activeFile);
+      let nextCode = diags.length && diags[0].fixedCode ? diags[0].fixedCode : inlineAIBackupCode;
+      const note = p.activeFile.endsWith(".html") ? `<!-- ✨ AI: ${promptVal} -->\n` : `// ✨ AI: ${promptVal}\n`;
+      if (!nextCode.includes(note)) nextCode = note + nextCode;
+
+      p.files[p.activeFile] = nextCode;
+      setEditorCode(nextCode, getLangMeta(p.activeFile).lang);
+      if (btnAiAccept) btnAiAccept.hidden = false;
+      if (btnAiReject) btnAiReject.hidden = false;
       executeWorkspace("project", false);
-      toast("✨ تم تطبيق تعديل الـ Inline AI!");
+      toast("✨ تم توليد التعديل — اضغط (قبول) لاعتماده أو (رفض) للاسترجاع");
+    });
+    btnAiAccept?.addEventListener("click", () => {
+      inlineAIBackupCode = null;
+      btnAiAccept.hidden = true;
+      if (btnAiReject) btnAiReject.hidden = true;
+      if (inlineBar) inlineBar.hidden = true;
+      saveState();
+      toast("✅ تم اعتماد تعديل الـ AI بنجاح!");
+    });
+    btnAiReject?.addEventListener("click", () => {
+      if (inlineAIBackupCode !== null) {
+        const p = curProj();
+        p.files[p.activeFile] = inlineAIBackupCode;
+        setEditorCode(inlineAIBackupCode, getLangMeta(p.activeFile).lang);
+        saveState();
+        executeWorkspace("project", false);
+      }
+      inlineAIBackupCode = null;
+      if (btnAiAccept) btnAiAccept.hidden = true;
+      btnAiReject.hidden = true;
+      toast("↩️ تم رفض التعديل واسترجاع الكود الأصلي!");
     });
 
     // Preview Responsive Viewport & Zoom
@@ -1875,7 +1909,7 @@ function openCustomThemeStudioModal() {
      - يصلح الخطأ في نفس السطر (In-Place) ولا يرمي وسوماً في نهاية الملف أبداً!
      - يعرض مقارنة حية (السطر الخاطئ ✖ مقابل السطر المصحح ✓) ويمنع التشغيل حتى الإصلاح
      ========================================================================== */
-  function runDeepLanguageDiagnostics(code, fileKey) {
+function runDeepLanguageDiagnostics(code, fileKey) {
     const meta = getLangMeta(fileKey);
     const lang = meta.lang;
     const raw = String(code || "").replace(/\u00A0/g, " ");
@@ -1884,22 +1918,23 @@ function openCustomThemeStudioModal() {
     const diagnostics = [];
 
     const addDiag = (lineNum, codeId, title, explainAr, explainEn, badLine, goodLine) => {
+      const safeLn = Math.max(1, Math.min(origLines.length, lineNum || 1));
       diagnostics.push({
         file: fileKey,
-        line: Math.max(1, lineNum),
+        line: safeLn,
         codeId,
         severity: "error",
         title,
         explainAr,
         explainEn,
-        badSnippet: String(badLine ?? origLines[lineNum - 1] ?? "").trim(),
-        goodSnippet: String(goodLine ?? fixedLines[lineNum - 1] ?? "").trim(),
-        fixedCode: null // يُحدّث في نهاية الفحص من المصفوفة المصححة في مكانها
+        badSnippet: String(badLine ?? origLines[safeLn - 1] ?? "").trim(),
+        goodSnippet: String(goodLine ?? fixedLines[safeLn - 1] ?? "").trim(),
+        fixedCode: null
       });
     };
 
     // ========================================================================
-    // 1. HTML STACK-BASED & IN-PLACE SURGICAL DIAGNOSTICS
+    // 1. HTML AST-AWARE & CONTEXT-SENSITIVE DIAGNOSTICS (INLINE vs CONTAINER)
     // ========================================================================
     if (lang === "html" && !fileKey.endsWith(".jsx")) {
       const htmlTypos = {
@@ -1909,15 +1944,62 @@ function openCustomThemeStudioModal() {
         artcle: "article", spna: "span", dvi: "div", tilte: "title", bdy: "body", hmtl: "html"
       };
       const voidTags = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr", "!doctype"]);
-      const tagStack = []; // [{ tag, line }]
+      const containerTags = new Set([
+        "html", "head", "body", "div", "section", "main", "header", "footer", "nav",
+        "aside", "article", "ul", "ol", "dl", "table", "thead", "tbody", "tfoot", "tr",
+        "form", "fieldset", "select", "details", "dialog", "figure", "blockquote"
+      ]);
+      const bodyStartTags = new Set(["body", "div", "section", "main", "header", "footer", "nav", "h1", "h2", "h3", "p", "button", "span", "ul", "table", "form"]);
+
+      const tagStack = []; // [{ tag, line, indent, hasInlineText }]
       let inComment = false;
       let inScriptOrStyle = null;
+
+      // دالة مساعدة تحسم هل الوسم يتقفل في نفس السطر أم في نهاية الحاوية قبل الأب
+      const closeUnclosedTagSmartly = (unclosed, beforeLineIdx, reasonTag) => {
+        const openIdx = unclosed.line - 1;
+        const isContainer = containerTags.has(unclosed.tag);
+        const spansMultipleLines = beforeLineIdx > openIdx;
+
+        // إذا كان حاوية هيكلية (مثل body, head, html, div, section) ومفتوح على عدة سطور بدون نص مباشر بجانبه:
+        // نضع وسم الإغلاق في مكانه الصحيح قبل إغلاق الأب (أو في نهاية البلوك) وليس بجانب وسم الفتح!
+        if ((isContainer || !unclosed.hasInlineText) && spansMultipleLines) {
+          const insertIdx = Math.max(openIdx, Math.min(fixedLines.length - 1, beforeLineIdx));
+          const targetOrig = origLines[insertIdx] ?? "";
+          const indent = unclosed.indent ?? "";
+          const closingLine = `${indent}</${unclosed.tag}>`;
+
+          fixedLines[insertIdx] = `${closingLine}\n${fixedLines[insertIdx]}`;
+          addDiag(
+            unclosed.line,
+            "HTML-E05",
+            `Unclosed Container Tag '<${unclosed.tag}>' (Opened on line ${unclosed.line}, missing '</${unclosed.tag}>' before line ${insertIdx + 1})`,
+            `الوسم الهيكلي <${unclosed.tag}> المفتوح في السطر ${unclosed.line} لم يتم إغلاقه في نهاية محتواه (قبل ${reasonTag || "نهاية الملف"} في السطر ${insertIdx + 1})!`,
+            `Insert '${closingLine.trim()}' before line ${insertIdx + 1} to properly wrap the contents of '<${unclosed.tag}>'.`,
+            `${origLines[openIdx].trim()}  ...  ${targetOrig.trim()}`,
+            `${origLines[openIdx].trim()}  ...  </${unclosed.tag}> ${targetOrig.trim()}`
+          );
+        } else {
+          // عنصر سطري (مثل <h1>مرحباً أو <p>نص) يتقفل في آخر سطره نفسه
+          const before = fixedLines[openIdx];
+          const after = before + `</${unclosed.tag}>`;
+          fixedLines[openIdx] = after;
+          addDiag(
+            unclosed.line,
+            "HTML-E05",
+            `Unclosed Inline HTML Tag (Line ${unclosed.line}): '<${unclosed.tag}>' is missing '</${unclosed.tag}>'`,
+            `في السطر ${unclosed.line} فتحت الوسم <${unclosed.tag}> ونسيت تقفله بـ </${unclosed.tag}> في نهاية السطر!`,
+            `Close '<${unclosed.tag}>' with '</${unclosed.tag}>' on line ${unclosed.line}.`,
+            before,
+            after
+          );
+        }
+      };
 
       fixedLines.forEach((ln, idx) => {
         const lineNum = idx + 1;
         let workingLine = ln;
 
-        // تخطي التعليقات متعددة الأسطر
         if (inComment) {
           if (workingLine.includes("-->")) inComment = false;
           return;
@@ -1927,62 +2009,66 @@ function openCustomThemeStudioModal() {
           return;
         }
 
-        // A. كشف أي قوس وسم مفتوح '<tag' أو '</tag' في نهاية السطر بدون '>' (مثل: <p id="x"></p)
+        // إذا كنا داخل <script> أو <style> لا نفحص وسوم HTML حتى نصل لوسم الإغلاق
+        if (inScriptOrStyle) {
+          const closeScriptReg = new RegExp(`</${inScriptOrStyle}\\s*>`, "i");
+          if (closeScriptReg.test(workingLine)) {
+            inScriptOrStyle = null;
+            if (tagStack.length && tagStack[tagStack.length - 1].tag === inScriptOrStyle) tagStack.pop();
+          }
+          return;
+        }
+
+        // A. كشف نسيان علامة '=' أو علامة التنصيص في خصائص الوسم (مثل class"box" أو class="box>)
+        const missingEqMatch = workingLine.match(/<([a-zA-Z0-9-]+)\s+([a-zA-Z-]+)("[^"]*"|'[^']*')/);
+        if (missingEqMatch) {
+          const before = workingLine;
+          workingLine = workingLine.replace(missingEqMatch[0], `<${missingEqMatch[1]} ${missingEqMatch[2]}=${missingEqMatch[3]}`);
+          fixedLines[idx] = workingLine;
+          addDiag(lineNum, "HTML-E07", `Malformed Attribute (Line ${lineNum}): Missing '=' after '${missingEqMatch[2]}'`, `في السطر ${lineNum} نسيت علامة يساوي (=) بعد الخاصية ${missingEqMatch[2]}!`, `Add '=' after '${missingEqMatch[2]}'.`, before, workingLine);
+        }
+
+        const unclosedAttrQuote = workingLine.match(/<[a-zA-Z0-9-]+\b[^>]*=\s*(["'])[^"'>]*>/);
+        if (unclosedAttrQuote) {
+          const q = unclosedAttrQuote[1];
+          const before = workingLine;
+          workingLine = workingLine.replace(/>/, `${q}>`);
+          fixedLines[idx] = workingLine;
+          addDiag(lineNum, "HTML-E08", `Unclosed Attribute Quote (Line ${lineNum}): Missing closing (${q}) before '>'`, `في السطر ${lineNum} فتحت علامة تنصيص (${q}) لقيمة الخاصية ونسيت تقفلها قبل '>'!`, `Close attribute quote (${q}) before '>'.`, before, workingLine);
+        }
+
+        // B. كشف وسم مفتوح في نهاية السطر بدون '>' (مثل <body أو </div)
         const unclosedBracketMatch = workingLine.match(/<([\/a-zA-Z0-9\s="':;.\-#]+)$/);
         if (unclosedBracketMatch) {
           const brokenPart = unclosedBracketMatch[0];
           const repairedLine = workingLine + ">";
           fixedLines[idx] = repairedLine;
           workingLine = repairedLine;
-          addDiag(
-            lineNum,
-            "HTML-E01",
-            `HTML Syntax Error (Line ${lineNum}): Missing '>' at end of tag '${brokenPart}'`,
-            `في السطر ${lineNum} كتبت (${brokenPart}) ونسيت تقفل قوس الوسم بعلامة أكبر من '>' في نهاية الوسم!`,
-            `Add closing '>' to complete '${brokenPart}>' on line ${lineNum}.`,
-            ln,
-            repairedLine
-          );
+          addDiag(lineNum, "HTML-E01", `HTML Syntax Error (Line ${lineNum}): Missing '>' at end of '${brokenPart}'`, `في السطر ${lineNum} كتبت (${brokenPart}) ونسيت تقفل قوس الوسم بعلامة '>'!`, `Add '>' to complete '${brokenPart}>'.`, ln, repairedLine);
         }
 
-        // B. كشف قوسين فتح متتاليين مثل <<div أو <p <span
+        // C. كشف قوسين فتح متتاليين مثل <<div
         if (/<[^<>]+</.test(workingLine.replace(/<!--.*?-->/g, ""))) {
           const repairedLine = workingLine.replace(/<([^<>]+)</g, "<$1><");
           fixedLines[idx] = repairedLine;
           workingLine = repairedLine;
-          addDiag(
-            lineNum,
-            "HTML-E02",
-            `HTML Syntax Error (Line ${lineNum}): Nested '<' before closing previous tag with '>'`,
-            `في السطر ${lineNum} فتحت وسم جديد بعلامة '<' قبل ما تقفل الوسم اللي قبله بعلامة '>'.`,
-            `Close the first tag with '>' before opening another '<'.`,
-            ln,
-            repairedLine
-          );
+          addDiag(lineNum, "HTML-E02", `HTML Syntax Error (Line ${lineNum}): Nested '<' before closing '>'`, `في السطر ${lineNum} فتحت وسم جديد بعلامة '<' قبل ما تقفل الوسم اللي قبله بعلامة '>'.`, `Close the first tag with '>' before opening another '<'.`, ln, repairedLine);
         }
 
-        // C. كشف الأخطاء الإملائية في أسماء وسوم HTML في نفس السطر
+        // D. كشف الأخطاء الإملائية في أسماء الوسوم
         Object.entries(htmlTypos).forEach(([wrong, right]) => {
           const reg = new RegExp(`(<\\/?)${wrong}\\b`, "gi");
           if (reg.test(workingLine)) {
             const before = workingLine;
             workingLine = workingLine.replace(reg, `$1${right}`);
             fixedLines[idx] = workingLine;
-            addDiag(
-              lineNum,
-              "HTML-E03",
-              `HTML Unknown Tag (Line ${lineNum}): '<${wrong}>' is not a valid HTML5 element`,
-              `في السطر ${lineNum} كتبت اسم الوسم <${wrong}> بحروف خاطئة، والصحيح في HTML5 هو <${right}>.`,
-              `Replace misspelled '<${wrong}>' with '<${right}>' on line ${lineNum}.`,
-              before,
-              workingLine
-            );
+            addDiag(lineNum, "HTML-E03", `Unknown HTML Tag (Line ${lineNum}): '<${wrong}>' should be '<${right}>'`, `في السطر ${lineNum} كتبت اسم الوسم <${wrong}> غلط، والصحيح هو <${right}>.`, `Replace '<${wrong}>' with '<${right}>'.`, before, workingLine);
           }
         });
 
-        // D. تتبع فتح وإغلاق الوسوم في هذا السطر بنظام الـ Stack الدقيق
+        // E. تتبع فتح وإغلاق الوسوم بنظام الـ AST Stack الذكي
         const cleanNoComments = workingLine.replace(/<!--.*?-->/g, "");
-        const tagRegex = /<\/?([a-zA-Z][a-zA-Z0-9-]*)\b[^>]*>/g;
+        const tagRegex = /<\/?([a-zA-Z!][a-zA-Z0-9-]*)\b[^>]*>/g;
         let m;
         while ((m = tagRegex.exec(cleanNoComments)) !== null) {
           const fullTag = m[0];
@@ -1990,73 +2076,62 @@ function openCustomThemeStudioModal() {
           const isClosing = fullTag.startsWith("</");
           const isSelfClosing = fullTag.endsWith("/>") || voidTags.has(tagName);
 
-          if (inScriptOrStyle) {
-            if (isClosing && tagName === inScriptOrStyle) {
-              inScriptOrStyle = null;
-              if (tagStack.length && tagStack[tagStack.length - 1].tag === tagName) tagStack.pop();
-            }
-            continue;
-          }
-
           if (isSelfClosing) continue;
 
           if (!isClosing) {
-            tagStack.push({ tag: tagName, line: lineNum });
-            if (tagName === "script" || tagName === "style") inScriptOrStyle = tagName;
+            // إذا كان <head> مفتوحاً وبدأنا <body> أو عناصر الصفحة بدون إغلاق </head>، نغلق </head> قبل هذا السطر فوراً!
+            if (bodyStartTags.has(tagName) && tagStack.length && tagStack[tagStack.length - 1].tag === "head") {
+              const unclosedHead = tagStack.pop();
+              closeUnclosedTagSmartly(unclosedHead, idx, `<${tagName}>`);
+            }
+
+            // إذا كان الوسم السابق على قمة الـ Stack وسماً سطرياً (مثل h1, p, title, button) على سطر سابق وبدأنا وسماً بلوكياً جديداً:
+            if (tagStack.length) {
+              const prevTop = tagStack[tagStack.length - 1];
+              if (prevTop.line < lineNum && !containerTags.has(prevTop.tag) && prevTop.hasInlineText) {
+                tagStack.pop();
+                closeUnclosedTagSmartly(prevTop, prevTop.line - 1, `<${tagName}>`);
+              }
+            }
+
+            const afterTagText = cleanNoComments.slice(m.index + fullTag.length).replace(/<[^>]*>/g, "").trim();
+            const indentMatch = workingLine.match(/^(\s*)/);
+            tagStack.push({
+              tag: tagName,
+              line: lineNum,
+              indent: indentMatch ? indentMatch[1] : "",
+              hasInlineText: afterTagText.length > 0
+            });
+
+            if (tagName === "script" || tagName === "style") {
+              inScriptOrStyle = tagName;
+              break;
+            }
           } else {
-            // وسم إغلاق </tagName>: نفحص قمة الـ Stack
+            // وسم إغلاق </tagName>
             if (tagStack.length === 0) {
               const repaired = workingLine.replace(fullTag, "");
               fixedLines[idx] = repaired;
-              addDiag(
-                lineNum,
-                "HTML-E04",
-                `HTML Stray End Tag (Line ${lineNum}): Unexpected '</${tagName}>' with no opening '<${tagName}>'`,
-                `في السطر ${lineNum} كتبت وسم إغلاق </${tagName}> زيادة ملوش أي وسم فتح <${tagName}> قبله!`,
-                `Remove stray closing tag '</${tagName}>' on line ${lineNum}.`,
-                workingLine,
-                repaired
-              );
+              addDiag(lineNum, "HTML-E04", `Stray End Tag (Line ${lineNum}): Unexpected '</${tagName}>'`, `في السطر ${lineNum} كتبت وسم إغلاق </${tagName}> زيادة بدون وسم فتح قبله!`, `Remove stray '</${tagName}>'.`, workingLine, repaired);
             } else {
               const top = tagStack[tagStack.length - 1];
               if (top.tag === tagName) {
                 tagStack.pop();
               } else {
-                // الوسم الحالي في قمة الـ Stack لم يُغلق قبل إغلاق الأب أو كتب وسم إغلاق مختلف!
                 const parentIdx = tagStack.map(x => x.tag).lastIndexOf(tagName);
                 if (parentIdx !== -1) {
-                  // هناك وسم داخلي مفتوح في سطر محدد نسي المستخدم إغلاقه قبل إغلاق الأب
+                  // إغلاق كل الوسوم المفتوحة داخل الأب في مكانها الصحيح قبل سطر إغلاق الأب (idx)
                   while (tagStack.length - 1 > parentIdx) {
                     const unclosed = tagStack.pop();
-                    const targetIdx = unclosed.line - 1;
-                    const origTarget = fixedLines[targetIdx];
-                    const fixedTarget = origTarget + `</${unclosed.tag}>`;
-                    fixedLines[targetIdx] = fixedTarget;
-                    addDiag(
-                      unclosed.line,
-                      "HTML-E05",
-                      `Unclosed HTML Tag (Line ${unclosed.line}): '<${unclosed.tag}>' was left open before '</${tagName}>'`,
-                      `في السطر ${unclosed.line} فتحت الوسم <${unclosed.tag}> ونسيت تقفله بـ </${unclosed.tag}> في مكانه الصحيح!`,
-                      `Close '<${unclosed.tag}>' on line ${unclosed.line} with '</${unclosed.tag}>'.`,
-                      origTarget,
-                      fixedTarget
-                    );
+                    closeUnclosedTagSmartly(unclosed, idx, `</${tagName}>`);
                   }
-                  tagStack.pop(); // pop the matched parent
+                  tagStack.pop();
                 } else {
-                  // وسم إغلاق لا يطابق الوسم المفتوح في نفس السطر (مثلاً <h1>...</h2>)
+                  // عدم تطابق في نفس العنصر (مثلاً <h1>...</h2>)
                   const repaired = workingLine.replace(new RegExp(`</${tagName}\\s*>`, "i"), `</${top.tag}>`);
                   fixedLines[idx] = repaired;
                   tagStack.pop();
-                  addDiag(
-                    lineNum,
-                    "HTML-E06",
-                    `Mismatched Closing Tag (Line ${lineNum}): Expected '</${top.tag}>' (opened on line ${top.line}) but found '</${tagName}>'`,
-                    `في السطر ${lineNum} قفلت بـ </${tagName}> بالغلط، والمفروض تقفل بـ </${top.tag}> اللي مفتوح في السطر ${top.line}!`,
-                    `Change '</${tagName}>' to '</${top.tag}>' on line ${lineNum}.`,
-                    workingLine,
-                    repaired
-                  );
+                  addDiag(lineNum, "HTML-E06", `Mismatched Closing Tag (Line ${lineNum}): Expected '</${top.tag}>' but found '</${tagName}>'`, `في السطر ${lineNum} قفلت بـ </${tagName}> بالغلط، والصحيح هو </${top.tag}> اللي مفتوح في السطر ${top.line}!`, `Change '</${tagName}>' to '</${top.tag}>'.`, workingLine, repaired);
                 }
               }
             }
@@ -2064,31 +2139,36 @@ function openCustomThemeStudioModal() {
         }
       });
 
-      // أي وسم بقي مفتوحاً في الـ Stack بعد انتهاء الملف نغلقه في سطره الأصلي نفسه (وليس بعد </html>!)
+      // معالجة أي وسوم بقيت مفتوحة حتى نهاية الملف بذكاء
       while (tagStack.length > 0) {
         const unclosed = tagStack.pop();
-        const targetIdx = unclosed.line - 1;
-        const before = fixedLines[targetIdx];
-        const after = before + `</${unclosed.tag}>`;
-        fixedLines[targetIdx] = after;
-        addDiag(
-          unclosed.line,
-          "HTML-E05",
-          `Unclosed HTML Tag (Line ${unclosed.line}): '<${unclosed.tag}>' is missing closing '</${unclosed.tag}>'`,
-          `في السطر ${unclosed.line} فتحت الوسم <${unclosed.tag}> ونسيت تقفله بـ </${unclosed.tag}>!`,
-          `Add '</${unclosed.tag}>' to close the element opened on line ${unclosed.line}.`,
-          before,
-          after
-        );
+        const isContainer = containerTags.has(unclosed.tag);
+        if (isContainer && fixedLines.length > unclosed.line) {
+          const lastIdx = fixedLines.length - 1;
+          const before = fixedLines[lastIdx];
+          const after = `${before}\n${unclosed.indent}</${unclosed.tag}>`;
+          fixedLines[lastIdx] = after;
+          addDiag(
+            unclosed.line,
+            "HTML-E05",
+            `Unclosed Container Tag '<${unclosed.tag}>' (Opened on line ${unclosed.line})`,
+            `الوسم الهيكلي <${unclosed.tag}> المفتوح في السطر ${unclosed.line} يحتاج وسم إغلاق </${unclosed.tag}> في نهاية البلوك (السطر ${lastIdx + 1})!`,
+            `Append '</${unclosed.tag}>' at the end of its block (line ${lastIdx + 1}).`,
+            origLines[unclosed.line - 1],
+            `${origLines[unclosed.line - 1]} ... </${unclosed.tag}>`
+          );
+        } else {
+          closeUnclosedTagSmartly(unclosed, unclosed.line - 1, "EOF");
+        }
       }
     }
 
     // ========================================================================
-    // 2. CSS SURGICAL LINE-BY-LINE DIAGNOSTICS
+    // 2. CSS CONTEXT-AWARE LINE-BY-LINE DIAGNOSTICS
     // ========================================================================
     if (lang === "css") {
       const cssTypos = {
-        colr: "color", cloor: "color", backgroud: "background", bakground: "background", bg: "background",
+        colr: "color", cloor: "color", backgroud: "background", bakground: "background",
         pading: "padding", padng: "padding", margn: "margin", mrgin: "margin",
         "fnt-size": "font-size", "font-siz": "font-size", fontsize: "font-size",
         bordr: "border", widht: "width", wdtih: "width", heigth: "height", hieght: "height",
@@ -2096,8 +2176,8 @@ function openCustomThemeStudioModal() {
         "justfy-content": "justify-content", "algn-items": "align-items", "text-algn": "text-align"
       };
 
-      let braceDepth = 0;
-      let lastOpenBraceLine = 1;
+      const braceStack = [];
+      let parenDepth = 0;
 
       fixedLines.forEach((ln, idx) => {
         const lineNum = idx + 1;
@@ -2105,59 +2185,58 @@ function openCustomThemeStudioModal() {
         const trimmed = noComment.trim();
         if (!trimmed) return;
 
-        if (trimmed.includes("{")) {
-          braceDepth += (trimmed.match(/\{/g) || []).length;
-          lastOpenBraceLine = lineNum;
-        }
-        if (trimmed.includes("}")) {
-          braceDepth -= (trimmed.match(/\}/g) || []).length;
-          if (braceDepth < 0) {
-            const rep = ln.replace(/\}/, "");
-            fixedLines[idx] = rep;
-            braceDepth = 0;
-            addDiag(lineNum, "CSS-E01", `CSS Extra Closing Brace (Line ${lineNum}): Unexpected '}'`, `في السطر ${lineNum} يوجد قوس إغلاق '}' زائد بدون قوس فتح '{'.`, `Remove extra '}' on line ${lineNum}.`, ln, rep);
-          }
+        for (const ch of noComment) {
+          if (ch === "{") braceStack.push(lineNum);
+          else if (ch === "}") {
+            if (braceStack.length > 0) braceStack.pop();
+            else {
+              const rep = ln.replace(/\}/, "");
+              fixedLines[idx] = rep;
+              addDiag(lineNum, "CSS-E01", `CSS Extra Closing Brace (Line ${lineNum}): Unexpected '}'`, `في السطر ${lineNum} يوجد قوس إغلاق '}' زائد بدون قوس فتح '{'.`, `Remove extra '}' on line ${lineNum}.`, ln, rep);
+            }
+          } else if (ch === "(") parenDepth++;
+          else if (ch === ")") parenDepth = Math.max(0, parenDepth - 1);
         }
 
-        // فحص الخصائص داخل البلوك { ... }
-        if (braceDepth > 0 && !trimmed.includes("{") && !trimmed.includes("}")) {
-          // 1) خطأ إملائي في اسم الخاصية
+        // تجاهل أسطر الـ Selectors أو @media أو القيم الممتدة عبر عدة أسطر داخل أقواس ()
+        const nextLineTrim = (fixedLines[idx + 1] || "").trim();
+        const isSelectorLine = trimmed.includes("{") || trimmed.includes("}") || trimmed.endsWith(",") || trimmed.startsWith("@") || nextLineTrim.startsWith("{");
+
+        if (braceStack.length > 0 && !isSelectorLine && parenDepth === 0) {
           Object.entries(cssTypos).forEach(([wrong, right]) => {
             const reg = new RegExp(`^(\\s*)${wrong}(\\s*[:\\s])`, "i");
             if (reg.test(fixedLines[idx])) {
               const before = fixedLines[idx];
               fixedLines[idx] = fixedLines[idx].replace(reg, `$1${right}$2`);
-              addDiag(lineNum, "CSS-E02", `Unknown CSS Property (Line ${lineNum}): '${wrong}' is invalid`, `في السطر ${lineNum} كتبت خاصية الـ CSS (${wrong}) غلط، والصحيح هو (${right}).`, `Replace '${wrong}' with '${right}' on line ${lineNum}.`, before, fixedLines[idx]);
+              addDiag(lineNum, "CSS-E02", `Unknown CSS Property (Line ${lineNum}): '${wrong}'`, `في السطر ${lineNum} كتبت خاصية الـ CSS (${wrong}) غلط، والصحيح هو (${right}).`, `Replace '${wrong}' with '${right}'.`, before, fixedLines[idx]);
             }
           });
 
-          // 2) نسيان النقطتين (:) بين الخاصية والقيمة (مثل: color red;)
           if (/^[a-zA-Z-]+\s+[^:;{}]+;?$/.test(fixedLines[idx].trim())) {
             const before = fixedLines[idx];
             let rep = before.replace(/^(\s*[a-zA-Z-]+)\s+/, "$1: ");
             if (!rep.trimEnd().endsWith(";")) rep = rep.trimEnd() + ";";
             fixedLines[idx] = rep;
-            addDiag(lineNum, "CSS-E03", `CSS Missing Colon ':' (Line ${lineNum}): Expected ':' after property name`, `في السطر ${lineNum} نسيت تضع النقطتين فوق بعض (:) بعد اسم خاصية الـ CSS!`, `Insert ':' between property and value on line ${lineNum}.`, before, rep);
-          }
-          // 3) نسيان الفصلة المنقوطة (;) في نهاية سطر الـ CSS
-          else if (/^[a-zA-Z-]+\s*:\s*[^;{}]+$/.test(fixedLines[idx].trim())) {
+            addDiag(lineNum, "CSS-E03", `CSS Missing Colon ':' (Line ${lineNum})`, `في السطر ${lineNum} نسيت النقطتين فوق بعض (:) بعد اسم خاصية الـ CSS!`, `Insert ':' between property and value.`, before, rep);
+          } else if (/^[a-zA-Z-]+\s*:\s*[^;{}]+$/.test(fixedLines[idx].trim())) {
             const before = fixedLines[idx];
             const rep = before.replace(/\s*$/, ";");
             fixedLines[idx] = rep;
-            addDiag(lineNum, "CSS-E04", `CSS Missing Semicolon ';' (Line ${lineNum}): Property declaration must end with ';'`, `في السطر ${lineNum} نسيت تقفل سطر الـ CSS بفصلة منقوطة (;) في آخر السطر!`, `Add ';' at the end of line ${lineNum}.`, before, rep);
+            addDiag(lineNum, "CSS-E04", `CSS Missing Semicolon ';' (Line ${lineNum})`, `في السطر ${lineNum} نسيت تقفل سطر الـ CSS بفصلة منقوطة (;)!`, `Add ';' at the end of line ${lineNum}.`, before, rep);
           }
         }
       });
 
-      if (braceDepth > 0) {
-        const before = fixedLines[fixedLines.length - 1];
-        fixedLines[fixedLines.length - 1] = before + "\n" + "}".repeat(braceDepth);
-        addDiag(lastOpenBraceLine, "CSS-E05", `CSS Unclosed Rule Block (Line ${lastOpenBraceLine}): Missing closing '}'`, `في السطر ${lastOpenBraceLine} فتحت قوس مجموعة '{' لقاعدة الـ CSS ونسيت تقفله بـ '}'!`, `Close the CSS block opened on line ${lastOpenBraceLine} with '}'.`, origLines[lastOpenBraceLine - 1], origLines[lastOpenBraceLine - 1] + " ... }");
+      while (braceStack.length > 0) {
+        const openLn = braceStack.pop();
+        const lastIdx = fixedLines.length - 1;
+        fixedLines[lastIdx] = fixedLines[lastIdx] + "\n}";
+        addDiag(openLn, "CSS-E05", `CSS Unclosed Rule Block (Opened on line ${openLn}): Missing '}'`, `في السطر ${openLn} فتحت قوس '{' لقاعدة الـ CSS ونسيت تقفله بـ '}' في نهاية القاعدة!`, `Close CSS block opened on line ${openLn} with '}'.`, origLines[openLn - 1], origLines[openLn - 1] + " ... }");
       }
     }
 
     // ========================================================================
-    // 3. JAVASCRIPT / TYPESCRIPT / REACT JSX LINE-BY-LINE DIAGNOSTICS
+    // 3. JAVASCRIPT / TYPESCRIPT STATE-MACHINE DIAGNOSTICS
     // ========================================================================
     if (lang === "javascript" || lang === "typescript") {
       const jsTypos = [
@@ -2173,43 +2252,53 @@ function openCustomThemeStudioModal() {
 
       fixedLines.forEach((ln, idx) => {
         const lineNum = idx + 1;
-        const clean = ln.replace(/\/\/.*$/, "");
-        if (!clean.trim()) return;
+        if (!ln.trim() || ln.trim().startsWith("//")) return;
 
         jsTypos.forEach(item => {
-          if (item.reg.test(clean)) {
+          if (item.reg.test(ln)) {
             const before = fixedLines[idx];
             fixedLines[idx] = fixedLines[idx].replace(item.reg, item.fix);
-            addDiag(lineNum, "JS-E01", `JavaScript Typo / ReferenceError (Line ${lineNum}): ${item.msgAr}`, `في السطر ${lineNum}: ${item.msgAr}، والصحيح هو (${item.fix}).`, `Fix typo on line ${lineNum} to '${item.fix}'.`, before, fixedLines[idx]);
+            addDiag(lineNum, "JS-E01", `JavaScript Typo (Line ${lineNum}): ${item.msgAr}`, `في السطر ${lineNum}: ${item.msgAr}، والصحيح هو (${item.fix}).`, `Fix typo to '${item.fix}'.`, before, fixedLines[idx]);
           }
           item.reg.lastIndex = 0;
         });
 
-        // فحص علامات التنصيص غير المغلقة في نفس السطر
-        const dblQuotes = (clean.match(/(?<!\\)"/g) || []).length;
-        const sglQuotes = (clean.match(/(?<!\\)'/g) || []).length;
-        if (dblQuotes % 2 !== 0 || sglQuotes % 2 !== 0) {
-          const qChar = dblQuotes % 2 !== 0 ? '"' : "'";
-          const before = fixedLines[idx];
-          const rep = before.trimEnd().endsWith(";") ? before.replace(/;\s*$/, `${qChar};`) : before.trimEnd() + qChar;
-          fixedLines[idx] = rep;
-          addDiag(lineNum, "JS-E02", `JavaScript SyntaxError (Line ${lineNum}): Unterminated string literal (${qChar})`, `في السطر ${lineNum} فتحت علامة تنصيص (${qChar}) للنص ونسيت تقفلها في نهاية النص!`, `Close the string quote (${qChar}) on line ${lineNum}.`, before, rep);
+        // فحص ذكي لعلامات التنصيص (يتجاهل ' داخل "..." والعكس تماماً)
+        let activeQuote = null;
+        let strippedLine = "";
+        const curLn = fixedLines[idx];
+        for (let i = 0; i < curLn.length; i++) {
+          const ch = curLn[i];
+          if (ch === "\\") { i++; continue; }
+          if (!activeQuote && ch === "/" && curLn[i + 1] === "/") break;
+          if (!activeQuote && (ch === '"' || ch === "'" || ch === "`")) {
+            activeQuote = ch;
+          } else if (activeQuote === ch) {
+            activeQuote = null;
+          } else if (!activeQuote) {
+            strippedLine += ch;
+          }
         }
 
-        // فحص الأقواس الدائرية ( ) غير المغلقة في سطر واحد
-        const noStr = fixedLines[idx].replace(/\/\/.*$/, "").replace(/(["'`])(?:(?=(\\?))\2.)*?\1/g, "");
-        const op = (noStr.match(/\(/g) || []).length;
-        const cp = (noStr.match(/\)/g) || []).length;
-        if (op > cp && !noStr.trim().endsWith("{") && !noStr.trim().endsWith(",")) {
+        if (activeQuote === '"' || activeQuote === "'") {
+          const before = fixedLines[idx];
+          const rep = before.trimEnd().endsWith(";") ? before.replace(/;\s*$/, `${activeQuote};`) : before.trimEnd() + activeQuote;
+          fixedLines[idx] = rep;
+          addDiag(lineNum, "JS-E02", `Unterminated String Literal (Line ${lineNum}): Missing (${activeQuote})`, `في السطر ${lineNum} فتحت علامة تنصيص (${activeQuote}) للنص ونسيت تقفلها!`, `Close string quote (${activeQuote}) on line ${lineNum}.`, before, rep);
+        }
+
+        const op = (strippedLine.match(/\(/g) || []).length;
+        const cp = (strippedLine.match(/\)/g) || []).length;
+        const trimmedStrip = strippedLine.trim();
+        if (op > cp && !trimmedStrip.endsWith("{") && !trimmedStrip.endsWith(",") && !trimmedStrip.endsWith("(")) {
           const before = fixedLines[idx];
           const missing = ")".repeat(op - cp);
           const rep = before.trimEnd().endsWith(";") ? before.replace(/;\s*$/, `${missing};`) : before.trimEnd() + missing + ";";
           fixedLines[idx] = rep;
-          addDiag(lineNum, "JS-E03", `JavaScript SyntaxError (Line ${lineNum}): Missing closing parenthesis ')'`, `في السطر ${lineNum} فتحت قوس '(' ونسيت تقفله بـ ')' في آخر الجملة!`, `Add '${missing}' on line ${lineNum}.`, before, rep);
+          addDiag(lineNum, "JS-E03", `Missing Closing Parenthesis ')' (Line ${lineNum})`, `في السطر ${lineNum} فتحت قوس '(' ونسيت تقفله بـ ')'!`, `Add '${missing}' on line ${lineNum}.`, before, rep);
         }
       });
 
-      // فحص أقواس البلوكات { } بالـ Stack لمعرفة رقم السطر المفتوح بالضبط
       const braceStack = [];
       fixedLines.forEach((ln, idx) => {
         const noStr = ln.replace(/\/\/.*$/, "").replace(/(["'`])(?:(?=(\\?))\2.)*?\1/g, "");
@@ -2220,29 +2309,41 @@ function openCustomThemeStudioModal() {
             else {
               const before = fixedLines[idx];
               fixedLines[idx] = before.replace(/\}/, "");
-              addDiag(idx + 1, "JS-E04", `SyntaxError (Line ${idx + 1}): Unexpected token '}'`, `في السطر ${idx + 1} يوجد قوس مجموعة '}' زائد بدون فتح!`, `Remove extra '}' on line ${idx + 1}.`, before, fixedLines[idx]);
+              addDiag(idx + 1, "JS-E04", `Unexpected Token '}' (Line ${idx + 1})`, `في السطر ${idx + 1} يوجد قوس مجموعة '}' زائد بدون فتح!`, `Remove extra '}' on line ${idx + 1}.`, before, fixedLines[idx]);
             }
           }
         }
       });
+
       while (braceStack.length > 0) {
         const openLn = braceStack.pop();
         fixedLines[fixedLines.length - 1] += "\n}";
-        addDiag(openLn, "JS-E05", `SyntaxError (Line ${openLn}): Unclosed block '{' — missing '}'`, `في السطر ${openLn} فتحت قوس بلوك '{' للدالة أو الشرط ونسيت تقفله بـ '}'!`, `Add closing '}' for the block opened on line ${openLn}.`, origLines[openLn - 1], origLines[openLn - 1] + " ... }");
+        addDiag(openLn, "JS-E05", `Unclosed Block '{' (Opened on line ${openLn})`, `في السطر ${openLn} فتحت قوس بلوك '{' ونسيت تقفله بـ '}' في نهاية البلوك!`, `Add closing '}' for block opened on line ${openLn}.`, origLines[openLn - 1], origLines[openLn - 1] + " ... }");
       }
 
-      // فحص نهائي بمحرك V8 للالتقاط أي خطأ Syntax آخر
       if (diagnostics.length === 0 && !fileKey.endsWith(".jsx") && !fileKey.endsWith(".tsx")) {
         try {
           new Function(raw);
         } catch (err) {
-          addDiag(1, "JS-E06", `JavaScript SyntaxError: ${err.message}`, `يوجد خطأ في قواعد كتابة كود الجافاسكريبت: (${err.message}).`, `Fix JavaScript syntax error: ${err.message}.`, origLines[0], fixedLines[0]);
+          // تحديد السطر الدقيق الذي تسبب في خطأ محرك V8
+          let badLn = 1;
+          for (let k = 1; k <= origLines.length; k++) {
+            try {
+              new Function(origLines.slice(0, k).join("\n"));
+            } catch (subErr) {
+              if (!/Unexpected end of input/i.test(subErr.message)) {
+                badLn = k;
+                break;
+              }
+            }
+          }
+          addDiag(badLn, "JS-E06", `JavaScript SyntaxError (Line ${badLn}): ${err.message}`, `يوجد خطأ قواعدي في السطر ${badLn}: (${err.message}).`, `Fix JavaScript syntax on line ${badLn}.`, origLines[badLn - 1], fixedLines[badLn - 1]);
         }
       }
     }
 
     // ========================================================================
-    // 4. PYTHON / C++ / C / JAVA / C# / SQL / JSON SURGICAL DIAGNOSTICS
+    // 4. PYTHON / C++ / C / JAVA / C# DIAGNOSTICS
     // ========================================================================
     if (lang === "python") {
       fixedLines.forEach((ln, idx) => {
@@ -2253,7 +2354,7 @@ function openCustomThemeStudioModal() {
         if (/^(if|else|elif|def|for|while|class|try|except|finally)\b/.test(clean) && !clean.endsWith(":")) {
           const before = fixedLines[idx];
           fixedLines[idx] = before.replace(/\s*$/, ":");
-          addDiag(lineNum, "PY-E01", `Python SyntaxError (Line ${lineNum}): expected ':'`, `في السطر ${lineNum} نسيت تضع النقطتين (:) في نهاية جملة (${clean.split(/\s+/)[0]})!`, `Add ':' at the end of line ${lineNum}.`, before, fixedLines[idx]);
+          addDiag(lineNum, "PY-E01", `Python SyntaxError (Line ${lineNum}): expected ':'`, `في السطر ${lineNum} نسيت النقطتين (:) في نهاية جملة (${clean.split(/\s+/)[0]})!`, `Add ':' at end of line ${lineNum}.`, before, fixedLines[idx]);
         }
         if (/\b(pritn|pirnt|prnt|Pint|Print|console\.log)\s*\(/.test(clean)) {
           const before = fixedLines[idx];
@@ -2270,7 +2371,7 @@ function openCustomThemeStudioModal() {
         if ((lang === "cpp" || lang === "c") && /\bcout\s*>>/.test(clean)) {
           const before = fixedLines[idx];
           fixedLines[idx] = before.replace(/\bcout\s*>>/g, "cout <<");
-          addDiag(lineNum, "CPP-E01", `C++ Operator Error (Line ${lineNum}): Invalid '>>' with 'cout'`, `في السطر ${lineNum} استخدمت '>>' مع cout، والصحيح في C++ هو 'cout <<'.`, `Change 'cout >>' to 'cout <<' on line ${lineNum}.`, before, fixedLines[idx]);
+          addDiag(lineNum, "CPP-E01", `C++ Operator Error (Line ${lineNum}): Invalid '>>' with 'cout'`, `في السطر ${lineNum} استخدمت '>>' مع cout، والصحيح في C++ هو 'cout <<'.`, `Change 'cout >>' to 'cout <<'.`, before, fixedLines[idx]);
         }
 
         const isHeaderOrBrace =
@@ -2282,7 +2383,7 @@ function openCustomThemeStudioModal() {
         if (!isHeaderOrBrace) {
           const before = fixedLines[idx];
           fixedLines[idx] = before.replace(/\s*$/, ";");
-          addDiag(lineNum, "C-E02", `Compiler Error (Line ${lineNum}): Expected ';' at end of statement`, `في السطر ${lineNum} نسيت تقفل الجملة البرمجية بفصلة منقوطة (;)!`, `Add ';' at the end of line ${lineNum}.`, before, fixedLines[idx]);
+          addDiag(lineNum, "C-E02", `Compiler Error (Line ${lineNum}): Expected ';'`, `في السطر ${lineNum} نسيت تقفل الجملة البرمجية بفصلة منقوطة (;)!`, `Add ';' at the end of line ${lineNum}.`, before, fixedLines[idx]);
         }
       });
     }
@@ -3099,4 +3200,34 @@ function openCustomThemeStudioModal() {
     bootUniversalIDE();
     setTimeout(injectVSCodeClassicMenusAndShortcuts, 120);
   }
+  /* ==========================================================================
+     14. SMART AUTO-CLOSE TAGS & ONE-CLICK FIX ALL PROJECT FILES (Ctrl+Shift+M)
+     ========================================================================== */
+  function fixAllProjectFilesNow() {
+    const p = curProj();
+    let totalFixed = 0;
+    Object.keys(p.files).forEach(fn => {
+      if (fn.endsWith(".test.js")) return;
+      const diags = runDeepLanguageDiagnostics(p.files[fn] || "", fn);
+      if (diags.length > 0 && diags[0].fixedCode) {
+        p.files[fn] = diags[0].fixedCode;
+        totalFixed += diags.length;
+      }
+    });
+    if (totalFixed > 0) {
+      saveState();
+      setEditorCode(p.files[p.activeFile], getLangMeta(p.activeFile).lang);
+      executeWorkspace("project", true);
+      toast(`⚡ تم إصلاح ${totalFixed} أخطاء في كل ملفات المشروع بنجاح!`);
+    } else {
+      toast("✅ كل ملفات المشروع سليمة 100%!");
+    }
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "m") {
+      e.preventDefault();
+      fixAllProjectFilesNow();
+    }
+  });
 })();
