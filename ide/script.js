@@ -2467,7 +2467,7 @@ function runDeepLanguageDiagnostics(code, fileKey) {
   /* ==========================================================================
      11. STRICT COMPILER GATE: HALTS ON ANY ERROR & SHOWS BEFORE/AFTER DIFF
      ========================================================================== */
-  const _baseExecuteWorkspace = executeWorkspace;
+let _baseExecuteWorkspace = executeWorkspace;
   executeWorkspace = function (mode = "project", notifyUser = false) {
     const p = curProj();
     const frame = document.getElementById("vsc-preview-iframe");
@@ -4202,4 +4202,17 @@ document.getElementById("${uid}-form")?.addEventListener("submit", function(e) {
   }
 
   setTimeout(mountTextGeneratorAndFileImporter, 300);
+  // === جسر الربط مع المحرك الاحترافي الإضافي (ide-pro.js) ===
+  window.__IDE_BRIDGE__ = {
+    state, PROJECT_TEMPLATES, curProj, saveState, toast, esc, getLangMeta,
+    getEditorCode, setEditorCode, switchActiveFile, refreshAllIDEUI,
+    openUniversalModal, closeUniversalModal, syncDiagnosticsToMonacoAndProblems,
+    buildAndInjectFromTextPrompt,
+    getMonaco: () => monacoEditor,
+    getDiagEngine: () => runDeepLanguageDiagnostics,
+    setDiagEngine: (fn) => { runDeepLanguageDiagnostics = fn; },
+    getBaseExec: () => _baseExecuteWorkspace,
+    setBaseExec: (fn) => { _baseExecuteWorkspace = fn; },
+    runWorkspace: (m, n) => executeWorkspace(m, n)
+  };
 })();
