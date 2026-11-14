@@ -995,7 +995,114 @@ body {
 .hidden-pane { display: none !important; }
 .full-pane { flex: 1 1 100% !important; }
 /* ============================================================================
-   1. إصلاح مساحة المعاينة (Output Preview) لتملأ الشاشة بالكامل 100% طولاً وعرضاً
+   1. PERFECT 100% ZOOM FIT FOR TITLEBAR & WORKBENCH (ZERO OVERFLOW AT 100%)
+   ============================================================================ */
+[hidden],
+.vsc-editor-host[hidden],
+.vsc-inline-ai-bar[hidden],
+.vsc-bpane[hidden],
+.vsc-palette-backdrop[hidden],
+.vsc-modal-backdrop[hidden],
+.vsc-context-menu[hidden] {
+  display: none !important;
+}
+
+.vsc-titlebar {
+  height: 38px !important;
+  padding: 0 6px !important;
+  gap: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  overflow: hidden !important;
+}
+
+.vsc-titlebar-left,
+.vsc-titlebar-center,
+.vsc-titlebar-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  min-width: 0 !important;
+}
+
+.vsc-icon-btn {
+  width: 26px !important;
+  height: 26px !important;
+  font-size: 12px !important;
+  flex-shrink: 0 !important;
+}
+
+.vsc-menubar-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.vsc-menu-item {
+  padding: 3px 5px !important;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', system-ui, sans-serif;
+  font-size: 11px !important;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.vsc-menu-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-bright);
+}
+
+.vsc-project-pill {
+  max-width: 145px !important;
+  padding: 2px 7px !important;
+  font-size: 11px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+}
+
+.vsc-project-pill strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vsc-command-bar {
+  width: clamp(110px, 12vw, 175px) !important;
+  height: 25px !important;
+  padding: 0 7px !important;
+  font-size: 10.5px !important;
+  flex-shrink: 1 !important;
+}
+
+.vsc-command-bar kbd {
+  display: none;
+}
+
+.vsc-select-pill {
+  padding: 2px 5px !important;
+}
+
+.vsc-select-pill select {
+  font-size: 10.5px !important;
+  max-width: 96px !important;
+}
+
+.vsc-run-pill {
+  padding: 3px 8px !important;
+  font-size: 11px !important;
+}
+
+.vsc-run-group .vsc-run-select {
+  max-width: 88px !important;
+  font-size: 10.5px !important;
+}
+
+/* ============================================================================
+   2. INTERACTIVE PREVIEW STAGE (DESKTOP 100% / TABLET 768PX / MOBILE 375PX)
    ============================================================================ */
 .vsc-preview-pane {
   display: flex !important;
@@ -1008,64 +1115,75 @@ body {
   flex: 1 1 auto !important;
   display: flex !important;
   flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
   width: 100% !important;
   height: 100% !important;
   min-height: 0 !important;
-  background: #070a12 !important;
+  background: radial-gradient(circle at center, #111827 0%, #060911 100%) !important;
   padding: 0 !important;
-  overflow: hidden !important;
+  overflow: auto !important;
 }
 
+.vsc-iframe-stage.device-sim-active {
+  padding: 14px 10px !important;
+}
+
+/* بدون !important على العرض والارتفاع حتى يعمل وضع الموبايل والتابلت بسلاسة */
 .vsc-device-frame {
-  flex: 1 1 auto !important;
-  display: flex !important;
-  flex-direction: column !important;
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  background: #ffffff !important;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: #ffffff;
   border: 0;
   margin: 0 auto;
+  transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1), height 0.25s ease, border-radius 0.25s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.vsc-device-frame.is-mobile-sim,
+.vsc-device-frame.is-tablet-sim {
+  flex: 0 0 auto;
+  border: 6px solid #1e293b !important;
+  border-radius: 26px !important;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.85), 0 0 0 1.5px var(--gold) !important;
+}
+
+.vsc-device-notch {
+  height: 22px;
+  background: #0f172a;
+  color: #94a3b8;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  border-bottom: 1px solid #1e293b;
+  user-select: none;
+}
+
+.vsc-device-frame.is-mobile-sim .vsc-device-notch,
+.vsc-device-frame.is-tablet-sim .vsc-device-notch {
+  display: flex;
 }
 
 #vsc-preview-iframe {
   flex: 1 1 auto !important;
   width: 100% !important;
   height: 100% !important;
-  min-height: 100% !important;
   border: 0 !important;
   display: block !important;
   background: #ffffff;
 }
 
 /* ============================================================================
-   2. شريط قوائم واختصارات Visual Studio Code الاحترافي العلوي (Menu & Layout Bar)
+   3. DROPDOWN MENUS, SIDEBAR & BOTTOM-LEFT PROFILE PILL
    ============================================================================ */
-.vsc-menubar-strip {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  margin-left: 4px;
-}
-
-.vsc-menu-item {
-  position: relative;
-  padding: 4px 8px;
-  border-radius: 5px;
-  font-family: 'JetBrains Mono', system-ui, sans-serif;
-  font-size: 11.5px;
-  color: var(--text);
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.vsc-menu-item:hover,
-.vsc-menu-item.open {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--text-bright);
-}
-
 .vsc-menu-dropdown {
   position: fixed;
   top: 38px;
@@ -1114,12 +1232,11 @@ body {
   margin: 4px 0;
 }
 
-/* أزرار تقسيم النوافذ في أقصى اليمين مثل VS Code الأصلي */
 .vsc-window-layout-toggles {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding-left: 6px;
+  gap: 2px;
+  padding-left: 4px;
   border-left: 1px solid var(--border);
 }
 
@@ -1127,62 +1244,21 @@ body {
   background: rgba(16, 185, 129, 0.16);
   border: 1px solid #10b981;
   color: #10b981;
-  padding: 3px 9px;
-  border-radius: 6px;
-  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 10.5px;
   font-weight: 800;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  transition: all 0.15s ease;
+  gap: 4px;
 }
 
 .vsc-live-server-pill:hover {
   background: #10b981;
   color: #04130d;
 }
-/* ============================================================================
-   RESTORE HIDDEN RULES, SIDEBAR STYLES, TOPBAR FIT & BOTTOM-LEFT USER PROFILE
-   ============================================================================ */
-[hidden],
-.vsc-editor-host[hidden],
-.vsc-inline-ai-bar[hidden],
-.vsc-bpane[hidden],
-.vsc-palette-backdrop[hidden],
-.vsc-modal-backdrop[hidden],
-.vsc-context-menu[hidden] {
-  display: none !important;
-}
 
-/* منع تكدس الشريط العلوي وضبط كبسولة المشروع */
-.vsc-titlebar {
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-  white-space: nowrap !important;
-}
-.vsc-project-pill {
-  max-width: 210px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 0;
-}
-.vsc-project-pill strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.vsc-command-bar {
-  width: clamp(145px, 16vw, 240px) !important;
-  flex-shrink: 1;
-}
-.vsc-menu-item {
-  padding: 3px 6px !important;
-  font-size: 11px !important;
-}
-
-/* إعادة تنسيقات القوائم الجانبية والنوافذ والأزرار */
 .vsc-field {
   display: flex;
   flex-direction: column;
@@ -1218,9 +1294,7 @@ body {
   font-weight: 800;
   cursor: pointer;
 }
-.vsc-tree-section {
-  margin-bottom: 12px;
-}
+.vsc-tree-section { margin-bottom: 12px; }
 .vsc-tree-title {
   font-size: 10.5px;
   font-weight: 800;
@@ -1245,9 +1319,7 @@ body {
   cursor: pointer;
   margin-bottom: 2px;
 }
-.vsc-tree-item:hover {
-  background: rgba(255, 255, 255, 0.07);
-}
+.vsc-tree-item:hover { background: rgba(255, 255, 255, 0.07); }
 .vsc-tree-item.active {
   background: rgba(0, 122, 204, 0.25);
   color: var(--text-bright);
@@ -1289,7 +1361,6 @@ body {
   cursor: pointer;
 }
 
-/* كبسولة الحساب الشخصي والصورة في الأسفل على اليسار (Bottom-Left Profile) */
 .vsc-profile-status-pill {
   display: inline-flex;
   align-items: center;
@@ -1303,11 +1374,6 @@ body {
   font-size: 11px;
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.18s ease;
-}
-.vsc-profile-status-pill:hover {
-  border-color: #10b981;
-  box-shadow: 0 0 12px rgba(212, 167, 44, 0.35);
 }
 .vsc-profile-avatar-mini {
   width: 18px;
@@ -1336,7 +1402,6 @@ body {
   color: var(--gold);
   font-weight: 900;
   font-size: 11px;
-  box-shadow: 0 0 10px rgba(212, 167, 44, 0.25);
 }
 .vsc-act-avatar-btn img {
   width: 100%;
