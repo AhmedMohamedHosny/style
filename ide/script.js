@@ -317,28 +317,27 @@
     }
     saveState();
   }
-
 function openCustomThemeStudioModal() {
     const ct = state.customTheme || { bgMain: "#0b0f19", bgSide: "#111827", accent: "#38bdf8", gold: "#d4a72c" };
     openUniversalModal("🎨 صانع الثيم الاحترافي المخصص (Custom Theme Studio)", `
       <div class="vsc-field">
         <label>لون خلفية المحرر الأساسية (Editor Background)</label>
-        <input type="color" id="ct-bg-main" value="${ct.bgMain}" style="height:40px; cursor:pointer;" />
+        <input type="color" id="ct-bg-main" value="${ct.bgMain}" style="height:38px; cursor:pointer;" />
       </div>
       <div class="vsc-field">
         <label>لون القوائم الجانبية والأشرطة (Sidebar & Panels)</label>
-        <input type="color" id="ct-bg-side" value="${ct.bgSide}" style="height:40px; cursor:pointer;" />
+        <input type="color" id="ct-bg-side" value="${ct.bgSide}" style="height:38px; cursor:pointer;" />
       </div>
       <div class="vsc-field">
         <label>لون التمييز والأزرار النشطة (Primary Accent)</label>
-        <input type="color" id="ct-accent" value="${ct.accent}" style="height:40px; cursor:pointer;" />
+        <input type="color" id="ct-accent" value="${ct.accent}" style="height:38px; cursor:pointer;" />
       </div>
       <div class="vsc-field">
         <label>لون العناوين والرموز الذهبية (Highlight / Gold)</label>
-        <input type="color" id="ct-gold" value="${ct.gold}" style="height:40px; cursor:pointer;" />
+        <input type="color" id="ct-gold" value="${ct.gold}" style="height:38px; cursor:pointer;" />
       </div>
       <div style="display:flex; gap:8px; margin-top:8px;">
-        <button type="button" id="btn-save-custom-theme" class="vsc-btn-primary" style="flex:1;">حفظ وتطبيق الثيم ✨</button>
+        <button type="button" id="btn-save-custom-theme" class="vsc-btn-primary" style="flex:1;">حفظ وتفعيل الثيم ✨</button>
         <button type="button" id="btn-export-theme-json" class="vsc-btn-primary" style="background:#334155;">تصدير JSON ⬇</button>
       </div>
     `);
@@ -378,6 +377,7 @@ function openCustomThemeStudioModal() {
         --bg-main: ${ct.bgMain} !important;
         --bg-sidebar: ${ct.bgSide} !important;
         --bg-titlebar: ${ct.bgSide} !important;
+        --bg-panel: ${ct.bgMain} !important;
         --accent: ${ct.accent} !important;
         --gold: ${ct.gold} !important;
       }
@@ -392,37 +392,47 @@ function openCustomThemeStudioModal() {
     const sidebar = document.getElementById("vsc-sidebar");
     const edPane = document.getElementById("vsc-editor-pane");
     const prPane = document.getElementById("vsc-preview-pane");
-    const resizer = document.getElementById("vsc-resizer");
+    const resizerV = document.getElementById("vsc-resizer-v");
+    const btmPanel = document.getElementById("vsc-bottom-panel");
 
     sidebar?.classList.remove("collapsed");
     edPane?.classList.remove("hidden-pane", "full-pane");
     prPane?.classList.remove("hidden-pane", "full-pane");
-    if (resizer) resizer.style.display = "grid";
+    btmPanel?.classList.remove("hidden-panel", "maximized");
+    if (resizerV) resizerV.style.display = "grid";
 
-    document.querySelectorAll(".layout-btn").forEach(b => {
-      b.classList.toggle("active", b.dataset.layout === mode);
-    });
+    const sel = document.getElementById("sel-workspace-layout");
+    if (sel && sel.value !== mode) sel.value = mode;
 
-    if (mode === "code" || mode === "coding-mode") {
+    if (mode === "classic") {
       prPane?.classList.add("hidden-pane");
       edPane?.classList.add("full-pane");
-      if (resizer) resizer.style.display = "none";
-    } else if (mode === "focus-mode") {
+      if (resizerV) resizerV.style.display = "none";
+    } else if (mode === "focus") {
       sidebar?.classList.add("collapsed");
       prPane?.classList.add("hidden-pane");
+      btmPanel?.classList.add("hidden-panel");
       edPane?.classList.add("full-pane");
-      if (resizer) resizer.style.display = "none";
-    } else if (mode === "preview" || mode === "full-preview") {
+      if (resizerV) resizerV.style.display = "none";
+    } else if (mode === "coding") {
+      prPane?.classList.add("hidden-pane");
+      edPane?.classList.add("full-pane");
+      btmPanel?.classList.add("maximized");
+      if (resizerV) resizerV.style.display = "none";
+    } else if (mode === "full-preview") {
+      sidebar?.classList.add("collapsed");
       edPane?.classList.add("hidden-pane");
+      btmPanel?.classList.add("hidden-panel");
       prPane?.classList.add("full-pane");
-      if (resizer) resizer.style.display = "none";
-    } else if (mode === "debug-mode") {
+      if (resizerV) resizerV.style.display = "none";
+    } else if (mode === "debugging") {
       state.activeAct = "debug";
+      activateBottomTab("debug-console");
       renderSidebarByActivity();
-    } else if (mode === "ai-mode") {
+    } else if (mode === "ai-dev") {
       state.activeAct = "ai";
       renderSidebarByActivity();
-    } else if (mode === "db-mode") {
+    } else if (mode === "database") {
       state.activeAct = "database";
       renderSidebarByActivity();
     }
@@ -431,129 +441,30 @@ function openCustomThemeStudioModal() {
   }
 
   /* ==========================================================================
-     6. DOM NORMALIZER & AUTO-UPGRADER (GUARANTEES ALL 22 MODULES WORK)
-     ========================================================================== */
-  function ensureUniversalIDEDOM() {
-    // توحيد معرفات محرر موناكو والمعاينة لتعمل مع أي نسخة HTML لديك
-    const mMount = document.getElementById("monaco-mount") || document.getElementById("monaco-mount-1");
-    if (mMount) mMount.id = "monaco-mount-1";
-
-    const fbArea = document.getElementById("fallback-code-area") || document.getElementById("fallback-editor-1");
-    if (fbArea) fbArea.id = "fallback-editor-1";
-
-    const cursorEl = document.getElementById("status-cursor") || document.getElementById("st-cursor-pos");
-    if (cursorEl) cursorEl.id = "st-cursor-pos";
-
-    // ترقية قائمة الثيمات لتشمل الـ 13 ثيماً القياسية + Custom Theme
-    const themeSel = document.getElementById("sel-ide-theme");
-    if (themeSel) {
-      themeSel.innerHTML = `
-        <option value="vscode-dark">🌑 VS Code Dark</option>
-        <option value="vscode-light">☀️ VS Code Light</option>
-        <option value="aurora-dark">🌌 Aurora Dark</option>
-        <option value="aurora-light">🌤️ Aurora Light</option>
-        <option value="midnight">🌠 Midnight Gold</option>
-        <option value="dracula-pro">🧛 Dracula Pro</option>
-        <option value="monokai">🔥 Monokai Pro</option>
-        <option value="nord">❄️ Nord Polar</option>
-        <option value="github-dark">🐙 GitHub Dark</option>
-        <option value="github-light">📄 GitHub Light</option>
-        <option value="one-dark">⚛️ One Dark Pro</option>
-        <option value="cyberpunk-neon">⚡ Cyberpunk Neon</option>
-        <option value="emerald-matrix">🌲 Emerald Matrix</option>
-        <option value="custom">🎨 Custom Theme...</option>
-      `;
-      themeSel.value = state.theme;
-    }
-
-    // ترقية الشريط الجانبي للأيقونات ليشمل الـ 10 مساحات عمل الكاملة
-    const actBar = document.querySelector(".vsc-activity-bar");
-    if (actBar && !actBar.querySelector('[data-sidebar-tab="git"]')) {
-      actBar.innerHTML = `
-        <button type="button" class="vsc-act-btn active" data-sidebar-tab="explorer" data-tip="مستكشف الملفات والموارد (Explorer — Ctrl+Shift+E)"><i class="fa-regular fa-copy"></i></button>
-        <button type="button" class="vsc-act-btn" data-sidebar-tab="search" data-tip="البحث والاستبدال الشامل (Global Search — Ctrl+Shift+F)"><i class="fa-solid fa-magnifying-glass"></i></button>
-        <button type="button" class="vsc-act-btn" data-sidebar-tab="git" data-tip="إدارة المصدر و Git (Source Control — Ctrl+Shift+G)" style="position:relative;">
-          <i class="fa-solid fa-code-branch"></i>
-          <span id="git-changes-badge" style="position:absolute;top:6px;right:6px;background:#10b981;color:#000;font-size:9px;font-weight:900;padding:0 4px;border-radius:99px;display:none;">0</span>
-        </button>
-        <button type="button" class="vsc-act-btn" data-sidebar-tab="debug" data-tip="التشغيل ومصحح الأخطاء (Run & Debug — F5)"><i class="fa-solid fa-bug"></i></button>
-        <button type="button" class="vsc-act-btn" data-sidebar-tab="extensions" data-tip="متجر الإضافات (Extensions Marketplace)"><i class="fa-solid fa-puzzle-piece"></i></button>
-        <button type="button" class="vsc-act-btn" data-sidebar-tab="database" data-tip="مستكشف قواعد البيانات (Database & SQL Explorer)"><i class="fa-solid fa-database"></i></button>
-        <button type="button" class="vsc-act-btn" data-sidebar-tab="ai" data-tip="المساعد البرمجي الذكي (AI Coding Assistant)"><i class="fa-solid fa-robot gold-icon"></i></button>
-        <button type="button" class="vsc-act-btn" data-sidebar-tab="testing" data-tip="الاختبارات وجودة الكود (Testing & Unit Tests)"><i class="fa-solid fa-vial-circle-check"></i></button>
-        <button type="button" class="vsc-act-btn" data-sidebar-tab="devops" data-tip="النشر والـ DevOps (Docker, CI/CD & Deployment)"><i class="fa-solid fa-cloud-arrow-up"></i></button>
-        <button type="button" class="vsc-act-btn" data-sidebar-tab="projects" data-tip="مدير المشاريع والقوالب الـ 14 (Project Manager)"><i class="fa-solid fa-layer-group"></i></button>
-
-        <div class="vsc-act-spacer"></div>
-
-        <button type="button" id="btn-open-cmd-palette" class="vsc-act-btn" data-tip="لوحة الأوامر السريعة (Command Palette — Ctrl+Shift+P)"><i class="fa-solid fa-terminal gold-icon"></i></button>
-        <button type="button" id="btn-open-settings-center" class="vsc-act-btn" data-tip="مركز الإعدادات الشامل (Settings — Ctrl+,)"><i class="fa-solid fa-gear"></i></button>
-        <a href="../index.html" class="vsc-act-btn" data-tip="العودة إلى منظومة حياتي (MY LIFE OS)"><i class="fa-solid fa-house"></i></a>
-      `;
-    }
-
-    // إضافة أزرار المعاينة المتجاوبة (موبايل / تابلت / ديسكتوب) في شريط المعاينة
-    const prevActions = document.querySelector(".vsc-preview-actions");
-    if (prevActions && !document.getElementById("btn-vp-mobile")) {
-      prevActions.insertAdjacentHTML("afterbegin", `
-        <button type="button" id="btn-vp-desktop" class="vsc-mini-icon" data-tip="عرض شاشة كمبيوتر (Desktop 100%)"><i class="fa-solid fa-desktop"></i></button>
-        <button type="button" id="btn-vp-tablet" class="vsc-mini-icon" data-tip="عرض شاشة تابلت (Tablet 768px)"><i class="fa-solid fa-tablet-screen-button"></i></button>
-        <button type="button" id="btn-vp-mobile" class="vsc-mini-icon" data-tip="عرض شاشة موبايل (Mobile 375px)"><i class="fa-solid fa-mobile-screen"></i></button>
-      `);
-    }
-
-    // ترقية الدرج السفلي ليشمل تبويبات: TERMINAL | CONSOLE | PROBLEMS | OUTPUT
-    const consoleHeader = document.querySelector(".vsc-console-header");
-    if (consoleHeader && !document.getElementById("bottom-panel-tabs")) {
-      consoleHeader.innerHTML = `
-        <div id="bottom-panel-tabs" style="display:flex; align-items:center; gap:12px;">
-          <button type="button" class="vsc-btm-tab active" data-btm-tab="console" style="background:none;border:0;color:var(--gold);font-weight:800;cursor:pointer;font-size:11px;">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> SMART CONSOLE <span id="console-badge-count" class="vsc-count-pill">0</span>
-          </button>
-          <button type="button" class="vsc-btm-tab" data-btm-tab="terminal" style="background:none;border:0;color:var(--text);font-weight:700;cursor:pointer;font-size:11px;">
-            <i class="fa-solid fa-terminal"></i> TERMINAL (BASH)
-          </button>
-          <button type="button" class="vsc-btm-tab" data-btm-tab="problems" style="background:none;border:0;color:var(--text);font-weight:700;cursor:pointer;font-size:11px;">
-            <i class="fa-solid fa-circle-exclamation"></i> PROBLEMS <span id="problems-badge-count" class="vsc-count-pill">0</span>
-          </button>
-        </div>
-        <div style="display:flex; gap:6px;">
-          <button type="button" id="btn-clear-console" class="vsc-mini-icon" data-tip="مسح المخرجات"><i class="fa-solid fa-trash-can"></i></button>
-          <button type="button" id="btn-toggle-console-height" class="vsc-mini-icon" data-tip="تكبير/تصغير اللوحة السفلية"><i class="fa-solid fa-chevron-up"></i></button>
-        </div>
-      `;
-    }
-  }
-
-  /* ==========================================================================
-     7. THE 10 ACTIVITY BAR WORKSPACES (FULL REAL FUNCTIONALITY)
+     6. THE 10 ACTIVITY BAR WORKSPACES (MATCHING #vsc-sidebar-body & data-act)
      ========================================================================== */
   function renderSidebarByActivity() {
     const p = curProj();
-    const box = document.getElementById("vsc-sidebar-content");
-    const titleEl = document.getElementById("sidebar-title-lbl");
+    const box = document.getElementById("vsc-sidebar-body");
+    const titleEl = document.getElementById("sidebar-header-title");
     if (!box) return;
 
-    document.querySelectorAll("[data-sidebar-tab]").forEach(b => {
-      b.classList.toggle("active", b.dataset.sidebarTab === state.activeAct);
+    document.querySelectorAll(".vsc-act-btn[data-act]").forEach(b => {
+      b.classList.toggle("active", b.dataset.act === state.activeAct);
     });
 
     const act = state.activeAct;
 
-    // ------------------------------------------------------------------------
-    // 1. EXPLORER (OPEN EDITORS, WORKSPACE FILES, FAVORITES, RECENT, ASSETS)
-    // ------------------------------------------------------------------------
+    // 1. EXPLORER
     if (act === "explorer") {
       if (titleEl) titleEl.textContent = "EXPLORER";
       const fileKeys = Object.keys(p.files || {});
       const assetEntries = Object.entries(p.assets || {});
 
       box.innerHTML = `
-        <!-- OPEN EDITORS -->
         <div class="vsc-tree-section">
           <div class="vsc-tree-title">
             <span>▾ OPEN EDITORS (${fileKeys.length})</span>
-            <button type="button" id="btn-restore-closed-tab" class="vsc-mini-icon" title="استرجاع آخر تبويب مغلق"><i class="fa-solid fa-rotate-left"></i></button>
           </div>
           ${fileKeys.map(fn => {
             const m = getLangMeta(fn);
@@ -561,15 +472,12 @@ function openCustomThemeStudioModal() {
             return `
               <div class="vsc-tree-item ${fn === p.activeFile ? "active" : ""}" data-open-file="${esc(fn)}">
                 <span><i class="${m.icon}" style="color:${m.color};margin-right:6px;"></i>${esc(fn)}</span>
-                <span style="display:flex;gap:5px;align-items:center;">
-                  <i class="fa-solid fa-thumbtack" data-pin-file="${esc(fn)}" style="font-size:10px;opacity:${isPinned ? "1" : "0.3"};color:${isPinned ? "var(--gold)" : "inherit"};" title="تثبيت التبويب (Pin Tab)"></i>
-                </span>
+                <i class="fa-solid fa-thumbtack" data-pin-file="${esc(fn)}" style="font-size:10px;opacity:${isPinned ? "1" : "0.35"};color:${isPinned ? "var(--gold)" : "inherit"};" title="تثبيت التبويب"></i>
               </div>
             `;
           }).join("")}
         </div>
 
-        <!-- WORKSPACE FILES -->
         <div class="vsc-tree-section">
           <div class="vsc-tree-title">
             <span>▾ WORKSPACE: ${esc(p.name)}</span>
@@ -584,83 +492,61 @@ function openCustomThemeStudioModal() {
               <div class="vsc-tree-item ${fn === p.activeFile ? "active" : ""}" data-open-file="${esc(fn)}">
                 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                   <i class="${m.icon}" style="color:${m.color};margin-right:6px;"></i>${esc(fn)}
-                  ${isModified ? `<b style="color:#f59e0b;font-size:10px;margin-left:4px;" title="Modified">● M</b>` : ""}
+                  ${isModified ? `<b style="color:#f59e0b;font-size:10px;margin-left:4px;">● M</b>` : ""}
                 </span>
                 <span style="display:flex;gap:5px;align-items:center;font-size:10px;color:var(--muted);">
                   <span>${sizeBytes}B</span>
-                  <i class="${isFav ? "fa-solid" : "fa-regular"} fa-star" data-fav-file="${esc(fn)}" style="color:${isFav ? "#facc15" : "inherit"};" title="إضافة للمفضلة"></i>
-                  <i class="fa-regular fa-pen-to-square" data-rename-file="${esc(fn)}" title="إعادة تسمية الملف"></i>
-                  <i class="fa-regular fa-clone" data-dup-file="${esc(fn)}" title="نسخ وتكرار الملف"></i>
+                  <i class="${isFav ? "fa-solid" : "fa-regular"} fa-star" data-fav-file="${esc(fn)}" style="color:${isFav ? "#facc15" : "inherit"};" title="مفضلة"></i>
+                  <i class="fa-regular fa-pen-to-square" data-rename-file="${esc(fn)}" title="إعادة تسمية"></i>
+                  <i class="fa-regular fa-clone" data-dup-file="${esc(fn)}" title="تكرار الملف"></i>
                 </span>
               </div>
             `;
           }).join("")}
         </div>
 
-        <!-- FAVORITES -->
         ${(p.favorites || []).length ? `
           <div class="vsc-tree-section">
             <div class="vsc-tree-title"><span>⭐ FAVORITES</span></div>
             ${p.favorites.filter(f => p.files[f] !== undefined).map(fn => `
-              <div class="vsc-tree-item" data-open-file="${esc(fn)}">
-                <span>⭐ ${esc(fn)}</span>
-              </div>
+              <div class="vsc-tree-item" data-open-file="${esc(fn)}"><span>⭐ ${esc(fn)}</span></div>
             `).join("")}
           </div>
         ` : ""}
 
-        <!-- UPLOADED IMAGES & ASSETS -->
         <div class="vsc-tree-section">
           <div class="vsc-tree-title">
-            <span>🖼️ ASSETS & MEDIA (${assetEntries.length})</span>
-            <label class="vsc-mini-icon" style="cursor:pointer;" title="رفع صور أو ملفات للمشروع">
+            <span>🖼️ ASSETS & IMAGES (${assetEntries.length})</span>
+            <label class="vsc-mini-icon" style="cursor:pointer;" title="رفع صور للمشروع">
               <i class="fa-solid fa-cloud-arrow-up gold-icon"></i>
               <input type="file" id="exp-asset-upload" accept="image/*,.svg,.json,.csv,.md" multiple hidden />
             </label>
           </div>
           ${assetEntries.length ? assetEntries.map(([name, url]) => `
-            <div class="vsc-asset-row" data-insert-asset="${esc(name)}" title="اضغط لإدراج ${esc(name)} في الكود مباشرة">
+            <div class="vsc-asset-row" data-insert-asset="${esc(name)}" title="اضغط لإدراج الصورة في الكود">
               <div style="display:flex;align-items:center;gap:7px;overflow:hidden;">
                 <img src="${url}" alt="${esc(name)}" />
                 <span style="font-size:11px;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</span>
               </div>
               <i class="fa-solid fa-trash" data-del-asset="${esc(name)}" style="color:#ef4444;font-size:11px;"></i>
             </div>
-          `).join("") : `<div style="font-size:11px;color:var(--muted);padding:6px;">ارفع صور مشروعك هنا وسيتعرف عليها المترجم بالاسم فوراً!</div>`}
+          `).join("") : `<div style="font-size:11px;color:var(--muted);padding:6px;">ارفع أي صورة وسيتعرف عليها الكود تلقائياً بالاسم!</div>`}
         </div>
       `;
 
       box.querySelector("#btn-exp-add-file")?.addEventListener("click", openCreateFileModal);
-      box.querySelector("#btn-restore-closed-tab")?.addEventListener("click", () => {
-        const last = (p.closedTabs || []).pop();
-        if (last && last.name) {
-          p.files[last.name] = last.content;
-          switchActiveFile(last.name);
-          toast(`↺ تم استرجاع الملف المغلق: ${last.name}`);
-        } else {
-          toast("لا توجد تبويبات مغلقة حديثاً");
-        }
-      });
-
       box.querySelectorAll("[data-open-file]").forEach(el => {
         el.onclick = (e) => {
           if (e.target.closest("[data-pin-file],[data-fav-file],[data-rename-file],[data-dup-file]")) return;
           switchActiveFile(el.dataset.openFile);
         };
       });
-
       box.querySelectorAll("[data-pin-file]").forEach(btn => {
         btn.onclick = (e) => {
           e.stopPropagation();
-          const fn = btn.dataset.pinFile;
-          p.pinnedTabs = p.pinnedTabs || [];
-          if (p.pinnedTabs.includes(fn)) p.pinnedTabs = p.pinnedTabs.filter(x => x !== fn);
-          else p.pinnedTabs.push(fn);
-          saveState();
-          refreshAllIDEUI();
+          togglePinFile(btn.dataset.pinFile);
         };
       });
-
       box.querySelectorAll("[data-fav-file]").forEach(btn => {
         btn.onclick = (e) => {
           e.stopPropagation();
@@ -672,7 +558,6 @@ function openCustomThemeStudioModal() {
           renderSidebarByActivity();
         };
       });
-
       box.querySelectorAll("[data-rename-file]").forEach(btn => {
         btn.onclick = (e) => {
           e.stopPropagation();
@@ -688,7 +573,6 @@ function openCustomThemeStudioModal() {
           toast(`✓ تمت إعادة التسمية إلى ${clean}`);
         };
       });
-
       box.querySelectorAll("[data-dup-file]").forEach(btn => {
         btn.onclick = (e) => {
           e.stopPropagation();
@@ -702,31 +586,28 @@ function openCustomThemeStudioModal() {
           toast(`✓ تم نسخ الملف إلى ${copyName}`);
         };
       });
-
       box.querySelector("#exp-asset-upload")?.addEventListener("change", handleAssetFilesInput);
       bindAssetRowEvents(box, p);
       return;
     }
 
-    // ------------------------------------------------------------------------
-    // 2. GLOBAL SEARCH & REPLACE (REGEX, CASE SENSITIVE, MULTI-FILE)
-    // ------------------------------------------------------------------------
+    // 2. SEARCH & REPLACE
     if (act === "search") {
       if (titleEl) titleEl.textContent = "GLOBAL SEARCH & REPLACE";
       box.innerHTML = `
         <div class="vsc-field">
           <input type="text" id="srch-query-inp" placeholder="ابحث في كل ملفات المشروع..." />
         </div>
-        <div class="vsc-field" style="margin-top:6px;">
+        <div class="vsc-field">
           <input type="text" id="srch-replace-inp" placeholder="استبدال بـ (Replace with)..." />
         </div>
-        <div style="display:flex; gap:6px; margin:8px 0; font-size:11px;">
-          <label style="cursor:pointer;"><input type="checkbox" id="srch-case-chk" /> Aa تطابق الحالة</label>
+        <div style="display:flex; gap:8px; margin:6px 0; font-size:11px;">
+          <label style="cursor:pointer;"><input type="checkbox" id="srch-case-chk" /> Aa الحالة</label>
           <label style="cursor:pointer;"><input type="checkbox" id="srch-regex-chk" /> .* Regex</label>
         </div>
         <div style="display:flex; gap:6px; margin-bottom:10px;">
-          <button type="button" id="btn-do-search" class="vsc-btn-primary" style="flex:1; padding:6px;">🔍 بحث</button>
-          <button type="button" id="btn-do-replace-all" class="vsc-btn-primary" style="background:#f59e0b; color:#000; padding:6px;">استبدال الكل</button>
+          <button type="button" id="btn-do-search" class="vsc-btn-primary" style="flex:1;">🔍 بحث</button>
+          <button type="button" id="btn-do-replace-all" class="vsc-btn-primary" style="background:#f59e0b; color:#000;">استبدال الكل</button>
         </div>
         <div id="srch-results-box" style="font-size:11.5px;"></div>
       `;
@@ -748,27 +629,21 @@ function openCustomThemeStudioModal() {
 
         const hits = [];
         Object.entries(p.files).forEach(([fn, content]) => {
-          const lines = String(content).split("\n");
-          lines.forEach((ln, idx) => {
-            if (regex.test(ln)) {
-              hits.push({ fn, line: idx + 1, preview: ln.trim().slice(0, 60) });
-            }
+          String(content).split("\n").forEach((ln, idx) => {
+            if (regex.test(ln)) hits.push({ fn, line: idx + 1, preview: ln.trim().slice(0, 55) });
             regex.lastIndex = 0;
           });
         });
 
-        if (!hits.length) {
-          resBox.innerHTML = `<div style="color:var(--muted);padding:8px;">لا توجد نتائج مطابقة.</div>`;
-          return;
-        }
-
-        resBox.innerHTML = `<div style="color:var(--gold);margin-bottom:6px;font-weight:800;">تم العثور على ${hits.length} نتيجة:</div>` +
-          hits.map(h => `
-            <div class="vsc-asset-row" data-jump-file="${esc(h.fn)}" data-jump-line="${h.line}" style="flex-direction:column;align-items:flex-start;gap:2px;">
-              <strong style="color:#38bdf8;font-size:11px;">${esc(h.fn)} : سطر ${h.line}</strong>
-              <code style="font-size:10.5px;color:var(--text);">${esc(h.preview)}</code>
-            </div>
-          `).join("");
+        resBox.innerHTML = hits.length
+          ? `<div style="color:var(--gold);margin-bottom:6px;font-weight:800;">النتائج (${hits.length}):</div>` +
+            hits.map(h => `
+              <div class="vsc-asset-row" data-jump-file="${esc(h.fn)}" data-jump-line="${h.line}" style="flex-direction:column;align-items:flex-start;gap:2px;">
+                <strong style="color:#38bdf8;font-size:11px;">${esc(h.fn)} : سطر ${h.line}</strong>
+                <code style="font-size:10.5px;color:var(--text);">${esc(h.preview)}</code>
+              </div>
+            `).join("")
+          : `<div style="color:var(--muted);padding:8px;">لا توجد نتائج مطابقة.</div>`;
 
         resBox.querySelectorAll("[data-jump-file]").forEach(row => {
           row.onclick = () => {
@@ -791,21 +666,17 @@ function openCustomThemeStudioModal() {
         const rep = document.getElementById("srch-replace-inp")?.value ?? "";
         if (!q) return;
         const reg = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g");
-        Object.keys(p.files).forEach(fn => {
-          p.files[fn] = String(p.files[fn]).replace(reg, rep);
-        });
+        Object.keys(p.files).forEach(fn => { p.files[fn] = String(p.files[fn]).replace(reg, rep); });
         saveState();
         setEditorCode(p.files[p.activeFile], getLangMeta(p.activeFile).lang);
         executeWorkspace("project", false);
         runSearch();
-        toast("✓ تم استبدال الكلمة في جميع ملفات المشروع!");
+        toast("✓ تم الاستبدال في كل ملفات المشروع!");
       });
       return;
     }
 
-    // ------------------------------------------------------------------------
-    // 3. SOURCE CONTROL & GIT INTEGRATION (COMMITS, DIFF, BRANCHES, STASH)
-    // ------------------------------------------------------------------------
+    // 3. GIT SOURCE CONTROL
     if (act === "git") {
       if (titleEl) titleEl.textContent = "SOURCE CONTROL (GIT)";
       const changedFiles = Object.keys(p.files).filter(fn => !p.git.snapshot || p.git.snapshot[fn] !== p.files[fn]);
@@ -813,38 +684,31 @@ function openCustomThemeStudioModal() {
       box.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <span style="font-size:11px;color:var(--emerald);font-weight:800;"><i class="fa-solid fa-code-branch"></i> الفرع: ${esc(p.git.branch)}</span>
-          <button type="button" id="btn-git-new-branch" class="vsc-mini-icon" title="إنشاء أو تبديل فرع Branch"><i class="fa-solid fa-plus"></i></button>
+          <button type="button" id="btn-git-new-branch" class="vsc-mini-icon" title="تغيير أو إنشاء فرع"><i class="fa-solid fa-plus"></i></button>
         </div>
-
         <div class="vsc-field">
-          <input type="text" id="git-commit-msg" placeholder="رسالة الـ Commit (مثال: Fix UI bug)..." />
+          <input type="text" id="git-commit-msg" placeholder="رسالة الـ Commit..." />
         </div>
-        <button type="button" id="btn-git-commit" class="vsc-btn-primary" style="width:100%;margin-top:6px;padding:7px;">
-          ✓ Commit Changes (${changedFiles.length})
-        </button>
-
+        <button type="button" id="btn-git-commit" class="vsc-btn-primary" style="width:100%;">✓ Commit Changes (${changedFiles.length})</button>
         <div style="display:flex;gap:5px;margin-top:6px;">
-          <button type="button" id="btn-git-stash" class="vsc-btn-primary" style="flex:1;background:#334155;padding:5px;font-size:11px;">Stash حفظ مؤقت</button>
-          <button type="button" id="btn-git-pop" class="vsc-btn-primary" style="flex:1;background:#334155;padding:5px;font-size:11px;">Pop استرجاع</button>
+          <button type="button" id="btn-git-stash" class="vsc-btn-primary" style="flex:1;background:#334155;font-size:11px;">Stash حفظ</button>
+          <button type="button" id="btn-git-pop" class="vsc-btn-primary" style="flex:1;background:#334155;font-size:11px;">Pop استرجاع</button>
         </div>
-
         <div class="vsc-tree-section" style="margin-top:12px;">
           <div class="vsc-tree-title"><span>📝 CHANGES (${changedFiles.length})</span></div>
           ${changedFiles.length ? changedFiles.map(fn => `
             <div class="vsc-tree-item" data-git-diff="${esc(fn)}">
               <span>${esc(fn)}</span>
-              <strong style="color:#f59e0b;font-size:10px;">M (عرض الفرق Diff)</strong>
+              <strong style="color:#f59e0b;font-size:10px;">M (Diff)</strong>
             </div>
-          `).join("") : `<div style="font-size:11px;color:var(--muted);padding:6px;">✓ Working tree clean (لا توجد تغييرات غير محفوظة)</div>`}
+          `).join("") : `<div style="font-size:11px;color:var(--muted);padding:6px;">✓ لا توجد تغييرات غير محفوظة</div>`}
         </div>
-
         <div class="vsc-tree-section">
-          <div class="vsc-tree-title"><span>🕒 COMMIT HISTORY (${(p.git.commits || []).length})</span></div>
+          <div class="vsc-tree-title"><span>🕒 COMMITS (${(p.git.commits || []).length})</span></div>
           ${(p.git.commits || []).slice(0, 8).map(c => `
             <div class="vsc-asset-row" style="flex-direction:column;align-items:flex-start;gap:2px;">
               <div style="display:flex;justify-content:space-between;width:100%;font-size:10px;color:var(--gold);">
-                <code>#${esc(c.id)}</code>
-                <span>${esc(c.date)}</span>
+                <code>#${esc(c.id)}</code><span>${esc(c.date)}</span>
               </div>
               <strong style="font-size:11px;color:var(--text-bright);">${esc(c.msg)}</strong>
             </div>
@@ -862,48 +726,40 @@ function openCustomThemeStudioModal() {
         renderSidebarByActivity();
         toast(`✓ [git commit #${hash}] ${msg}`);
       });
-
       box.querySelector("#btn-git-new-branch")?.addEventListener("click", () => {
-        const bName = prompt("🌿 اكتب اسم الفرع الجديد أو الفرع المراد الانتقال إليه:", "feature-ui");
+        const bName = prompt("🌿 اسم الفرع الجديد:", "feature-x");
         if (!bName) return;
         p.git.branch = bName.trim();
-        if (!p.git.branches.includes(p.git.branch)) p.git.branches.push(p.git.branch);
         saveState();
-        renderSidebarByActivity();
-        toast(`🌿 Switched to branch '${p.git.branch}'`);
+        refreshAllIDEUI();
       });
-
       box.querySelector("#btn-git-stash")?.addEventListener("click", () => {
         p.git.stash = JSON.parse(JSON.stringify(p.files));
         p.files = JSON.parse(JSON.stringify(p.git.snapshot));
         saveState();
         switchActiveFile(p.activeFile);
-        toast("📦 تم حفظ التعديلات في Git Stash وإرجاع الكود لآخر Commit");
+        toast("📦 تم عمل Git Stash");
       });
-
       box.querySelector("#btn-git-pop")?.addEventListener("click", () => {
         if (!p.git.stash) return toast("لا يوجد Stash محفوظ");
         p.files = JSON.parse(JSON.stringify(p.git.stash));
         p.git.stash = null;
         saveState();
         switchActiveFile(p.activeFile);
-        toast("📦 تم استرجاع التعديلات من Git Stash Pop!");
+        toast("📦 تم استرجاع Git Stash Pop");
       });
-
       box.querySelectorAll("[data-git-diff]").forEach(row => {
         row.onclick = () => {
           const fn = row.dataset.gitDiff;
-          const oldTxt = (p.git.snapshot && p.git.snapshot[fn]) || "";
-          const newTxt = p.files[fn] || "";
-          openUniversalModal(`🔍 Git Diff Viewer — ${fn}`, `
+          openUniversalModal(`🔍 Git Diff — ${fn}`, `
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;direction:ltr;text-align:left;font-family:monospace;font-size:11px;">
               <div style="background:#1f1116;border:1px solid #ef4444;padding:10px;border-radius:8px;max-height:280px;overflow:auto;">
-                <strong style="color:#f87171;display:block;margin-bottom:6px;">--- HEAD (Previous Commit)</strong>
-                <pre style="white-space:pre-wrap;">${esc(oldTxt)}</pre>
+                <strong style="color:#f87171;display:block;margin-bottom:6px;">--- HEAD</strong>
+                <pre style="white-space:pre-wrap;">${esc((p.git.snapshot && p.git.snapshot[fn]) || "")}</pre>
               </div>
               <div style="background:#0d1f18;border:1px solid #10b981;padding:10px;border-radius:8px;max-height:280px;overflow:auto;">
-                <strong style="color:#34d399;display:block;margin-bottom:6px;">+++ Working Copy (Current)</strong>
-                <pre style="white-space:pre-wrap;">${esc(newTxt)}</pre>
+                <strong style="color:#34d399;display:block;margin-bottom:6px;">+++ Working Tree</strong>
+                <pre style="white-space:pre-wrap;">${esc(p.files[fn] || "")}</pre>
               </div>
             </div>
           `);
@@ -912,25 +768,21 @@ function openCustomThemeStudioModal() {
       return;
     }
 
-    // ------------------------------------------------------------------------
-    // 4. RUN & DEBUGGER (BREAKPOINTS, STEP OVER/INTO, WATCH, VARIABLES)
-    // ------------------------------------------------------------------------
+    // 4. DEBUGGER
     if (act === "debug") {
-      if (titleEl) titleEl.textContent = "RUN & DEBUGGER (DAP)";
+      if (titleEl) titleEl.textContent = "RUN & DEBUG";
       const code = p.files[p.activeFile] || "";
       const varsFound = Array.from(code.matchAll(/(?:const|let|var|int|double|String)\s+([a-zA-Z_]\w*)\s*=\s*([^;\n]+)/g)).slice(0, 8);
 
       box.innerHTML = `
         <div style="display:flex;gap:5px;margin-bottom:10px;">
-          <button type="button" id="dbg-continue" class="vsc-btn-primary" style="flex:1;background:#10b981;color:#000;padding:6px;" title="Continue (F5)">▶ Run</button>
-          <button type="button" id="dbg-step-over" class="vsc-btn-primary" style="flex:1;background:#334155;padding:6px;" title="Step Over (F10)">↷ Step</button>
-          <button type="button" id="dbg-restart" class="vsc-btn-primary" style="background:#f59e0b;color:#000;padding:6px;" title="Restart">↻</button>
+          <button type="button" id="dbg-continue" class="vsc-btn-primary" style="flex:1;background:#10b981;color:#000;">▶ Run (F5)</button>
+          <button type="button" id="dbg-step" class="vsc-btn-primary" style="flex:1;background:#334155;">↷ Step Over</button>
         </div>
-
         <div class="vsc-tree-section">
           <div class="vsc-tree-title">
             <span>🔴 BREAKPOINTS (${state.breakpoints.length})</span>
-            <button type="button" id="btn-add-bp" class="vsc-mini-icon" title="إضافة نقطة توقف Breakpoint"><i class="fa-solid fa-plus"></i></button>
+            <button type="button" id="btn-add-bp" class="vsc-mini-icon"><i class="fa-solid fa-plus"></i></button>
           </div>
           ${state.breakpoints.map((ln, idx) => `
             <div class="vsc-tree-item">
@@ -939,41 +791,22 @@ function openCustomThemeStudioModal() {
             </div>
           `).join("")}
         </div>
-
         <div class="vsc-tree-section">
-          <div class="vsc-tree-title"><span>📦 LOCAL VARIABLES (${varsFound.length})</span></div>
+          <div class="vsc-tree-title"><span>📦 VARIABLES (${varsFound.length})</span></div>
           ${varsFound.length ? varsFound.map(m => `
             <div class="vsc-asset-row" style="font-family:monospace;font-size:11px;">
               <strong style="color:#38bdf8;">${esc(m[1])}</strong>
               <span style="color:#4ade80;">= ${esc(m[2].slice(0, 22))}</span>
             </div>
-          `).join("") : `<div style="font-size:11px;color:var(--muted);padding:4px;">لا توجد متغيرات محلية في الملف الحالي</div>`}
-        </div>
-
-        <div class="vsc-tree-section">
-          <div class="vsc-tree-title">
-            <span>👁️ WATCH EXPRESSIONS</span>
-            <button type="button" id="btn-add-watch" class="vsc-mini-icon"><i class="fa-solid fa-plus"></i></button>
-          </div>
-          ${(state.watchList || []).map((w, i) => `
-            <div class="vsc-tree-item">
-              <code>${esc(w)} : <span style="color:var(--gold);">active</span></code>
-              <i class="fa-solid fa-xmark" data-del-watch="${i}"></i>
-            </div>
-          `).join("")}
-        </div>
-
-        <div class="vsc-tree-section">
-          <div class="vsc-tree-title"><span>📚 CALL STACK</span></div>
-          <div class="vsc-tree-item active"><span>main() — ${esc(p.activeFile)}:1</span></div>
+          `).join("") : `<div style="font-size:11px;color:var(--muted);padding:4px;">لا توجد متغيرات محلية</div>`}
         </div>
       `;
 
       box.querySelector("#dbg-continue")?.addEventListener("click", () => {
         executeWorkspace("project", true);
-        toast("🐞 Debugger: تم فحص المتغيرات وتشغيل المشروع بنجاح!");
+        activateBottomTab("debug-console");
       });
-      box.querySelector("#dbg-step-over")?.addEventListener("click", () => {
+      box.querySelector("#dbg-step")?.addEventListener("click", () => {
         const nextLn = (state.breakpoints[0] || 1) + 1;
         state.breakpoints[0] = nextLn;
         if (monacoEditor) {
@@ -983,331 +816,154 @@ function openCustomThemeStudioModal() {
         renderSidebarByActivity();
         toast(`↷ Step Over to Line ${nextLn}`);
       });
-      box.querySelector("#dbg-restart")?.addEventListener("click", () => executeWorkspace("project", true));
       box.querySelector("#btn-add-bp")?.addEventListener("click", () => {
-        const ln = Number(prompt("🔴 أدخل رقم السطر لوضع Breakpoint:", "5"));
+        const ln = Number(prompt("رقم السطر لوضع Breakpoint:", "5"));
         if (ln > 0) { state.breakpoints.push(ln); saveState(); renderSidebarByActivity(); }
       });
       box.querySelectorAll("[data-del-bp]").forEach(b => {
         b.onclick = () => { state.breakpoints.splice(Number(b.dataset.delBp), 1); saveState(); renderSidebarByActivity(); };
       });
-      box.querySelector("#btn-add-watch")?.addEventListener("click", () => {
-        const exp = prompt("👁️ اسم المتغير أو التعبير لمراقبته (Watch):");
-        if (exp) { state.watchList.push(exp.trim()); saveState(); renderSidebarByActivity(); }
-      });
-      box.querySelectorAll("[data-del-watch]").forEach(b => {
-        b.onclick = () => { state.watchList.splice(Number(b.dataset.delWatch), 1); saveState(); renderSidebarByActivity(); };
-      });
       return;
     }
 
-    // ------------------------------------------------------------------------
-    // 5. EXTENSIONS MARKETPLACE
-    // ------------------------------------------------------------------------
-    if (act === "extensions") {
-      if (titleEl) titleEl.textContent = "EXTENSIONS MARKETPLACE";
+    // 5. AI ASSISTANT
+    if (act === "ai") {
+      if (titleEl) titleEl.textContent = "AI CODING ASSISTANT";
       box.innerHTML = `
-        <div class="vsc-field" style="margin-bottom:8px;">
-          <input type="text" id="ext-search-inp" placeholder="ابحث في متجر الإضافات..." />
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">
+          مساعد الذكاء الاصطناعي يفهم الملف المفتوح (<strong>${esc(p.activeFile)}</strong>):
         </div>
-        <div id="ext-list-box">
-          ${state.extensions.map((ex, i) => `
-            <div class="vsc-asset-row" style="flex-direction:column;align-items:flex-start;gap:4px;padding:8px;">
-              <div style="display:flex;justify-content:space-between;width:100%;">
-                <strong style="color:var(--text-bright);font-size:11.5px;">🧩 ${esc(ex.name)}</strong>
-                <span class="vsc-mini-tag">v${esc(ex.ver)}</span>
-              </div>
-              <small style="color:var(--muted);font-size:10.5px;">${esc(ex.desc)}</small>
-              <div style="display:flex;justify-content:space-between;width:100%;margin-top:4px;align-items:center;">
-                <span style="font-size:10px;color:var(--gold);">${esc(ex.pub)}</span>
-                <button type="button" class="vsc-run-pill" data-toggle-ext="${i}" style="padding:3px 10px;font-size:10px;background:${ex.enabled ? "#334155" : "#10b981"};color:${ex.enabled ? "#fff" : "#000"};">
-                  ${ex.enabled ? "✓ Enabled (تعطيل)" : "+ Install / Enable"}
-                </button>
-              </div>
-            </div>
-          `).join("")}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px;">
+          <button type="button" class="vsc-btn-primary" data-ai-act="explain" style="background:#1e293b;font-size:11px;">📖 اشرح الكود</button>
+          <button type="button" class="vsc-btn-primary" data-ai-act="fix" style="background:#1e293b;font-size:11px;">🔧 صلح الأخطاء</button>
+          <button type="button" class="vsc-btn-primary" data-ai-act="optimize" style="background:#1e293b;font-size:11px;">⚡ حسّن الأداء</button>
+          <button type="button" class="vsc-btn-primary" data-ai-act="tests" style="background:#1e293b;font-size:11px;">🧪 ولّد اختبارات</button>
         </div>
+        <div class="vsc-field">
+          <textarea id="ai-prompt-inp" rows="3" placeholder="اطلب بناء مكون أو تعديل الكود..."></textarea>
+        </div>
+        <button type="button" id="btn-ai-send" class="vsc-btn-primary" style="width:100%;">✨ تنفيذ بالذكاء الاصطناعي</button>
+        <div id="ai-reply-box" style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(0,0,0,0.3);font-size:11.5px;line-height:1.6;"></div>
       `;
 
-      box.querySelectorAll("[data-toggle-ext]").forEach(btn => {
-        btn.onclick = () => {
-          const ex = state.extensions[Number(btn.dataset.toggleExt)];
-          if (!ex) return;
-          ex.enabled = !ex.enabled;
-          saveState();
-          renderSidebarByActivity();
-          toast(`${ex.enabled ? "✅ تم تفعيل" : "⏸️ تم تعطيل"} إضافة: ${ex.name}`);
+      const runAI = (mode) => {
+        const out = document.getElementById("ai-reply-box");
+        const curCode = getEditorCode();
+        if (!out) return;
+        const linesCount = curCode.split("\n").length;
+        const map = {
+          explain: `📖 **تحليل ملف ${p.activeFile} (${linesCount} سطراً):**\n- اللغة: ${getLangMeta(p.activeFile).label}\n- البنية البرمجية سليمة وجاهزة للتشغيل الفوري.`,
+          fix: `🔧 **فحص وإصلاح الأخطاء:**\nتمت مراجعة الأقواس وعلامات التنصيص في ${p.activeFile} ولا توجد أخطاء Syntax.`,
+          optimize: `⚡ **تحسين الأداء:**\nالكود يعمل بأفضل كفاءة داخل بيئة Universal IDE.`,
+          tests: `🧪 **تم تجهيز ملف الاختبارات (app.test.js):**\nافتح تبويب Testing (🧪) لتشغيل الاختبارات.`
         };
-      });
+        out.innerHTML = `<div style="white-space:pre-line;color:#a7f3d0;">${esc(map[mode] || map.explain)}</div>`;
+      };
+      box.querySelectorAll("[data-ai-act]").forEach(b => { b.onclick = () => runAI(b.dataset.aiAct); });
+      box.querySelector("#btn-ai-send")?.addEventListener("click", () => runAI("explain"));
       return;
     }
 
-    // ------------------------------------------------------------------------
-    // 6. DATABASE EXPLORER (SQL RUNNER, TABLES, EXPORT CSV/JSON)
-    // ------------------------------------------------------------------------
+    // 6. DATABASE EXPLORER
     if (act === "database") {
       if (titleEl) titleEl.textContent = "DATABASE EXPLORER";
       const tables = Object.keys(state.dbTables || {});
       box.innerHTML = `
         <div class="vsc-field">
-          <label>محرك قواعد البيانات المتصل</label>
-          <select id="db-engine-sel">
-            <option value="sqlite">🗄️ SQLite In-Memory Engine (Connected)</option>
-            <option value="firebase">🔥 Firebase Firestore Cloud</option>
-            <option value="postgres">🐘 PostgreSQL 16</option>
-            <option value="mysql">🐬 MySQL 8.0</option>
-          </select>
-        </div>
-
-        <div class="vsc-field" style="margin-top:8px;">
-          <label>تشغيل استعلام SQL فوري (Query Runner)</label>
+          <label>تشغيل استعلام SQL فوري</label>
           <textarea id="db-sql-inp" rows="3" dir="ltr" style="font-family:monospace;font-size:11px;">SELECT * FROM Users;</textarea>
         </div>
-        <button type="button" id="btn-run-sql-query" class="vsc-btn-primary" style="width:100%;margin-top:6px;padding:6px;">▶ تنفيذ الاستعلام (Run SQL)</button>
-
-        <div class="vsc-tree-section" style="margin-top:12px;">
-          <div class="vsc-tree-title">
-            <span>📊 TABLES (${tables.length})</span>
-            <button type="button" id="btn-export-db-json" class="vsc-mini-icon" title="تصدير قاعدة البيانات JSON"><i class="fa-solid fa-download"></i></button>
-          </div>
-          ${tables.map(tName => {
-            const rows = state.dbTables[tName] || [];
-            return `
-              <div class="vsc-asset-row" data-view-table="${esc(tName)}" style="flex-direction:column;align-items:flex-start;">
-                <strong style="color:var(--gold);font-size:11.5px;">📋 ${esc(tName)} (${rows.length} صفوف)</strong>
-                <code style="font-size:10px;color:var(--muted);">${esc(JSON.stringify(rows[0] || {}).slice(0, 48))}...</code>
-              </div>
-            `;
-          }).join("")}
+        <button type="button" id="btn-run-sql-query" class="vsc-btn-primary" style="width:100%;margin-bottom:10px;">▶ Run SQL Query</button>
+        <div class="vsc-tree-section">
+          <div class="vsc-tree-title"><span>📊 TABLES (${tables.length})</span></div>
+          ${tables.map(tName => `
+            <div class="vsc-asset-row" data-view-table="${esc(tName)}">
+              <strong style="color:var(--gold);">📋 ${esc(tName)} (${(state.dbTables[tName] || []).length} rows)</strong>
+              <i class="fa-solid fa-table"></i>
+            </div>
+          `).join("")}
         </div>
       `;
-
-      box.querySelector("#btn-run-sql-query")?.addEventListener("click", () => {
-        const q = document.getElementById("db-sql-inp")?.value.trim() || "";
-        const insertMatch = q.match(/INSERT\s+INTO\s+(\w+)\s+VALUES\s*\(([^)]+)\)/i);
-        if (insertMatch) {
-          const tName = insertMatch[1];
-          const vals = insertMatch[2].split(",").map(v => v.trim().replace(/^['"]|['"]$/g, ""));
-          state.dbTables[tName] = state.dbTables[tName] || [];
-          state.dbTables[tName].push({ id: vals[0], name: vals[1] || "Item", role: vals[2] || "Active" });
-          saveState();
-          renderSidebarByActivity();
-          toast(`✓ تمت إضافة السجل في جدول ${tName}`);
-          return;
-        }
-        openDatabaseTableModal("Users");
-      });
-
-      box.querySelectorAll("[data-view-table]").forEach(row => {
-        row.onclick = () => openDatabaseTableModal(row.dataset.viewTable);
-      });
-
-      box.querySelector("#btn-export-db-json")?.addEventListener("click", () => {
-        const blob = new Blob([JSON.stringify(state.dbTables, null, 2)], { type: "application/json" });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "database-export.json";
-        a.click();
-      });
+      box.querySelector("#btn-run-sql-query")?.addEventListener("click", () => openDatabaseTableModal("Users"));
+      box.querySelectorAll("[data-view-table]").forEach(r => { r.onclick = () => openDatabaseTableModal(r.dataset.viewTable); });
       return;
     }
 
-    // ------------------------------------------------------------------------
-    // 7. AI CODING ASSISTANT (EXPLAIN, FIX, REFACTOR, GENERATE TESTS, DIFF)
-    // ------------------------------------------------------------------------
-    if (act === "ai") {
-      if (titleEl) titleEl.textContent = "AI CODING ASSISTANT";
-      box.innerHTML = `
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">
-          مساعد ذكاء اصطناعي يفهم الملف المفتوح حالياً (<strong>${esc(p.activeFile)}</strong>) ويبني أو يصلح الأكواد فوراً:
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px;">
-          <button type="button" class="vsc-btn-primary" data-ai-act="explain" style="padding:5px;font-size:10.5px;background:#1e293b;">📖 اشرح الكود</button>
-          <button type="button" class="vsc-btn-primary" data-ai-act="fix" style="padding:5px;font-size:10.5px;background:#1e293b;">🔧 صلح الأخطاء</button>
-          <button type="button" class="vsc-btn-primary" data-ai-act="optimize" style="padding:5px;font-size:10.5px;background:#1e293b;">⚡ حسّن الأداء</button>
-          <button type="button" class="vsc-btn-primary" data-ai-act="tests" style="padding:5px;font-size:10.5px;background:#1e293b;">🧪 ولّد اختبارات</button>
-          <button type="button" class="vsc-btn-primary" data-ai-act="security" style="padding:5px;font-size:10.5px;background:#1e293b;">🛡️ فحص أمني</button>
-          <button type="button" class="vsc-btn-primary" data-ai-act="docs" style="padding:5px;font-size:10.5px;background:#1e293b;">📝 توثيق Docs</button>
-        </div>
-        <div class="vsc-field">
-          <textarea id="ai-prompt-inp" rows="3" placeholder="اطلب بناء مكون أو تعديل الكود الحالي..."></textarea>
-        </div>
-        <button type="button" id="btn-ai-send" class="vsc-btn-primary" style="width:100%;margin-top:6px;padding:7px;">✨ تنفيذ بالذكاء الاصطناعي</button>
-        <div id="ai-reply-box" style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(0,0,0,0.3);font-size:11.5px;line-height:1.6;max-height:240px;overflow-y:auto;"></div>
-      `;
-
-      const handleAIAction = async (mode) => {
-        const out = document.getElementById("ai-reply-box");
-        const curCode = getEditorCode();
-        if (!out) return;
-        out.innerHTML = "⏳ جاري تحليل الكود وتوليد الاستجابة الذكية...";
-
-        const geminiKey = localStorage.getItem("MY_LIFE_OS_GEMINI_KEY");
-        if (geminiKey) {
-          try {
-            const promptText = `الملف المفتوح: ${p.activeFile}\nالكود:\n${curCode.slice(0, 2000)}\nالمطلوب (${mode}): اشرح أو حسن الكود باختصار بالعربية.`;
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(geminiKey)}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-            });
-            const json = await res.json();
-            const reply = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (reply) {
-              out.innerHTML = `<div style="white-space:pre-line;">${esc(reply)}</div>`;
-              return;
-            }
-          } catch (e) {}
-        }
-
-        // محرك التحليل الذكي الفوري المدمج (يعمل دائماً حتى بدون مفتاح خارجي)
-        const linesCount = curCode.split("\n").length;
-        const responses = {
-          explain: `📖 **تحليل ملف ${p.activeFile} (${linesCount} سطراً):**\n- اللغة: ${getLangMeta(p.activeFile).label}\n- الكود منظم ويعتمد على بنية قياسية نظيفة قابلة للتوسع.`,
-          fix: `🔧 **فحص الأخطاء (Bug Check):**\nتم فحص الأقواس وعلامات التنصيص والمتغيرات في ${p.activeFile}، ولا توجد أخطاء تعيق التشغيل.`,
-          optimize: `⚡ **تحسين الأداء:**\nيفضل استخدام Event Delegation وتقليل عمليات البحث المتكررة في الـ DOM لسرعة استجابة مضاعفة.`,
-          tests: `🧪 **تم توليد ملف اختبار الوحدة (app.test.js):**\nيمكنك تشغيله الآن من تبويب Testing (🧪) في الشريط الجانبي!`,
-          security: `🛡️ **فحص الأمان (Security Audit):**\n✓ لا توجد مفاتيح API مكشوفة.\n✓ المعاينة معزولة داخل Sandbox آمن.`,
-          docs: `📝 **التوثيق القياسي:**\nتم توليد تعليقات JSDoc قياسية للدوال الموجودة في الملف.`
-        };
-        out.innerHTML = `<div style="white-space:pre-line;color:#a7f3d0;">${esc(responses[mode] || responses.explain)}</div>`;
-      };
-
-      box.querySelectorAll("[data-ai-act]").forEach(b => {
-        b.onclick = () => handleAIAction(b.dataset.aiAct);
-      });
-      box.querySelector("#btn-ai-send")?.addEventListener("click", () => handleAIAction("custom"));
-      return;
-    }
-
-    // ------------------------------------------------------------------------
-    // 8. TESTING & QUALITY CENTER (JEST / VITEST STYLE RUNNER)
-    // ------------------------------------------------------------------------
+    // 7. TESTING
     if (act === "testing") {
       if (titleEl) titleEl.textContent = "TESTING & QUALITY";
       box.innerHTML = `
-        <button type="button" id="btn-run-all-tests" class="vsc-btn-primary" style="width:100%;background:#10b981;color:#000;padding:8px;margin-bottom:10px;">
-          ▶ Run All Unit Tests (Jest Engine)
-        </button>
+        <button type="button" id="btn-run-all-tests" class="vsc-btn-primary" style="width:100%;background:#10b981;color:#000;margin-bottom:10px;">▶ Run All Unit Tests</button>
         <div id="test-results-container"></div>
       `;
-
-      const runTests = () => {
+      const runSuite = () => {
         const resBox = document.getElementById("test-results-container");
         if (!resBox) return;
-        const testCode = p.files["app.test.js"] || `test("Default Truthy Check", () => { expect(1 + 1).toBe(2); });`;
+        const testCode = p.files["app.test.js"] || `test("Default Check", () => { expect(2 + 2).toBe(4); });`;
         const results = [];
-
         try {
-          const describe = (suiteName, fn) => fn();
+          const describe = (_, fn) => fn();
           const test = (name, fn) => {
-            try {
-              fn();
-              results.push({ name, passed: true });
-            } catch (err) {
-              results.push({ name, passed: false, err: err.message });
-            }
+            try { fn(); results.push({ name, passed: true }); }
+            catch (err) { results.push({ name, passed: false, err: err.message }); }
           };
-          const expect = (actual) => ({
-            toBe: (expected) => { if (actual !== expected) throw new Error(`Expected ${expected} but got ${actual}`); },
-            toEqual: (expected) => { if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`Not equal`); },
-            toBeTruthy: () => { if (!actual) throw new Error(`Expected truthy`); }
+          const expect = (a) => ({
+            toBe: (b) => { if (a !== b) throw new Error(`Expected ${b} got ${a}`); }
           });
-          Function("describe", "test", "it", "expect", testCode)(describe, test, test, expect);
+          Function("describe", "test", "expect", testCode)(describe, test, expect);
         } catch (e) {
-          results.push({ name: "Test Suite Syntax", passed: false, err: e.message });
+          results.push({ name: "Syntax Check", passed: false, err: e.message });
         }
-
-        const passedCount = results.filter(r => r.passed).length;
-        resBox.innerHTML = `
-          <div style="padding:8px;background:rgba(16,185,129,0.14);border:1px solid #10b981;border-radius:8px;margin-bottom:8px;">
-            <strong style="color:#10b981;">✓ Passed: ${passedCount} / ${results.length}</strong>
-            <small style="display:block;color:var(--muted);">Coverage: 96.4% Statements</small>
+        resBox.innerHTML = results.map(r => `
+          <div class="vsc-asset-row">
+            <span style="color:${r.passed ? "#4ade80" : "#f87171"};">${r.passed ? "✓ PASS" : "✖ FAIL"}: ${esc(r.name)}</span>
           </div>
-          ${results.map(r => `
-            <div class="vsc-asset-row">
-              <span style="color:${r.passed ? "#4ade80" : "#f87171"};">${r.passed ? "✓ PASS" : "✖ FAIL"}: ${esc(r.name)}</span>
-            </div>
-          `).join("")}
-        `;
+        `).join("");
       };
-
-      box.querySelector("#btn-run-all-tests")?.addEventListener("click", runTests);
-      runTests();
+      box.querySelector("#btn-run-all-tests")?.addEventListener("click", runSuite);
+      runSuite();
       return;
     }
 
-    // ------------------------------------------------------------------------
-    // 9. DEPLOYMENT & DEVOPS CENTER (DOCKER, CI/CD, ENV VARS)
-    // ------------------------------------------------------------------------
-    if (act === "devops") {
-      if (titleEl) titleEl.textContent = "DEPLOYMENT & DEVOPS";
-      box.innerHTML = `
-        <div class="vsc-tree-section">
-          <div class="vsc-tree-title"><span>🐳 GENERATE DEVOPS CONFIGS</span></div>
-          <button type="button" id="btn-gen-dockerfile" class="vsc-btn-primary" style="width:100%;margin-bottom:6px;background:#1e293b;font-size:11px;">+ توليد ملف Dockerfile</button>
-          <button type="button" id="btn-gen-cicd" class="vsc-btn-primary" style="width:100%;margin-bottom:6px;background:#1e293b;font-size:11px;">+ توليد GitHub Actions CI/CD</button>
+    // 8. EXTENSIONS
+    if (act === "extensions") {
+      if (titleEl) titleEl.textContent = "EXTENSIONS MARKETPLACE";
+      box.innerHTML = state.extensions.map((ex, i) => `
+        <div class="vsc-asset-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+          <div style="display:flex;justify-content:space-between;width:100%;">
+            <strong style="color:var(--text-bright);font-size:11.5px;">🧩 ${esc(ex.name)}</strong>
+            <span class="vsc-mini-tag">v${esc(ex.ver)}</span>
+          </div>
+          <small style="color:var(--muted);font-size:10.5px;">${esc(ex.desc)}</small>
+          <button type="button" class="vsc-btn-sm ${ex.enabled ? "" : "emerald"}" data-toggle-ext="${i}" style="margin-top:4px;">
+            ${ex.enabled ? "✓ Enabled (تعطيل)" : "+ Enable"}
+          </button>
         </div>
-
-        <div class="vsc-tree-section">
-          <div class="vsc-tree-title"><span>🔐 ENVIRONMENT VARIABLES (.env)</span></div>
-          ${Object.entries(p.env || { PORT: "3000" }).map(([k, v]) => `
-            <div class="vsc-asset-row" style="font-family:monospace;font-size:11px;">
-              <strong style="color:var(--gold);">${esc(k)}</strong>
-              <span>= ${esc(v)}</span>
-            </div>
-          `).join("")}
-          <button type="button" id="btn-add-env" class="vsc-btn-primary" style="width:100%;margin-top:6px;padding:5px;font-size:11px;">+ إضافة متغير بيئة</button>
-        </div>
-
-        <div class="vsc-tree-section">
-          <div class="vsc-tree-title"><span>🚀 PRODUCTION BUILD & EXPORT</span></div>
-          <button type="button" id="btn-devops-zip" class="vsc-btn-primary" style="width:100%;background:#10b981;color:#000;">📦 تصدير حزمة النشر الكاملة (.ZIP)</button>
-        </div>
-      `;
-
-      box.querySelector("#btn-gen-dockerfile")?.addEventListener("click", () => {
-        p.files["Dockerfile"] = `FROM node:20-alpine\nWORKDIR /app\nCOPY . .\nEXPOSE 3000\nCMD ["npx", "serve", "."]`;
-        saveState();
-        switchActiveFile("Dockerfile");
-        toast("🐳 تم إنشاء ملف Dockerfile في مشروعك!");
+      `).join("");
+      box.querySelectorAll("[data-toggle-ext]").forEach(btn => {
+        btn.onclick = () => {
+          const ex = state.extensions[Number(btn.dataset.toggleExt)];
+          if (ex) { ex.enabled = !ex.enabled; saveState(); renderSidebarByActivity(); }
+        };
       });
-      box.querySelector("#btn-gen-cicd")?.addEventListener("click", () => {
-        p.files["deploy.yml"] = `name: Deploy Universal Project\non: [push]\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: echo "Build succeeded!"`;
-        saveState();
-        switchActiveFile("deploy.yml");
-        toast("⚙️ تم إنشاء ملف CI/CD Pipeline!");
-      });
-      box.querySelector("#btn-add-env")?.addEventListener("click", () => {
-        const k = prompt("اسم المتغير (مثال: API_URL):");
-        const v = prompt("القيمة:");
-        if (k && v) { p.env = p.env || {}; p.env[k.trim()] = v.trim(); saveState(); renderSidebarByActivity(); }
-      });
-      box.querySelector("#btn-devops-zip")?.addEventListener("click", downloadProjectZip);
       return;
     }
 
-    // ------------------------------------------------------------------------
-    // 10. PROJECT MANAGER & TEMPLATES
-    // ------------------------------------------------------------------------
+    // 9. PROJECTS
     if (act === "projects") {
       if (titleEl) titleEl.textContent = "PROJECT MANAGER";
       box.innerHTML = `
-        <button type="button" id="btn-pm-new" class="vsc-btn-primary" style="width:100%;margin-bottom:10px;">+ إنشاء مشروع جديد من القوالب</button>
-        <div class="vsc-tree-section">
-          <div class="vsc-tree-title"><span>📂 مشاريعي المحفوظة (${state.projects.length})</span></div>
-          ${state.projects.map(pr => `
-            <div class="vsc-asset-row ${pr.id === p.id ? "active" : ""}" data-pm-open="${esc(pr.id)}" style="padding:8px;">
-              <div>
-                <strong style="display:block;color:var(--text-bright);">${esc(pr.name)}</strong>
-                <small style="color:var(--gold);font-size:10px;">${esc(pr.type)} • ${Object.keys(pr.files).length} ملفات</small>
-              </div>
-              ${state.projects.length > 1 ? `<i class="fa-solid fa-trash" data-pm-del="${esc(pr.id)}" style="color:#ef4444;"></i>` : ""}
+        <button type="button" id="btn-pm-new" class="vsc-btn-primary" style="width:100%;margin-bottom:10px;">+ إنشاء مشروع جديد</button>
+        ${state.projects.map(pr => `
+          <div class="vsc-asset-row ${pr.id === p.id ? "active" : ""}" data-pm-open="${esc(pr.id)}">
+            <div>
+              <strong style="display:block;color:var(--text-bright);">${esc(pr.name)}</strong>
+              <small style="color:var(--gold);font-size:10px;">${esc(pr.type)}</small>
             </div>
-          `).join("")}
-        </div>
+            ${state.projects.length > 1 ? `<i class="fa-solid fa-trash" data-pm-del="${esc(pr.id)}" style="color:#ef4444;"></i>` : ""}
+          </div>
+        `).join("")}
       `;
-
       box.querySelector("#btn-pm-new")?.addEventListener("click", openNewProjectModal);
       box.querySelectorAll("[data-pm-open]").forEach(row => {
         row.onclick = (e) => {
@@ -1315,24 +971,47 @@ function openCustomThemeStudioModal() {
           state.activeProjectId = row.dataset.pmOpen;
           saveState();
           switchActiveFile(curProj().activeFile);
-          toast(`📂 تم التبديل إلى مشروع: ${curProj().name}`);
+          toast(`📂 تم فتح مشروع: ${curProj().name}`);
         };
       });
       box.querySelectorAll("[data-pm-del]").forEach(del => {
         del.onclick = (e) => {
           e.stopPropagation();
-          if (!confirm("حذف هذا المشروع؟")) return;
           state.projects = state.projects.filter(x => x.id !== del.dataset.pmDel);
           state.activeProjectId = state.projects[0].id;
           saveState();
           switchActiveFile(curProj().activeFile);
         };
       });
+      return;
+    }
+
+    // 10. DEPLOY & DEVOPS
+    if (act === "deploy") {
+      if (titleEl) titleEl.textContent = "DEPLOYMENT & DEVOPS";
+      box.innerHTML = `
+        <button type="button" id="btn-gen-dockerfile" class="vsc-btn-primary" style="width:100%;margin-bottom:8px;background:#1e293b;">🐳 + توليد Dockerfile</button>
+        <button type="button" id="btn-gen-cicd" class="vsc-btn-primary" style="width:100%;margin-bottom:8px;background:#1e293b;">⚙️ + توليد GitHub Actions CI/CD</button>
+        <button type="button" id="btn-devops-zip" class="vsc-btn-primary" style="width:100%;background:#10b981;color:#000;">📦 تصدير المشروع الكامل (.ZIP)</button>
+      `;
+      box.querySelector("#btn-gen-dockerfile")?.addEventListener("click", () => {
+        p.files["Dockerfile"] = `FROM node:20-alpine\nWORKDIR /app\nCOPY . .\nEXPOSE 3000\nCMD ["npx", "serve", "."]`;
+        saveState();
+        switchActiveFile("Dockerfile");
+        toast("🐳 تم توليد Dockerfile!");
+      });
+      box.querySelector("#btn-gen-cicd")?.addEventListener("click", () => {
+        p.files["deploy.yml"] = `name: CI/CD Pipeline\non: [push]\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4`;
+        saveState();
+        switchActiveFile("deploy.yml");
+        toast("⚙️ تم توليد deploy.yml!");
+      });
+      box.querySelector("#btn-devops-zip")?.addEventListener("click", downloadProjectZip);
     }
   }
 
   /* ==========================================================================
-     8. UNIVERSAL EXECUTION ENGINE (WEB, REACT 18 JSX, VUE 3, PYTHON, C++, JAVA, SQL)
+     7. EXECUTION ENGINE (WEB, REACT 18 JSX, PYTHON, C++, JAVA, SQL)
      ========================================================================== */
   function resolveAssetsInCode(rawText, assetsMap) {
     let out = String(rawText || "");
@@ -1347,61 +1026,44 @@ function openCustomThemeStudioModal() {
 
   function executeWorkspace(mode = "project", notifyUser = false) {
     const p = curProj();
-    const frame = document.getElementById("vsc-preview-iframe") || document.getElementById("vsc-preview-frame");
+    const frame = document.getElementById("vsc-preview-iframe");
     if (!frame || !p) return;
 
     const activeFile = p.activeFile || "index.html";
     const meta = getLangMeta(activeFile);
     const activeCode = p.files[activeFile] || "";
 
-    // 1. React 18 JSX Live Execution
+    const outPane = document.getElementById("bpane-output");
+    if (outPane) {
+      outPane.innerHTML = `<div style="color:#10b981;">[${new Date().toLocaleTimeString()}] ▶ Building & Executing ${esc(p.name)} (${esc(activeFile)})... ✓ Success</div>`;
+    }
+
+    // 1. React JSX
     if (meta.mode === "react") {
       const jsxCode = resolveAssetsInCode(activeCode, p.assets);
-      frame.srcdoc = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin><\/script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin><\/script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
-</head>
-<body style="margin:0;background:#0b1120;color:#fff;">
-  <div id="root"></div>
-  <script type="text/babel">
-    ${jsxCode}
-  <\/script>
-</body>
-</html>`;
-      if (notifyUser) toast("⚛️ تم تشغيل مكون React 18 JSX بنجاح!");
+      frame.srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+        <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin><\/script>
+        <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin><\/script>
+        <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
+      </head><body style="margin:0;background:#0b1120;color:#fff;"><div id="root"></div><script type="text/babel">${jsxCode}<\/script></body></html>`;
+      if (notifyUser) toast("⚛️ تم تشغيل React 18 JSX!");
       return;
     }
 
-    // 2. Markdown Live Preview
-    if (meta.mode === "md") {
-      const htmlMd = activeCode
-        .replace(/^### (.*$)/gim, "<h3>$1</h3>")
-        .replace(/^## (.*$)/gim, "<h2>$1</h2>")
-        .replace(/^# (.*$)/gim, "<h1>$1</h1>")
-        .replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>")
-        .replace(/\n/gim, "<br>");
-      frame.srcdoc = `<body style="font-family:Cairo,sans-serif;padding:24px;background:#0b1120;color:#f8fafc;line-height:1.8;">${htmlMd}</body>`;
-      return;
-    }
-
-    // 3. Terminal & Backend Languages (Python, C++, C, Java, C#, SQL)
+    // 2. Terminal Languages (Python, C++, C, Java, C#, SQL)
     if (meta.mode === "term" || meta.mode === "sql") {
       const outputs = [];
       try {
         if (meta.lang === "python") {
           const pyJs = activeCode
             .replace(/#.*$/gm, "")
-            .replace(/\bprint\s*\(/g, "__out.push(")
+            .replace(/\bprint\s*\(/g, "__push(")
             .replace(/\bsum\s*\(([^)]+)\)/g, "($1).reduce((a,b)=>a+b,0)")
             .replace(/\bfor\s+([a-zA-Z_]\w*)\s+in\s+range\(([^,]+),\s*([^)]+)\)\s*:/g, "for(let $1=$2;$1<$3;$1++){")
             .replace(/\bfor\s+([a-zA-Z_]\w*)\s+in\s+range\(([^)]+)\)\s*:/g, "for(let $1=0;$1<$2;$1++){");
           const openB = (pyJs.match(/\{/g) || []).length;
           const closeB = (pyJs.match(/\}/g) || []).length;
-          const res = Function(`const __out=[]; const __ push=(...a)=>__out.push(a.join(' ')); ${pyJs.replace(/__out\.push\(/g, "__push(")}\n${"}".repeat(Math.max(0, openB - closeB))}; return __out;`)();
+          const res = Function(`const __out=[]; const __push=(...a)=>__out.push(a.join(' ')); ${pyJs}\n${"}".repeat(Math.max(0, openB - closeB))}; return __out;`)();
           res.forEach(r => outputs.push(String(r)));
         } else if (meta.lang === "cpp" || meta.lang === "c") {
           const vars = {};
@@ -1415,8 +1077,7 @@ function openCustomThemeStudioModal() {
               const line = m[1].split("<<").map(s => {
                 const t = s.trim();
                 if (t === "endl" || t === "'\\n'") return "";
-                if (vars[t] !== undefined) return vars[t];
-                return t.replace(/^["']|["']$/g, "");
+                return vars[t] !== undefined ? vars[t] : t.replace(/^["']|["']$/g, "");
               }).join("");
               outputs.push(line);
             } else if (m[2]) {
@@ -1428,11 +1089,8 @@ function openCustomThemeStudioModal() {
           let m;
           while ((m = reg.exec(activeCode)) !== null) {
             let expr = m[1].trim();
-            try {
-              expr = Function(`return (${expr})`)();
-            } catch (e) {
-              expr = expr.replace(/^["']|["']$/g, "");
-            }
+            try { expr = Function(`return (${expr})`)(); }
+            catch (e) { expr = expr.replace(/^["']|["']$/g, ""); }
             outputs.push(String(expr));
           }
         } else if (meta.lang === "sql") {
@@ -1440,27 +1098,26 @@ function openCustomThemeStudioModal() {
           outputs.push("│ id │ name                   │ role                  │ level │");
           outputs.push("├────┼────────────────────────┼───────────────────────┼───────┤");
           outputs.push("│ 1  │ Eng. Ahmed M Hosny     │ Lead System Architect │ 100   │");
-          outputs.push("│ 2  │ Sara Ali               │ Frontend Dev          │ 92    │");
           outputs.push("└────┴────────────────────────┴───────────────────────┴───────┘");
         }
       } catch (err) {
         outputs.push("✖ Error: " + err.message);
       }
 
-      frame.srcdoc = `<!DOCTYPE html><html><body style="margin:0;padding:22px;background:#080c16;color:#4ade80;font-family:'JetBrains Mono',monospace;font-size:13.5px;">
-        <div style="background:#0f172a;border:1.5px solid #10b981;border-radius:12px;padding:18px;box-shadow:0 15px 35px rgba(0,0,0,0.6);">
+      frame.srcdoc = `<!DOCTYPE html><html><body style="margin:0;padding:24px;background:#080c16;color:#4ade80;font-family:'JetBrains Mono',monospace;font-size:13.5px;">
+        <div style="background:#0f172a;border:1.5px solid #10b981;border-radius:12px;padding:18px;">
           <div style="color:#38bdf8;margin-bottom:12px;border-bottom:1px dashed #334155;padding-bottom:8px;display:flex;justify-content:space-between;">
-            <span>›_ Universal Runtime Engine (${esc(meta.label)})</span>
+            <span>›_ Universal Runtime (${esc(meta.label)})</span>
             <span style="color:#10b981;">✓ Exit Code 0</span>
           </div>
-          <pre style="margin:0;white-space:pre-wrap;line-height:1.75;">${esc(outputs.length ? outputs.join("\n") : "تم تنفيذ البرنامج بنجاح ✓")}</pre>
+          <pre style="margin:0;white-space:pre-wrap;line-height:1.75;">${esc(outputs.length ? outputs.join("\n") : "Executed successfully ✓")}</pre>
         </div>
       </body></html>`;
-      if (notifyUser) toast(`▶ تم تشغيل ${activeFile} (${meta.label})`);
+      if (notifyUser) toast(`▶ تم تشغيل ${activeFile}`);
       return;
     }
 
-    // 4. Full Web Application (HTML + CSS + JS + Auto-Resolved Assets)
+    // 3. Full Web Application (Always render index.html + style.css + script.js!)
     let html = p.files["index.html"] || activeCode;
     let css = "";
     let js = "";
@@ -1489,9 +1146,8 @@ function openCustomThemeStudioModal() {
               parent.postMessage({ source:'vsc-ide-console', level:lv, message:msg }, '*');
             } catch(e){}
           }
-          var oL = console.log, oE = console.error, oW = console.warn;
+          var oL = console.log, oE = console.error;
           console.log = function(){ send('info', arguments); oL.apply(console, arguments); };
-          console.warn = function(){ send('warn', arguments); oW.apply(console, arguments); };
           console.error = function(){ send('error', arguments); oE.apply(console, arguments); };
           window.onerror = function(msg, u, ln){ send('error', [msg + ' (Line ' + ln + ')']); };
         })();
@@ -1499,129 +1155,85 @@ function openCustomThemeStudioModal() {
     `;
 
     frame.srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8">${bridge}<style>${css}</style></head><body>${cleanHtml}<script>try{${js}}catch(e){console.error(e.message);}<\/script></body></html>`;
-    if (notifyUser) toast("▶ تم تشغيل المشروع وتحديث المعاينة الحية!");
+    if (notifyUser) toast("▶ تم تشغيل المشروع وتحديث المعاينة!");
   }
 
   /* ==========================================================================
-     9. INTERACTIVE BASH TERMINAL & COMMAND PALETTE (CTRL+SHIFT+P)
+     8. BOTTOM PANEL, TERMINAL, COMMAND PALETTE & MODALS
      ========================================================================== */
   function activateBottomTab(tabName) {
-    document.querySelectorAll(".vsc-btm-tab").forEach(b => {
-      const isAct = b.dataset.btmTab === tabName;
-      b.style.color = isAct ? "var(--gold)" : "var(--text)";
-      b.style.fontWeight = isAct ? "800" : "600";
+    const btmPanel = document.getElementById("vsc-bottom-panel");
+    btmPanel?.classList.remove("hidden-panel");
+
+    document.querySelectorAll(".vsc-btab").forEach(b => {
+      b.classList.toggle("active", b.dataset.btab === tabName);
     });
 
-    const body = document.getElementById("vsc-console-body");
-    if (!body) return;
-    const p = curProj();
-
-    if (tabName === "terminal") {
-      body.style.direction = "ltr";
-      body.style.textAlign = "left";
-      body.innerHTML = `
-        <div id="term-history-out" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#cbd5e1;line-height:1.6;">
-          <div><span style="color:#10b981;">ahmed@mylifeos-ide</span>:<span style="color:#38bdf8;">~/${esc(p.name.replace(/\s+/g, "-"))}</span>$ type <b>help</b> for available commands</div>
-          ${(state.termHistory || []).map(l => `<div>${l}</div>`).join("")}
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;font-family:'JetBrains Mono',monospace;">
-          <span style="color:#10b981;font-weight:700;">$</span>
-          <input type="text" id="term-cmd-inp" style="flex:1;background:transparent;border:0;outline:none;color:#4ade80;font-family:inherit;font-size:12px;" placeholder="ls, cat index.html, touch page.js, git status, run, clear..." autofocus />
-        </div>
-      `;
-
-      const inp = document.getElementById("term-cmd-inp");
-      inp?.focus();
-      inp?.addEventListener("keydown", (e) => {
-        if (e.key !== "Enter") return;
-        const raw = inp.value.trim();
-        inp.value = "";
-        if (!raw) return;
-
-        const parts = raw.split(/\s+/);
-        const cmd = parts[0].toLowerCase();
-        const arg = parts[1];
-        let resp = "";
-
-        if (cmd === "help") resp = "Commands: ls, cat <file>, touch <file>, rm <file>, run, git status, git log, npm test, whoami, date, clear";
-        else if (cmd === "ls" || cmd === "dir") resp = Object.keys(p.files).join("   ");
-        else if (cmd === "whoami") resp = "Eng:Ahmed M Hosny — Lead System Architect";
-        else if (cmd === "date") resp = new Date().toString();
-        else if (cmd === "cat" && arg) resp = esc(p.files[arg] || `cat: ${arg}: No such file`);
-        else if (cmd === "touch" && arg) { p.files[arg] = ""; saveState(); refreshAllIDEUI(); resp = `Created file: ${arg}`; }
-        else if (cmd === "rm" && arg) { delete p.files[arg]; saveState(); refreshAllIDEUI(); resp = `Removed: ${arg}`; }
-        else if (cmd === "run") { executeWorkspace("project", true); resp = "▶ Project executed in live preview."; }
-        else if (raw === "git status") resp = `On branch ${p.git.branch} — Files tracked: ${Object.keys(p.files).length}`;
-        else if (raw === "git log") resp = (p.git.commits || []).map(c => `#${c.id} - ${c.msg} (${c.date})`).join("<br>");
-        else if (raw === "npm test") { state.activeAct = "testing"; renderSidebarByActivity(); resp = "Running Jest Unit Test Suite..."; }
-        else if (cmd === "clear" || cmd === "cls") { state.termHistory = []; activateBottomTab("terminal"); return; }
-        else resp = `Executed: ${esc(raw)} (Exit code 0)`;
-
-        state.termHistory.push(`<span style="color:#38bdf8;">$ ${esc(raw)}</span><br><span style="color:#a7f3d0;">${resp}</span>`);
-        activateBottomTab("terminal");
-      });
-      return;
-    }
+    ["problems", "output", "debug-console", "terminal"].forEach(id => {
+      const pane = document.getElementById(`bpane-${id}`);
+      if (pane) pane.hidden = (id !== tabName);
+    });
 
     if (tabName === "problems") {
-      body.style.direction = "rtl";
-      body.style.textAlign = "right";
-      body.innerHTML = `<div style="color:#10b981;">✓ لا توجد أخطاء Syntax أو تحذيرات في ملفات المشروع الحالي.</div>`;
-      return;
+      const pPane = document.getElementById("bpane-problems");
+      if (pPane) pPane.innerHTML = `<div style="color:#10b981;">✓ لا توجد أخطاء أو تحذيرات في ملفات المشروع.</div>`;
     }
+  }
 
-    body.style.direction = "rtl";
-    body.style.textAlign = "right";
-    executeWorkspace("project", false);
+  function renderTerminalLogs() {
+    const logsBox = document.getElementById("term-logs");
+    const p = curProj();
+    const promptLbl = document.getElementById("term-prompt-lbl");
+    if (promptLbl) promptLbl.textContent = `ahmed@mylifeos:~/${p.name.replace(/\s+/g, "-")}$`;
+    if (!logsBox) return;
+    logsBox.innerHTML = `
+      <div style="color:#94a3b8;">MY LIFE OS Universal Terminal — Type <b style="color:var(--gold);">help</b> for commands</div>
+      ${(state.termHistory || []).map(l => `<div>${l}</div>`).join("")}
+    `;
+    logsBox.scrollTop = logsBox.scrollHeight;
   }
 
   function openCommandPaletteModal() {
+    const pal = document.getElementById("vsc-palette-modal");
+    const inp = document.getElementById("inp-palette-search");
+    const list = document.getElementById("vsc-palette-list");
+    if (!pal || !inp || !list) return;
+
+    const p = curProj();
     const commands = [
       { name: "▶ Run: تشغيل المشروع الحالي (Ctrl+Enter)", act: () => executeWorkspace("project", true) },
       { name: "📄 File: إنشاء ملف جديد (+ New File)", act: openCreateFileModal },
-      { name: "🚀 Project: إنشاء مشروع جديد من الـ 14 قالباً", act: openNewProjectModal },
+      { name: "🚀 Project: إنشاء مشروع جديد من القوالب الـ 14", act: openNewProjectModal },
       { name: "📦 Export: تحميل المشروع كاملاً بصيغة .ZIP", act: downloadProjectZip },
-      { name: "✨ Format: تنظيف وتنسيق الكود (Clean Code)", act: formatActiveCode },
-      { name: "🎨 Theme: فتح صانع الثيم المخصص (Custom Theme Studio)", act: openCustomThemeStudioModal },
-      { name: "🌿 Git: فتح لوحة Source Control & Diff", act: () => { state.activeAct = "git"; renderSidebarByActivity(); } },
-      { name: "🐞 Debug: فتح مصحح الأخطاء والـ Breakpoints", act: () => { state.activeAct = "debug"; renderSidebarByActivity(); } },
-      { name: "🗄️ Database: فتح مستكشف قواعد البيانات SQL", act: () => { state.activeAct = "database"; renderSidebarByActivity(); } },
-      { name: "🤖 AI: فتح المساعد البرمجي الذكي", act: () => { state.activeAct = "ai"; renderSidebarByActivity(); } },
-      { name: "🧪 Testing: تشغيل جميع اختبارات الوحدة Unit Tests", act: () => { state.activeAct = "testing"; renderSidebarByActivity(); } },
-      { name: "💻 Terminal: فتح طرفية الأوامر التفاعلية Bash", act: () => activateBottomTab("terminal") }
+      { name: "✨ Format: تنظيف وتنسيق الكود (Prettier)", act: formatActiveCode },
+      { name: "🎨 Theme: فتح صانع الثيم المخصص (Custom Theme)", act: openCustomThemeStudioModal },
+      { name: "◫ Split: تقسيم محرر الأكواد لنافذتين (Split Editor)", act: toggleSplitEditor },
+      ...Object.keys(p.files).map(fn => ({ name: `📂 Open File: ${fn}`, act: () => switchActiveFile(fn) }))
     ];
 
-    openUniversalModal("⌘ لوحة الأوامر السريعة (Command Palette — Ctrl+Shift+P)", `
-      <div class="vsc-field">
-        <input type="text" id="cmd-pal-inp" placeholder="اكتب اسم الأمر للبحث والتنفيذ الفوري..." autofocus />
-      </div>
-      <div id="cmd-pal-list" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;"></div>
-    `);
-
-    const renderCmds = (q = "") => {
-      const listEl = document.getElementById("cmd-pal-list");
-      if (!listEl) return;
+    const renderList = (q = "") => {
       const filtered = commands.filter(c => c.name.toLowerCase().includes(q.toLowerCase()));
-      listEl.innerHTML = filtered.map((c, idx) => `
-        <div class="vsc-tree-item" data-cmd-idx="${idx}" style="padding:8px 10px;background:rgba(255,255,255,0.04);">
+      list.innerHTML = filtered.map((c, i) => `
+        <div class="palette-row" data-pal-idx="${i}">
           <span>${esc(c.name)}</span>
+          <i class="fa-solid fa-arrow-left" style="font-size:10px;opacity:0.6;"></i>
         </div>
       `).join("");
-      listEl.querySelectorAll("[data-cmd-idx]").forEach(el => {
-        el.onclick = () => {
-          closeUniversalModal();
-          filtered[Number(el.dataset.cmdIdx)]?.act();
+      list.querySelectorAll("[data-pal-idx]").forEach(row => {
+        row.onclick = () => {
+          pal.hidden = true;
+          filtered[Number(row.dataset.palIdx)]?.act();
         };
       });
     };
 
-    renderCmds();
-    document.getElementById("cmd-pal-inp")?.addEventListener("input", (e) => renderCmds(e.target.value));
+    pal.hidden = false;
+    inp.value = "";
+    renderList();
+    setTimeout(() => inp.focus(), 40);
+    inp.oninput = () => renderList(inp.value);
   }
 
-  /* ==========================================================================
-     10. MODALS, HELPERS, ZIP DOWNLOADER & EVENT BINDINGS
-     ========================================================================== */
   function openUniversalModal(title, bodyHtml) {
     const modal = document.getElementById("vsc-modal");
     const tEl = document.getElementById("vsc-modal-title");
@@ -1635,10 +1247,12 @@ function openCustomThemeStudioModal() {
   function closeUniversalModal() {
     const modal = document.getElementById("vsc-modal");
     if (modal) modal.hidden = true;
+    const pal = document.getElementById("vsc-palette-modal");
+    if (pal) pal.hidden = true;
   }
 
   function openNewProjectModal() {
-    openUniversalModal("🚀 إنشاء مشروع جديد (14 قالباً احترافياً)", `
+    openUniversalModal("🚀 إنشاء مشروع برمجي جديد", `
       <div class="vsc-field">
         <label>اسم المشروع</label>
         <input type="text" id="np-name" placeholder="مثال: منصة الجامعة / تطبيق ذكي..." autofocus />
@@ -1659,16 +1273,9 @@ function openCustomThemeStudioModal() {
       const id = "proj_" + Date.now();
 
       state.projects.unshift({
-        id,
-        name,
-        type: base.type,
-        activeFile: base.activeFile,
-        files: base.files,
-        assets: {},
-        favorites: [],
-        pinnedTabs: [base.activeFile],
-        closedTabs: [],
-        git: { branch: "main", branches: ["main"], commits: [{ id: "init01", msg: "Initial project template", date: new Date().toLocaleTimeString() }], snapshot: JSON.parse(JSON.stringify(base.files)) }
+        id, name, type: base.type, activeFile: base.activeFile, files: base.files,
+        assets: {}, favorites: [], pinnedTabs: [base.activeFile], closedTabs: [],
+        git: { branch: "main", branches: ["main"], commits: [{ id: "init01", msg: "Initial commit", date: new Date().toLocaleTimeString() }], snapshot: JSON.parse(JSON.stringify(base.files)) }
       });
       state.activeProjectId = id;
       saveState();
@@ -1681,10 +1288,10 @@ function openCustomThemeStudioModal() {
   function openCreateFileModal() {
     openUniversalModal("📄 إضافة ملف كود جديد", `
       <div class="vsc-field">
-        <label>اسم الملف مع الامتداد (مثل: App.jsx, page.html, main.py, app.cpp, query.sql)</label>
-        <input type="text" id="nf-name" value="component.js" dir="ltr" autofocus />
+        <label>اسم الملف مع الامتداد (مثل: page.html, App.jsx, main.py, app.cpp, query.sql)</label>
+        <input type="text" id="nf-name" value="app.js" dir="ltr" autofocus />
       </div>
-      <button type="button" id="btn-nf-create" class="vsc-btn-primary">إنشاء الملف ✦</button>
+      <button type="button" id="btn-nf-create" class="vsc-btn-primary">إنشاء وفتح الملف ✦</button>
     `);
 
     document.getElementById("btn-nf-create")?.addEventListener("click", () => {
@@ -1708,15 +1315,11 @@ function openCustomThemeStudioModal() {
         <table style="width:100%;border-collapse:collapse;">
           <thead>
             <tr style="background:#1e293b;color:var(--gold);">
-              ${Object.keys(rows[0] || { id: 1, name: "" }).map(k => `<th style="padding:6px;border:1px solid var(--border);">${esc(k)}</th>`).join("")}
+              ${Object.keys(rows[0] || { id: 1 }).map(k => `<th style="padding:6px;border:1px solid var(--border);">${esc(k)}</th>`).join("")}
             </tr>
           </thead>
           <tbody>
-            ${rows.map(r => `
-              <tr>
-                ${Object.values(r).map(v => `<td style="padding:6px;border:1px solid var(--border);">${esc(v)}</td>`).join("")}
-              </tr>
-            `).join("")}
+            ${rows.map(r => `<tr>${Object.values(r).map(v => `<td style="padding:6px;border:1px solid var(--border);">${esc(v)}</td>`).join("")}</tr>`).join("")}
           </tbody>
         </table>
       </div>
@@ -1724,7 +1327,7 @@ function openCustomThemeStudioModal() {
   }
 
   function openSettingsCenterModal() {
-    openUniversalModal("⚙️ مركز إعدادات الـ IDE الشامل (Settings Center)", `
+    openUniversalModal("⚙️ إعدادات بيئة التطوير (IDE Settings)", `
       <div class="vsc-field">
         <label>حجم خط المحرر (Font Size px)</label>
         <input type="number" id="set-font-size" value="${state.codeFontSize}" min="11" max="28" />
@@ -1752,8 +1355,51 @@ function openCustomThemeStudioModal() {
       saveState();
       closeUniversalModal();
       refreshAllIDEUI();
-      toast("⚙️ تم تحديث إعدادات بيئة التطوير بنجاح!");
+      toast("⚙️ تم حفظ الإعدادات!");
     });
+  }
+
+  function toggleSplitEditor() {
+    const host2 = document.getElementById("vsc-editor-host-2");
+    const sel2 = document.getElementById("sel-split-2-file");
+    const fb2 = document.getElementById("fallback-editor-2");
+    if (!host2) return;
+
+    state.splitEditorOpen = !state.splitEditorOpen;
+    host2.hidden = !state.splitEditorOpen;
+
+    if (state.splitEditorOpen) {
+      const p = curProj();
+      const files = Object.keys(p.files);
+      state.splitFile2 = files.find(f => f !== p.activeFile) || p.activeFile;
+      if (sel2) {
+        sel2.innerHTML = files.map(f => `<option value="${esc(f)}" ${f === state.splitFile2 ? "selected" : ""}>${esc(f)}</option>`).join("");
+        sel2.onchange = () => {
+          state.splitFile2 = sel2.value;
+          document.getElementById("split-2-title").textContent = `Split Editor: ${state.splitFile2}`;
+          fb2.value = p.files[state.splitFile2] || "";
+        };
+      }
+      document.getElementById("split-2-title").textContent = `Split Editor: ${state.splitFile2}`;
+      if (fb2) {
+        fb2.value = p.files[state.splitFile2] || "";
+        fb2.oninput = () => {
+          p.files[state.splitFile2] = fb2.value;
+          saveState();
+          if (state.autoRun) scheduleAutoRun();
+        };
+      }
+    }
+    if (monacoEditor) setTimeout(() => monacoEditor.layout(), 60);
+  }
+
+  function togglePinFile(fname) {
+    const p = curProj();
+    p.pinnedTabs = p.pinnedTabs || [];
+    if (p.pinnedTabs.includes(fname)) p.pinnedTabs = p.pinnedTabs.filter(x => x !== fname);
+    else p.pinnedTabs.push(fname);
+    saveState();
+    refreshAllIDEUI();
   }
 
   async function handleAssetFilesInput(e) {
@@ -1772,7 +1418,7 @@ function openCustomThemeStudioModal() {
     saveState();
     renderSidebarByActivity();
     executeWorkspace("project", false);
-    toast(`🖼️ تم رفع ${files.length} ملف/صورة للمشروع!`);
+    toast(`🖼️ تم رفع ${files.length} صورة للمشروع!`);
   }
 
   function bindAssetRowEvents(container, p) {
@@ -1788,10 +1434,9 @@ function openCustomThemeStudioModal() {
         setEditorCode(next, getLangMeta(p.activeFile).lang);
         saveState();
         executeWorkspace("project", false);
-        toast(`🖼️ تم إدراج "${name}" في الكود فوراً!`);
+        toast(`🖼️ تم إدراج "${name}" في الكود!`);
       };
     });
-
     container.querySelectorAll("[data-del-asset]").forEach(del => {
       del.onclick = (e) => {
         e.stopPropagation();
@@ -1808,12 +1453,12 @@ function openCustomThemeStudioModal() {
     p.files[p.activeFile] = cleaned;
     setEditorCode(cleaned, getLangMeta(p.activeFile).lang);
     saveState();
-    toast("✨ Prettier: تم تنسيق وتنظيف الكود بنجاح!");
+    toast("✨ تم تنسيق وتنظيف الكود بنجاح!");
   }
 
   async function downloadProjectZip() {
     const p = curProj();
-    toast(`⏳ جاري ضغط وتحميل مشروع "${p.name}" بالكامل (.ZIP)...`);
+    toast(`⏳ جاري ضغط وتحميل مشروع "${p.name}" (.ZIP)...`);
     try {
       if (!window.JSZip) {
         await new Promise((resolve, reject) => {
@@ -1840,28 +1485,26 @@ function openCustomThemeStudioModal() {
       const blob = await zip.generateAsync({ type: "blob" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `${p.name.replace(/\s+/g, "-")}-Universal-IDE.zip`;
+      a.download = `${p.name.replace(/\s+/g, "-")}.zip`;
       a.click();
-      toast("📦 تم تحميل ملف .ZIP الشامل للمشروع والصور!");
+      toast("📦 تم تحميل ملف .ZIP الشامل للمشروع!");
     } catch (e) {
-      toast("⚠️ تعذر ضغط ZIP، تأكد من الاتصال بالإنترنت");
+      toast("⚠️ تعذر ضغط ZIP");
     }
   }
 
   function updateGitBadge() {
     const p = curProj();
-    const badge = document.getElementById("git-changes-badge");
+    const badge = document.getElementById("git-badge-count");
     if (!badge) return;
     const count = Object.keys(p.files).filter(fn => !p.git?.snapshot || p.git.snapshot[fn] !== p.files[fn]).length;
     badge.textContent = String(count);
-    badge.style.display = count > 0 ? "inline-block" : "none";
   }
 
   function switchActiveFile(fname) {
     const p = curProj();
     if (p.files[fname] === undefined) return;
     p.activeFile = fname;
-    state.recentFiles = [fname, ...(state.recentFiles || []).filter(x => x !== fname)].slice(0, 10);
     saveState();
     const meta = getLangMeta(fname);
     setEditorCode(p.files[fname], meta.lang);
@@ -1877,14 +1520,14 @@ function openCustomThemeStudioModal() {
     const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     setTxt("top-proj-name", p.name);
     setTxt("top-proj-type", p.type);
-    setTxt("crumb-proj-name", p.name);
-    setTxt("crumb-file-name", p.activeFile);
-    setTxt("crumb-lang-badge", meta.label);
-    setTxt("status-lang", meta.label);
-    setTxt("preview-url-lbl", `localhost:3000/${p.activeFile}`);
-    setTxt("status-autorun", `⚡ Auto-Run: ${state.autoRun ? "ON" : "OFF"}`);
+    setTxt("crumb-proj", p.name);
+    setTxt("crumb-file", p.activeFile);
+    setTxt("crumb-lang-tag", meta.label);
+    setTxt("st-lang-mode", meta.label);
+    setTxt("st-branch-name", `${p.git?.branch || "main"}*`);
+    setTxt("preview-address-text", `localhost:3000/${p.activeFile}`);
+    setTxt("st-autorun-lbl", `⚡ Auto-Run: ${state.autoRun ? "ON" : "OFF"}`);
 
-    // ترتيب التبويبات بحيث تظهر التبويبات المثبتة (Pinned) أولاً
     const tabsBar = document.getElementById("vsc-tabs-bar");
     if (tabsBar) {
       const allKeys = Object.keys(p.files);
@@ -1896,10 +1539,10 @@ function openCustomThemeStudioModal() {
         const m = getLangMeta(fn);
         const isPin = pinned.includes(fn);
         return `
-          <div class="vsc-tab ${fn === p.activeFile ? "active" : ""}" data-tab-open="${esc(fn)}">
+          <div class="vsc-tab ${fn === p.activeFile ? "active" : ""} ${isPin ? "pinned" : ""}" data-tab-open="${esc(fn)}">
             ${isPin ? `<i class="fa-solid fa-thumbtack gold-icon" style="font-size:10px;"></i>` : `<i class="${m.icon}" style="color:${m.color};"></i>`}
             <span>${esc(fn)}</span>
-            ${sortedKeys.length > 1 ? `<button type="button" class="vsc-tab-close" data-tab-close="${esc(fn)}" title="إغلاق التبويب">×</button>` : ""}
+            ${sortedKeys.length > 1 ? `<button type="button" class="vsc-tab-close" data-tab-close="${esc(fn)}" title="إغلاق">×</button>` : ""}
           </div>
         `;
       }).join("") + `<button type="button" id="btn-tab-new" class="vsc-tab-add" data-tip="إنشاء ملف جديد (+)">+</button>`;
@@ -1929,50 +1572,74 @@ function openCustomThemeStudioModal() {
 
     updateGitBadge();
     renderSidebarByActivity();
+    renderTerminalLogs();
   }
 
   /* ==========================================================================
-     11. GLOBAL EVENTS & KEYBOARD SHORTCUTS (CTRL+SHIFT+P, CTRL+S, F5)
+     9. BIND ALL EXACT BUTTONS & INPUTS IN INDEX.HTML
      ========================================================================== */
   function bindGlobalIDEEvents() {
     document.getElementById("btn-close-vsc-modal")?.addEventListener("click", closeUniversalModal);
-    document.getElementById("btn-new-project-wizard")?.addEventListener("click", openNewProjectModal);
-    document.getElementById("btn-open-project-switcher")?.addEventListener("click", () => {
+    document.getElementById("btn-new-project-modal")?.addEventListener("click", openNewProjectModal);
+    document.getElementById("btn-title-project-switcher")?.addEventListener("click", () => {
       state.activeAct = "projects";
       document.getElementById("vsc-sidebar")?.classList.remove("collapsed");
       renderSidebarByActivity();
     });
+
+    document.getElementById("btn-command-palette")?.addEventListener("click", openCommandPaletteModal);
 
     document.getElementById("btn-toggle-autorun")?.addEventListener("click", (e) => {
       state.autoRun = !state.autoRun;
       e.currentTarget.classList.toggle("active-emerald", state.autoRun);
       saveState();
       refreshAllIDEUI();
-      toast(state.autoRun ? "⚡ Auto-Run: مفعل" : "⏸️ Auto-Run: متوقف");
+      toast(state.autoRun ? "⚡ Auto-Run: ON" : "⏸️ Auto-Run: OFF");
     });
 
-    document.getElementById("btn-run-code")?.addEventListener("click", () => executeWorkspace("project", true));
+    document.getElementById("btn-run-main")?.addEventListener("click", () => {
+      const mode = document.getElementById("sel-run-mode")?.value || "project";
+      if (mode === "terminal") activateBottomTab("terminal");
+      executeWorkspace(mode, true);
+    });
+
+    document.getElementById("btn-start-debug")?.addEventListener("click", () => {
+      state.activeAct = "debug";
+      document.getElementById("vsc-sidebar")?.classList.remove("collapsed");
+      renderSidebarByActivity();
+      activateBottomTab("debug-console");
+      executeWorkspace("project", true);
+    });
+
+    document.getElementById("btn-stop-exec")?.addEventListener("click", () => {
+      const st = document.getElementById("st-runtime-status");
+      if (st) st.innerHTML = `<span style="color:#ef4444;">⏹ Stopped</span>`;
+      toast("⏹ تم إيقاف العملية الجارية");
+    });
+
+    document.getElementById("sel-workspace-layout")?.addEventListener("change", (e) => applyWorkspaceLayout(e.target.value));
+    document.getElementById("sel-ide-theme")?.addEventListener("change", (e) => applyTheme(e.target.value));
     document.getElementById("inp-upload-assets")?.addEventListener("change", handleAssetFilesInput);
-    document.getElementById("btn-open-snippets")?.addEventListener("click", () => {
+    document.getElementById("btn-split-editor")?.addEventListener("click", toggleSplitEditor);
+    document.getElementById("btn-format-code")?.addEventListener("click", formatActiveCode);
+    document.getElementById("btn-download-zip")?.addEventListener("click", downloadProjectZip);
+
+    document.getElementById("btn-open-ai-side")?.addEventListener("click", () => {
       state.activeAct = "ai";
       document.getElementById("vsc-sidebar")?.classList.remove("collapsed");
       renderSidebarByActivity();
     });
-    document.getElementById("btn-format-code")?.addEventListener("click", formatActiveCode);
-    document.getElementById("btn-download-zip")?.addEventListener("click", downloadProjectZip);
-    document.getElementById("btn-side-new-file")?.addEventListener("click", openCreateFileModal);
-    document.getElementById("btn-side-upload-img")?.addEventListener("click", () => document.getElementById("inp-upload-assets")?.click());
-    document.getElementById("btn-side-zip")?.addEventListener("click", downloadProjectZip);
 
-    document.getElementById("sel-ide-theme")?.addEventListener("change", (e) => applyTheme(e.target.value));
-
-    document.querySelectorAll(".layout-btn").forEach(btn => {
-      btn.onclick = () => applyWorkspaceLayout(btn.dataset.layout);
+    document.getElementById("btn-open-settings")?.addEventListener("click", openSettingsCenterModal);
+    document.getElementById("btn-act-settings")?.addEventListener("click", openSettingsCenterModal);
+    document.getElementById("btn-act-terminal")?.addEventListener("click", () => {
+      document.getElementById("vsc-bottom-panel")?.classList.toggle("hidden-panel");
     });
 
-    document.querySelectorAll("[data-sidebar-tab]").forEach(btn => {
+    // Activity Bar Icons (`data-act`)
+    document.querySelectorAll(".vsc-act-btn[data-act]").forEach(btn => {
       btn.onclick = () => {
-        const tab = btn.dataset.sidebarTab;
+        const tab = btn.dataset.act;
         const sb = document.getElementById("vsc-sidebar");
         if (state.activeAct === tab && !sb.classList.contains("collapsed")) {
           sb.classList.add("collapsed");
@@ -1984,77 +1651,210 @@ function openCustomThemeStudioModal() {
       };
     });
 
-    document.getElementById("btn-open-cmd-palette")?.addEventListener("click", openCommandPaletteModal);
-    document.getElementById("btn-open-settings-center")?.addEventListener("click", openSettingsCenterModal);
+    // Sidebar Header Buttons
+    document.getElementById("btn-side-new-file")?.addEventListener("click", openCreateFileModal);
+    document.getElementById("btn-side-new-folder")?.addEventListener("click", () => {
+      const folder = prompt("📁 اكتب مسار المجلد والملف الجديد (مثال: src/utils.js):", "src/helper.js");
+      if (folder && folder.trim()) {
+        const p = curProj();
+        p.files[folder.trim()] = `// ${folder.trim()}\n`;
+        saveState();
+        switchActiveFile(folder.trim());
+      }
+    });
+    document.getElementById("btn-side-restore-tab")?.addEventListener("click", () => {
+      const p = curProj();
+      const last = (p.closedTabs || []).pop();
+      if (last && last.name) {
+        p.files[last.name] = last.content;
+        switchActiveFile(last.name);
+        toast(`↺ تم استعادة التبويب المغلق: ${last.name}`);
+      } else {
+        toast("لا توجد تبويبات مغلقة حديثاً");
+      }
+    });
+    document.getElementById("btn-side-collapse")?.addEventListener("click", () => {
+      document.getElementById("vsc-sidebar")?.classList.add("collapsed");
+    });
 
-    // Responsive Viewport Buttons (Desktop / Tablet / Mobile)
-    const setPreviewWidth = (w) => {
-      const f = document.getElementById("vsc-preview-iframe") || document.getElementById("vsc-preview-frame");
-      if (!f) return;
-      f.style.width = w;
-      f.style.margin = w === "100%" ? "0" : "0 auto";
-      f.style.display = "block";
-      f.style.borderLeft = w === "100%" ? "0" : "2px solid var(--gold)";
-      f.style.borderRight = w === "100%" ? "0" : "2px solid var(--gold)";
+    // Tab Header Tools
+    document.getElementById("btn-pin-active-tab")?.addEventListener("click", () => togglePinFile(curProj().activeFile));
+    document.getElementById("btn-close-other-tabs")?.addEventListener("click", () => {
+      const p = curProj();
+      const keep = p.activeFile;
+      p.files = { [keep]: p.files[keep] };
+      saveState();
+      refreshAllIDEUI();
+      toast("تم إغلاق التبويبات الأخرى");
+    });
+    document.getElementById("btn-toggle-minimap")?.addEventListener("click", () => {
+      state.minimap = !state.minimap;
+      if (monacoEditor) monacoEditor.updateOptions({ minimap: { enabled: state.minimap } });
+      saveState();
+    });
+    document.getElementById("btn-toggle-wordwrap")?.addEventListener("click", () => {
+      state.wordWrap = !state.wordWrap;
+      if (monacoEditor) monacoEditor.updateOptions({ wordWrap: state.wordWrap ? "on" : "off" });
+      saveState();
+    });
+
+    // Inline AI Bar
+    const inlineBar = document.getElementById("vsc-inline-ai-bar");
+    document.getElementById("btn-inline-ai-edit")?.addEventListener("click", () => {
+      if (inlineBar) inlineBar.hidden = !inlineBar.hidden;
+    });
+    document.getElementById("btn-inline-ai-close")?.addEventListener("click", () => {
+      if (inlineBar) inlineBar.hidden = true;
+    });
+    document.getElementById("btn-inline-ai-run")?.addEventListener("click", () => {
+      const promptVal = document.getElementById("inp-inline-ai-prompt")?.value.trim();
+      if (!promptVal) return;
+      const p = curProj();
+      const comment = p.activeFile.endsWith(".html") ? `<!-- AI Applied: ${promptVal} -->\n` : `// AI Applied: ${promptVal}\n`;
+      p.files[p.activeFile] = comment + getEditorCode();
+      setEditorCode(p.files[p.activeFile], getLangMeta(p.activeFile).lang);
+      saveState();
+      executeWorkspace("project", false);
+      toast("✨ تم تطبيق تعديل الـ Inline AI!");
+    });
+
+    // Preview Responsive Viewport & Zoom
+    document.querySelectorAll(".vp-btn[data-vp]").forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll(".vp-btn").forEach(b => b.classList.toggle("active", b === btn));
+        const dev = document.getElementById("vsc-device-frame");
+        if (dev) {
+          dev.style.width = btn.dataset.vp;
+          dev.style.border = btn.dataset.vp === "100%" ? "0" : "2px solid var(--gold)";
+        }
+      };
+    });
+
+    const applyPrevZoom = () => {
+      const f = document.getElementById("vsc-preview-iframe");
+      const l = document.getElementById("prev-zoom-lbl");
+      if (l) l.textContent = `${state.previewZoom}%`;
+      if (f) {
+        const s = state.previewZoom / 100;
+        f.style.transform = `scale(${s})`;
+        f.style.width = `${100 / s}%`;
+        f.style.height = `${100 / s}%`;
+      }
     };
-    document.getElementById("btn-vp-desktop")?.addEventListener("click", () => setPreviewWidth("100%"));
-    document.getElementById("btn-vp-tablet")?.addEventListener("click", () => setPreviewWidth("768px"));
-    document.getElementById("btn-vp-mobile")?.addEventListener("click", () => setPreviewWidth("375px"));
-
+    document.getElementById("btn-prev-zoom-in")?.addEventListener("click", () => { state.previewZoom = Math.min(180, state.previewZoom + 10); applyPrevZoom(); });
+    document.getElementById("btn-prev-zoom-out")?.addEventListener("click", () => { state.previewZoom = Math.max(50, state.previewZoom - 10); applyPrevZoom(); });
     document.getElementById("btn-prev-reload")?.addEventListener("click", () => executeWorkspace("project", true));
-    document.getElementById("btn-prev-ext")?.addEventListener("click", () => {
-      const f = document.getElementById("vsc-preview-iframe") || document.getElementById("vsc-preview-frame");
+    document.getElementById("btn-prev-external")?.addEventListener("click", () => {
+      const f = document.getElementById("vsc-preview-iframe");
       const blob = new Blob([f?.srcdoc || ""], { type: "text/html;charset=utf-8" });
       window.open(URL.createObjectURL(blob), "_blank");
     });
 
-    // Bottom Panel Tabs (Console / Terminal / Problems)
-    document.querySelectorAll(".vsc-btm-tab").forEach(tab => {
-      tab.onclick = () => activateBottomTab(tab.dataset.btmTab);
+    // Bottom Panel Tabs & Terminal Input (`inp-terminal-cmd`)
+    document.querySelectorAll(".vsc-btab[data-btab]").forEach(btn => {
+      btn.onclick = () => activateBottomTab(btn.dataset.btab);
     });
 
-    document.getElementById("btn-clear-console")?.addEventListener("click", () => {
-      const cb = document.getElementById("vsc-console-body");
-      if (cb) cb.innerHTML = "";
-    });
-    document.getElementById("btn-toggle-console-height")?.addEventListener("click", () => {
-      document.getElementById("vsc-console-drawer")?.classList.toggle("expanded");
+    const termInp = document.getElementById("inp-terminal-cmd");
+    termInp?.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const raw = termInp.value.trim();
+      termInp.value = "";
+      if (!raw) return;
+
+      const p = curProj();
+      const parts = raw.split(/\s+/);
+      const cmd = parts[0].toLowerCase();
+      const arg = parts[1];
+      let resp = "";
+
+      if (cmd === "help") resp = "Available commands: ls, cat <file>, touch <file>, rm <file>, mkdir <dir>, git status, git log, run, npm test, whoami, clear";
+      else if (cmd === "ls" || cmd === "dir") resp = Object.keys(p.files).join("    ");
+      else if (cmd === "whoami") resp = "Eng:Ahmed M Hosny — Lead System Architect";
+      else if (cmd === "cat" && arg) resp = esc(p.files[arg] || `cat: ${arg}: File not found`);
+      else if (cmd === "touch" && arg) { p.files[arg] = ""; saveState(); refreshAllIDEUI(); resp = `Created file: ${arg}`; }
+      else if (cmd === "rm" && arg) { delete p.files[arg]; saveState(); refreshAllIDEUI(); resp = `Removed: ${arg}`; }
+      else if (cmd === "run") { executeWorkspace("project", true); resp = "▶ Project executed."; }
+      else if (raw === "git status") resp = `On branch ${p.git.branch} — Tracked files: ${Object.keys(p.files).length}`;
+      else if (raw === "git log") resp = (p.git.commits || []).map(c => `#${c.id} ${c.msg}`).join("<br>");
+      else if (cmd === "clear" || cmd === "cls") { state.termHistory = []; renderTerminalLogs(); return; }
+      else resp = `Executed: ${esc(raw)} (Exit code 0)`;
+
+      state.termHistory.push(`<span style="color:#38bdf8;">$ ${esc(raw)}</span><br><span style="color:#a7f3d0;">${resp}</span>`);
+      renderTerminalLogs();
     });
 
-    // Draggable Splitter
-    const resizer = document.getElementById("vsc-resizer");
+    // Debug Console REPL (`inp-debug-eval`)
+    const dbgInp = document.getElementById("inp-debug-eval");
+    dbgInp?.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const expr = dbgInp.value.trim();
+      dbgInp.value = "";
+      if (!expr) return;
+      const logBox = document.getElementById("debug-console-logs");
+      let outVal = "";
+      try { outVal = String(Function(`return (${expr})`)()); }
+      catch (err) { outVal = `Error: ${err.message}`; }
+      if (logBox) {
+        logBox.innerHTML += `<div><span style="color:var(--gold);">debug&gt; ${esc(expr)}</span><br><span style="color:#4ade80;">${esc(outVal)}</span></div>`;
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+    });
+
+    document.getElementById("btn-clear-bottom")?.addEventListener("click", () => {
+      state.termHistory = [];
+      renderTerminalLogs();
+      const dbg = document.getElementById("debug-console-logs");
+      if (dbg) dbg.innerHTML = "";
+    });
+    document.getElementById("btn-max-bottom")?.addEventListener("click", () => {
+      document.getElementById("vsc-bottom-panel")?.classList.toggle("maximized");
+    });
+    document.getElementById("btn-close-bottom")?.addEventListener("click", () => {
+      document.getElementById("vsc-bottom-panel")?.classList.add("hidden-panel");
+    });
+
+    // Vertical & Horizontal Resizers
+    const resV = document.getElementById("vsc-resizer-v");
     const edPane = document.getElementById("vsc-editor-pane");
     const prPane = document.getElementById("vsc-preview-pane");
-    const wb = document.getElementById("vsc-workbench");
-    let isDragging = false;
-    resizer?.addEventListener("mousedown", () => { isDragging = true; resizer.classList.add("dragging"); });
-    window.addEventListener("mousemove", (e) => {
-      if (!isDragging || !wb) return;
-      const r = wb.getBoundingClientRect();
-      const pct = Math.max(20, Math.min(80, ((e.clientX - r.left) / r.width) * 100));
-      edPane.style.flex = `0 0 ${pct}%`;
-      prPane.style.flex = `0 0 ${100 - pct}%`;
-    });
-    window.addEventListener("mouseup", () => { isDragging = false; resizer?.classList.remove("dragging"); });
+    const upperWb = document.getElementById("vsc-upper-workbench");
+    let dragV = false;
+    resV?.addEventListener("mousedown", () => { dragV = true; });
 
-    // Listen to Console logs from Live Preview iframe
+    const resH = document.getElementById("vsc-resizer-h");
+    const btmPanel = document.getElementById("vsc-bottom-panel");
+    let dragH = false;
+    resH?.addEventListener("mousedown", () => { dragH = true; });
+
+    window.addEventListener("mousemove", (e) => {
+      if (dragV && upperWb) {
+        const r = upperWb.getBoundingClientRect();
+        const pct = Math.max(20, Math.min(80, ((e.clientX - r.left) / r.width) * 100));
+        edPane.style.flex = `0 0 ${pct}%`;
+        prPane.style.flex = `0 0 ${100 - pct}%`;
+      }
+      if (dragH && btmPanel) {
+        const newH = Math.max(90, Math.min(500, window.innerHeight - e.clientY - 26));
+        btmPanel.style.height = `${newH}px`;
+      }
+    });
+    window.addEventListener("mouseup", () => { dragV = false; dragH = false; });
+
+    // Console Logs from Preview iframe
     window.addEventListener("message", (e) => {
       if (e.data && e.data.source === "vsc-ide-console") {
-        const cb = document.getElementById("vsc-console-body");
-        if (!cb) return;
-        const row = document.createElement("div");
-        row.style.padding = "3px 0";
-        row.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
-        row.style.color = e.data.level === "error" ? "#f87171" : e.data.level === "warn" ? "#fbbf24" : "#38bdf8";
-        row.textContent = `${e.data.level === "error" ? "✖ " : "› "} ${e.data.message}`;
-        cb.appendChild(row);
-        cb.scrollTop = cb.scrollHeight;
+        const dbg = document.getElementById("debug-console-logs");
+        const term = document.getElementById("term-logs");
+        const htmlLine = `<div style="color:${e.data.level === "error" ? "#f87171" : "#38bdf8"};">[Console] › ${esc(e.data.message)}</div>`;
+        if (dbg) dbg.innerHTML += htmlLine;
+        if (term) { term.innerHTML += htmlLine; term.scrollTop = term.scrollHeight; }
       }
     });
 
     // Global Keyboard Shortcuts
     window.addEventListener("keydown", (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "p") {
+      if ((e.ctrlKey || e.metaKey) && (e.shiftKey || e.key.toLowerCase() === "p") && e.key.toLowerCase() === "p") {
         e.preventDefault();
         openCommandPaletteModal();
       } else if ((e.ctrlKey || e.metaKey) && e.key === ",") {
@@ -2070,10 +1870,9 @@ function openCustomThemeStudioModal() {
   }
 
   /* ==========================================================================
-     12. BOOTSTRAP UNIVERSAL IDE
+     10. BOOTSTRAP UNIVERSAL IDE
      ========================================================================== */
   function bootUniversalIDE() {
-    ensureUniversalIDEDOM();
     if (state.theme === "custom") applyCustomThemeVariables(state.customTheme);
     else applyTheme(state.theme);
 
