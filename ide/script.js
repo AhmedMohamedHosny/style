@@ -3031,131 +3031,245 @@ function openCustomThemeStudioModal() {
   }
 
 /* ==========================================================================
-     15. REAL VS CODE TOP MENU BAR (File, Edit, Selection, View, Go, Run, Terminal, Help)
-         + TOP-RIGHT WINDOW LAYOUT TOGGLES + PERSISTENT LIVE SERVER EXTERNAL TAB
+     15. REAL VS CODE TOP MENU BAR + CHROME REFRESH-PROOF LIVE SERVER
+         + BOTTOM-LEFT DEVELOPER PROFILE (AVATAR PHOTO + NAME)
      ========================================================================== */
   let liveExternalWindow = null;
-  const livePreviewChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("mylifeos_vsc_live_server") : null;
+  let liveWatcherTimer = null;
 
-  // إرسال أي تعديل في الكود فوراً إلى التبويب الخارجي المفتوح (Hot Reloading)
-  function syncExternalLiveServerWindow() {
-    const frame = document.getElementById("vsc-preview-iframe");
-    if (!frame) return;
-    const currentHtml = frame.srcdoc || "";
+  function getDeveloperProfile() {
     try {
-      localStorage.setItem("__MYLIFEOS_LIVE_SERVER_HTML__", currentHtml);
-      localStorage.setItem("__MYLIFEOS_LIVE_SERVER_TS__", String(Date.now()));
+      const saved = localStorage.getItem("MY_LIFE_OS_IDE_DEV_PROFILE");
+      if (saved) return JSON.parse(saved);
     } catch (e) {}
-
-    if (livePreviewChannel) {
-      try { livePreviewChannel.postMessage({ type: "reload", html: currentHtml }); } catch (e) {}
-    }
-
-    if (liveExternalWindow && !liveExternalWindow.closed) {
-      try {
-        const innerFrame = liveExternalWindow.document.getElementById("vsc-live-server-frame");
-        if (innerFrame) innerFrame.srcdoc = currentHtml;
-      } catch (e) {}
-    }
+    return {
+      name: "Eng:Ahmed M Hosny",
+      role: "Lead Full-Stack & Systems Architect",
+      avatar: localStorage.getItem("MY_LIFE_OS_USER_AVATAR") || ""
+    };
   }
 
-  // فتح التبويب الخارجي بنظام Live Server المستمر (يتحدث تلقائياً ولا يختفي مع F5 ولا يظهر رابط GitHub)
-  function openPersistentExternalLiveServer() {
-    const frame = document.getElementById("vsc-preview-iframe");
-    const currentHtml = frame?.srcdoc || "";
+  function saveDeveloperProfile(prof) {
     try {
-      localStorage.setItem("__MYLIFEOS_LIVE_SERVER_HTML__", currentHtml);
+      localStorage.setItem("MY_LIFE_OS_IDE_DEV_PROFILE", JSON.stringify(prof));
+      if (prof.avatar) localStorage.setItem("MY_LIFE_OS_USER_AVATAR", prof.avatar);
     } catch (e) {}
+  }
 
+  // بناء كود الصفحة الكامل شاملاً الـ CSS دائماً لضمان عدم ظهور صفحة بدون تنسيق أبداً
+  function buildFullStandaloneHTML() {
     const p = curProj();
+    let html = p.files["index.html"] || "";
+    let css = p.files["style.css"] || "";
+    let js = p.files["script.js"] || "";
+
+    // إذا كان ملف style.css فارغاً، نستخدم تنسيق القالب الافتراضي تلقائياً
+    if (!css || css.trim().length < 10) {
+      css = PROJECT_TEMPLATES["web-vanilla"].files["style.css"];
+      p.files["style.css"] = css;
+    }
+
+    html = resolveAssetsInCode(html, p.assets);
+    css = resolveAssetsInCode(css, p.assets);
+    js = resolveAssetsInCode(js, p.assets);
+
+    const cleanHtml = html
+      .replace(/<link\b[^>]*href=["'](?:\.\/)?style\.css["'][^>]*>/gi, "")
+      .replace(/<script\b[^>]*src=["'](?:\.\/)?script\.js["'][^>]*>\s*<\/script>/gi, "");
+
+    return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>${esc(p.name)} — Live Server</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>${css}</style>
+</head>
+<body data-live-rendered="1">
+  ${cleanHtml}
+  <div style="position:fixed;bottom:12px;right:12px;background:rgba(15,23,42,0.9);border:1px solid #10b981;color:#f8fafc;padding:4px 12px;border-radius:99px;font:700 11px Cairo,sans-serif;z-index:999999;display:flex;align-items:center;gap:6px;box-shadow:0 8px 20px rgba(0,0,0,0.5);">
+    <span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;box-shadow:0 0 8px #10b981;"></span>
+    <span>Live Server Connected</span>
+  </div>
+  <script>
+    try {
+      ${js}
+    } catch (err) {
+      console.error(err);
+    }
+  <\/script>
+</body>
+</html>`;
+  }
+
+  function writeToExternalLiveWindow() {
+    if (!liveExternalWindow || liveExternalWindow.closed) return;
+    try {
+      const fullDoc = buildFullStandaloneHTML();
+      liveExternalWindow.document.open();
+      liveExternalWindow.document.write(fullDoc);
+      liveExternalWindow.document.close();
+    } catch (e) {}
+  }
+
+  // فتح التبويب الخارجي مع مراقب حي يعيد رسم الموقع فوراً حتى لو ضغطت Refresh من كروم نفسه!
+  function openPersistentExternalLiveServer() {
     liveExternalWindow = window.open("about:blank", "MYLIFEOS_LIVE_SERVER_WIN");
     if (!liveExternalWindow) {
       return toast("⚠️ يرجى السماح بالنوافذ المنبثقة (Pop-ups)");
     }
 
-    const shellHtml = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>⚡ Live Server — ${esc(p.name)}</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { width: 100vw; height: 100vh; overflow: hidden; display: flex; flex-direction: column; background: #090d16; font-family: 'Cairo', system-ui, sans-serif; }
-    .live-bar { height: 30px; background: #111827; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 11.5px; color: #94a3b8; user-select: none; }
-    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 8px #10b981; margin-right: 6px; }
-    .live-btn { background: #1e293b; color: #f8fafc; border: 1px solid #334155; padding: 2px 10px; border-radius: 5px; font-family: inherit; font-size: 11px; cursor: pointer; }
-    .live-btn:hover { border-color: #d4a72c; color: #d4a72c; }
-    #vsc-live-server-frame { flex: 1; width: 100%; height: 100%; border: 0; background: #ffffff; }
-  </style>
-</head>
-<body>
-  <div class="live-bar">
-    <div><span class="live-dot"></span> <strong style="color:#fff;">Live Server Connected:</strong> <span id="sync-status">متصل بمحرر الأكواد لحظياً (أي تعديل في الكود يظهر هنا تلقائياً)</span></div>
-    <div style="display:flex; gap:8px; align-items:center;">
-      <button type="button" class="live-btn" id="btn-manual-refresh">🔄 تحديث يدوي (F5)</button>
-    </div>
-  </div>
-  <iframe id="vsc-live-server-frame" sandbox="allow-scripts allow-forms allow-modals allow-same-origin allow-popups"></iframe>
-  <script>
-    const frame = document.getElementById('vsc-live-server-frame');
-    const statusEl = document.getElementById('sync-status');
+    writeToExternalLiveWindow();
 
-    function loadLatestCode() {
-      const html = localStorage.getItem('__MYLIFEOS_LIVE_SERVER_HTML__') || '';
-      frame.srcdoc = html;
-      if (statusEl) statusEl.textContent = '✓ تم التحديث التلقائي الساعة ' + new Date().toLocaleTimeString();
-    }
-
-    loadLatestCode();
-
-    window.addEventListener('storage', (e) => {
-      if (e.key === '__MYLIFEOS_LIVE_SERVER_HTML__' || e.key === '__MYLIFEOS_LIVE_SERVER_TS__') {
-        loadLatestCode();
+    // المراقب الذكي: يفحص التبويب الخارجي كل 150ms؛ إذا ضغط المستخدم Refresh من كروم وأصبحت الصفحة بيضاء، يعيد حقن الكود والتنسيقات فوراً!
+    if (liveWatcherTimer) clearInterval(liveWatcherTimer);
+    liveWatcherTimer = setInterval(() => {
+      if (!liveExternalWindow || liveExternalWindow.closed) {
+        clearInterval(liveWatcherTimer);
+        return;
       }
-    });
-
-    if (typeof BroadcastChannel !== 'undefined') {
-      const ch = new BroadcastChannel('mylifeos_vsc_live_server');
-      ch.onmessage = (e) => {
-        if (e.data && e.data.html) {
-          frame.srcdoc = e.data.html;
-          if (statusEl) statusEl.textContent = '⚡ تحديث حي فوري الساعة ' + new Date().toLocaleTimeString();
+      try {
+        const body = liveExternalWindow.document?.body;
+        if (body && body.getAttribute("data-live-rendered") !== "1") {
+          writeToExternalLiveWindow();
         }
-      };
-    }
+      } catch (e) {}
+    }, 150);
 
-    document.getElementById('btn-manual-refresh').onclick = loadLatestCode;
-
-    // اعتراض F5 و Ctrl+R داخل الصفحة لتحديث الكود من المحرر بدلاً من تفريغ about:blank!
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r')) {
-        e.preventDefault();
-        loadLatestCode();
-      }
-    });
-  <\/script>
-</body>
-</html>`;
-
-    liveExternalWindow.document.open();
-    liveExternalWindow.document.write(shellHtml);
-    liveExternalWindow.document.close();
-    toast("📡 تم فتح Live Server الخارجي! عدّل أي كود هنا وسيتحدث هناك تلقائياً في نفس اللحظة!");
+    toast("📡 تم تشغيل Live Server الخارجي! جرب التعديل أو الضغط على Refresh من كروم وسيبقى ثابتاً دائماً!");
   }
 
-  // ربط الـ Live Server تلقائياً مع كل عملية تشغيل في المحرر
+  // تحديث التبويب الخارجي تلقائياً مع كل تعديل في الكود
   const _prevExec = executeWorkspace;
   executeWorkspace = function (mode = "project", notifyUser = false) {
     _prevExec(mode, notifyUser);
-    syncExternalLiveServerWindow();
+    if (liveExternalWindow && !liveExternalWindow.closed) {
+      writeToExternalLiveWindow();
+    }
   };
+
+  /* ==========================================================================
+     16. DEVELOPER PROFILE WIDGET IN BOTTOM-LEFT (PHOTO + NAME + MODAL)
+     ========================================================================== */
+  function renderBottomLeftDeveloperProfile() {
+    const prof = getDeveloperProfile();
+    const initials = (prof.name || "AH").replace(/^Eng:?/i, "").trim().slice(0, 2).toUpperCase() || "AH";
+
+    // 1. وضع الصورة الشخصية في أسفل الشريط الجانبي الأيسر (Activity Bar)
+    const actBar = document.querySelector(".vsc-activity-bar");
+    if (actBar) {
+      let avBtn = document.getElementById("btn-act-dev-profile");
+      if (!avBtn) {
+        avBtn = document.createElement("div");
+        avBtn.id = "btn-act-dev-profile";
+        avBtn.className = "vsc-act-avatar-btn";
+        avBtn.setAttribute("data-tip", `حساب المطور: ${prof.name} (اضغط لتغيير صورتك واسمك)`);
+        avBtn.onclick = openDeveloperProfileModal;
+        actBar.appendChild(avBtn);
+      }
+      avBtn.innerHTML = prof.avatar
+        ? `<img src="${prof.avatar}" alt="${esc(prof.name)}" />`
+        : `<span>${esc(initials)}</span>`;
+    }
+
+    // 2. وضع كبسولة الحساب (الصورة + الاسم) في أقصى يسار الشريط السفلي (Status Bar Left)
+    const stLeft = document.querySelector(".vsc-status-left");
+    if (stLeft) {
+      let pill = document.getElementById("st-dev-profile-pill");
+      if (!pill) {
+        pill = document.createElement("button");
+        pill.type = "button";
+        pill.id = "st-dev-profile-pill";
+        pill.className = "vsc-profile-status-pill";
+        pill.setAttribute("data-tip", "البيانات الشخصية وصورة الحساب (اضغط للتعديل)");
+        pill.onclick = openDeveloperProfileModal;
+        stLeft.prepend(pill);
+      }
+      pill.innerHTML = `
+        ${prof.avatar
+          ? `<img src="${prof.avatar}" class="vsc-profile-avatar-mini" alt="Avatar" />`
+          : `<span class="vsc-profile-avatar-mini">${esc(initials)}</span>`}
+        <span>${esc(prof.name)}</span>
+      `;
+    }
+
+    // تحديث الاسم في التوقيع السفلي الأوسط أيضاً
+    const centerName = document.querySelector(".neon-eng-name");
+    if (centerName) centerName.textContent = prof.name;
+  }
+
+  function openDeveloperProfileModal() {
+    const prof = getDeveloperProfile();
+    let tempAvatar = prof.avatar || "";
+
+    openUniversalModal("👤 الحساب الشخصي للمطور (Developer Account & Avatar)", `
+      <div style="display:flex; align-items:center; gap:14px; padding:10px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px;">
+        <div id="dev-modal-avatar-preview" style="width:64px; height:64px; border-radius:50%; border:2px solid var(--gold); overflow:hidden; display:grid; place-items:center; background:#111827; color:var(--gold); font-size:20px; font-weight:900; flex-shrink:0;">
+          ${tempAvatar ? `<img src="${tempAvatar}" style="width:100%;height:100%;object-fit:cover;" />` : "AH"}
+        </div>
+        <div style="flex:1;">
+          <strong style="color:#fff; font-size:14px; display:block;">${esc(prof.name)}</strong>
+          <small style="color:var(--gold); display:block; margin-bottom:6px;">${esc(prof.role)}</small>
+          <label class="vsc-btn-sm gold" style="cursor:pointer; display:inline-block;">
+            📷 اختر صورتك الشخصية من جهازك
+            <input type="file" id="inp-dev-avatar-file" accept="image/*" hidden />
+          </label>
+          ${tempAvatar ? `<button type="button" id="btn-remove-dev-avatar" class="vsc-btn-sm danger" style="margin-right:6px;">حذف الصورة</button>` : ""}
+        </div>
+      </div>
+
+      <div class="vsc-field" style="margin-top:8px;">
+        <label>اسم الحساب / المطور (يظهر أسفل يسار المحرر)</label>
+        <input type="text" id="inp-dev-name" value="${esc(prof.name)}" />
+      </div>
+      <div class="vsc-field">
+        <label>المسمى الوظيفي (Role / Title)</label>
+        <input type="text" id="inp-dev-role" value="${esc(prof.role)}" />
+      </div>
+
+      <button type="button" id="btn-save-dev-profile" class="vsc-btn-primary">💾 حفظ بيانات وصورة الحساب</button>
+    `);
+
+    document.getElementById("inp-dev-avatar-file")?.addEventListener("change", (e) => {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        tempAvatar = ev.target.result;
+        const prev = document.getElementById("dev-modal-avatar-preview");
+        if (prev) prev.innerHTML = `<img src="${tempAvatar}" style="width:100%;height:100%;object-fit:cover;" />`;
+      };
+      reader.readAsDataURL(f);
+    });
+
+    document.getElementById("btn-remove-dev-avatar")?.addEventListener("click", () => {
+      tempAvatar = "";
+      const prev = document.getElementById("dev-modal-avatar-preview");
+      if (prev) prev.innerHTML = "AH";
+    });
+
+    document.getElementById("btn-save-dev-profile")?.addEventListener("click", () => {
+      const newProf = {
+        name: document.getElementById("inp-dev-name")?.value.trim() || "Eng:Ahmed M Hosny",
+        role: document.getElementById("inp-dev-role")?.value.trim() || "Lead System Architect",
+        avatar: tempAvatar
+      };
+      saveDeveloperProfile(newProf);
+      renderBottomLeftDeveloperProfile();
+      closeUniversalModal();
+      toast("👤 تم تحديث اسم الحساب وصورتك الشخصية بنجاح!");
+    });
+  }
 
   // بناء شريط القوائم العلوي الكلاسيكي لـ VS Code + أزرار التحكم في النوافذ
   function injectVSCodeClassicMenusAndShortcuts() {
+    // التأكد من إخفاء الـ Split Editor الثاني افتراضياً عند فتح المحرر
+    const host2 = document.getElementById("vsc-editor-host-2");
+    if (host2 && !state.splitEditorOpen) host2.hidden = true;
+
     const leftBar = document.querySelector(".vsc-titlebar-left");
     const rightBar = document.querySelector(".vsc-titlebar-right");
 
-    // 1. حقن شريط القوائم (File | Edit | Selection | View | Go | Run | Terminal | Help)
     if (leftBar && !document.getElementById("vsc-menubar-strip")) {
       const menuStrip = document.createElement("div");
       menuStrip.id = "vsc-menubar-strip";
@@ -3167,7 +3281,7 @@ function openCustomThemeStudioModal() {
           { label: "🚀 مشروع جديد من القوالب (New Project)", kbd: "Ctrl+Shift+N", act: openNewProjectModal },
           { sep: true },
           { label: "💾 حفظ جميع الملفات (Save All)", kbd: "Ctrl+S", act: () => { saveState(); toast("💾 تم حفظ المشروع بالكامل!"); } },
-          { label: "🖼️ رفع صور وموارد للمشروع (Upload Assets)", kbd: "", act: () => document.getElementById("inp-upload-assets")?.click() },
+          { label: "🖼️ رفع صور للمشروع (Upload Assets)", kbd: "", act: () => document.getElementById("inp-upload-assets")?.click() },
           { label: "📦 تحميل المشروع كاملاً (.ZIP)", kbd: "", act: downloadProjectZip },
           { sep: true },
           { label: "🔄 استعادة القالب الأصلي (Reset Template)", kbd: "", act: () => document.getElementById("btn-reset-proj-tpl")?.click() },
@@ -3178,73 +3292,39 @@ function openCustomThemeStudioModal() {
           { label: "↪️ إعادة (Redo)", kbd: "Ctrl+Y", act: () => monacoEditor?.trigger("keyboard", "redo", null) },
           { sep: true },
           { label: "🔍 بحث داخل الملف (Find)", kbd: "Ctrl+F", act: () => monacoEditor?.getAction("actions.find")?.run() },
-          { label: "🔄 استبدال داخل الملف (Replace)", kbd: "Ctrl+H", act: () => monacoEditor?.getAction("editor.action.startFindReplaceAction")?.run() },
-          { label: "🌐 بحث شامل في كل الملفات", kbd: "Ctrl+Shift+F", act: () => { state.activeAct = "search"; document.getElementById("vsc-sidebar")?.classList.remove("collapsed"); renderSidebarByActivity(); } },
-          { sep: true },
-          { label: "✨ تنسيق وتنظيف الكود (Prettier Format)", kbd: "Alt+Shift+F", act: formatActiveCode },
-          { label: "⚡ إصلاح الأخطاء تلقائياً (Auto-Fix Code)", kbd: "", act: () => {
-              const p = curProj();
-              const fixed = buildAutoRepairedCode(getEditorCode(), getLangMeta(p.activeFile).lang, p.activeFile);
-              p.files[p.activeFile] = fixed;
-              setEditorCode(fixed, getLangMeta(p.activeFile).lang);
-              saveState();
-              executeWorkspace("project", true);
-              toast("⚡ تم فحص وإصلاح الأخطاء تلقائياً!");
-            }
-          }
+          { label: "🔄 استبدال (Replace)", kbd: "Ctrl+H", act: () => monacoEditor?.getAction("editor.action.startFindReplaceAction")?.run() },
+          { label: "✨ تنسيق الكود (Prettier Format)", kbd: "Alt+Shift+F", act: formatActiveCode }
         ],
         Selection: [
           { label: "تحديد الكل (Select All)", kbd: "Ctrl+A", act: () => monacoEditor?.setSelection(monacoEditor.getModel().getFullModelRange()) },
           { label: "نسخ السطر للأسفل (Copy Line Down)", kbd: "Shift+Alt+↓", act: () => monacoEditor?.getAction("editor.action.copyLinesDownAction")?.run() },
-          { label: "تحريك السطر للأعلى (Move Line Up)", kbd: "Alt+↑", act: () => monacoEditor?.getAction("editor.action.moveLinesUpAction")?.run() },
-          { label: "تعليق / إلغاء تعليق السطر (Toggle Comment)", kbd: "Ctrl+/", act: () => monacoEditor?.getAction("editor.action.commentLine")?.run() }
+          { label: "تعليق السطر (Toggle Comment)", kbd: "Ctrl+/", act: () => monacoEditor?.getAction("editor.action.commentLine")?.run() }
         ],
         View: [
           { label: "⌘ لوحة الأوامر الشاملة (Command Palette)", kbd: "Ctrl+Shift+P", act: openCommandPaletteModal },
           { sep: true },
           { label: "📁 مستكشف الملفات (Explorer)", kbd: "Ctrl+Shift+E", act: () => { state.activeAct = "explorer"; document.getElementById("vsc-sidebar")?.classList.remove("collapsed"); renderSidebarByActivity(); } },
-          { label: "🌿 إدارة المصدر (Git Source Control)", kbd: "Ctrl+Shift+G", act: () => { state.activeAct = "git"; document.getElementById("vsc-sidebar")?.classList.remove("collapsed"); renderSidebarByActivity(); } },
-          { label: "🤖 مساعد الذكاء الاصطناعي (AI Assistant)", kbd: "", act: () => { state.activeAct = "ai"; document.getElementById("vsc-sidebar")?.classList.remove("collapsed"); renderSidebarByActivity(); } },
-          { label: "🗄️ مستكشف قواعد البيانات (Database)", kbd: "", act: () => { state.activeAct = "database"; document.getElementById("vsc-sidebar")?.classList.remove("collapsed"); renderSidebarByActivity(); } },
-          { sep: true },
-          { label: "◫ تقسيم محرر الأكواد (Split Editor)", kbd: "Ctrl+\\", act: toggleSplitEditor },
-          { label: "🗺️ إظهار/إخفاء الخريطة المصغرة (Minimap)", kbd: "", act: () => document.getElementById("btn-toggle-minimap")?.click() },
-          { label: "🎯 وضع التركيز الكامل (Zen Focus Mode)", kbd: "", act: () => applyWorkspaceLayout("focus") },
-          { label: "🌐 وضع تطوير الويب المقسوم (Split Web Dev)", kbd: "", act: () => applyWorkspaceLayout("web-dev") }
+          { label: "🌿 إدارة المصدر (Git)", kbd: "Ctrl+Shift+G", act: () => { state.activeAct = "git"; document.getElementById("vsc-sidebar")?.classList.remove("collapsed"); renderSidebarByActivity(); } },
+          { label: "◫ تقسيم المحرر (Split Editor)", kbd: "Ctrl+\\", act: toggleSplitEditor }
         ],
         Go: [
           { label: "📂 انتقال سريع لملف (Go to File...)", kbd: "Ctrl+P", act: openCommandPaletteModal },
-          { label: "🔢 انتقال إلى سطر محدد (Go to Line...)", kbd: "Ctrl+G", act: () => {
-              const ln = Number(prompt("🔢 اكتب رقم السطر للانتقال إليه:", "1"));
-              if (ln > 0 && monacoEditor) {
-                monacoEditor.revealLineInCenter(ln);
-                monacoEditor.setPosition({ lineNumber: ln, column: 1 });
-                monacoEditor.focus();
-              }
-            }
-          },
-          { label: "⚠️ الانتقال إلى لوحة المشكلات (Problems)", kbd: "F8", act: () => activateBottomTab("problems") }
+          { label: "⚠️ لوحة المشكلات والأخطاء (Problems)", kbd: "F8", act: () => activateBottomTab("problems") }
         ],
         Run: [
-          { label: "▶ تشغيل المشروع وتحديث المعاينة", kbd: "Ctrl+Enter", act: () => executeWorkspace("project", true) },
-          { label: "📡 فتح المعاينة الحية في تبويب مستقل (Live Server)", kbd: "", act: openPersistentExternalLiveServer },
-          { sep: true },
-          { label: "🐞 بدء التصحيح وتتبع المتغيرات (Start Debugging)", kbd: "F5", act: () => document.getElementById("btn-start-debug")?.click() },
-          { label: "🧪 تشغيل جميع الاختبارات (Run Unit Tests)", kbd: "", act: () => { state.activeAct = "testing"; document.getElementById("vsc-sidebar")?.classList.remove("collapsed"); renderSidebarByActivity(); } }
+          { label: "▶ تشغيل المشروع الآن", kbd: "Ctrl+Enter", act: () => executeWorkspace("project", true) },
+          { label: "📡 فتح المعاينة الحية في تبويب مستقل (Go Live)", kbd: "", act: openPersistentExternalLiveServer },
+          { label: "🐞 بدء التصحيح (Start Debugging)", kbd: "F5", act: () => document.getElementById("btn-start-debug")?.click() }
         ],
         Terminal: [
-          { label: "›_ إظهار / إخفاء الطرفية (Toggle Terminal)", kbd: "Ctrl+`", act: () => document.getElementById("vsc-bottom-panel")?.classList.toggle("hidden-panel") },
-          { label: "🧹 مسح سجل الطرفية (Clear Terminal)", kbd: "", act: () => document.getElementById("btn-clear-bottom")?.click() },
-          { sep: true },
-          { label: "🐧 التبديل إلى Bash — Linux/Git", kbd: "", act: () => { const s = document.getElementById("sel-term-profile"); if (s) { s.value = "bash"; s.dispatchEvent(new Event("change")); } activateBottomTab("terminal"); } },
-          { label: "🟢 التبديل إلى Node.js Interactive REPL", kbd: "", act: () => { const s = document.getElementById("sel-term-profile"); if (s) { s.value = "js"; s.dispatchEvent(new Event("change")); } activateBottomTab("terminal"); } },
-          { label: "🐍 التبديل إلى Python 3 Interactive", kbd: "", act: () => { const s = document.getElementById("sel-term-profile"); if (s) { s.value = "py"; s.dispatchEvent(new Event("change")); } activateBottomTab("terminal"); } }
+          { label: "›_ إظهار / إخفاء الطرفية", kbd: "Ctrl+`", act: () => document.getElementById("vsc-bottom-panel")?.classList.toggle("hidden-panel") },
+          { label: "🧹 مسح سجل الطرفية", kbd: "", act: () => document.getElementById("btn-clear-bottom")?.click() }
         ],
         Help: [
-          { label: "📦 مدير مكتبات الـ CDN السريع (Tailwind / Bootstrap)", kbd: "", act: openCDNPackageManagerModal },
-          { label: "🎨 استوديو التصميم البصري (CSS Glassmorphism)", kbd: "", act: openCSSVisualGeneratorModal },
-          { label: "🌐 فاحص الـ APIs المدمج (Thunder REST Client)", kbd: "", act: openRestApiTesterModal },
-          { label: "⚙️ إعدادات المحرر والثيم المخصص", kbd: "Ctrl+,", act: openSettingsCenterModal }
+          { label: "👤 تعديل اسم وصورة الحساب الشخصي", kbd: "", act: openDeveloperProfileModal },
+          { label: "📦 مدير مكتبات الـ CDN السريع", kbd: "", act: openCDNPackageManagerModal },
+          { label: "🎨 استوديو التصميم البصري (CSS Studio)", kbd: "", act: openCSSVisualGeneratorModal },
+          { label: "🌐 فاحص الـ APIs المدمج", kbd: "", act: openRestApiTesterModal }
         ]
       };
 
@@ -3280,23 +3360,22 @@ function openCustomThemeStudioModal() {
       leftBar.insertBefore(menuStrip, document.getElementById("btn-title-project-switcher"));
     }
 
-    // 2. حقن أزرار تقسيم النوافذ في أقصى يمين الشريط العلوي (مثل VS Code بالضبط) + كبسولة Go Live
     if (rightBar && !document.getElementById("vsc-win-toggles")) {
       const winToggles = document.createElement("div");
       winToggles.id = "vsc-win-toggles";
       winToggles.className = "vsc-window-layout-toggles";
       winToggles.innerHTML = `
-        <button type="button" id="btn-top-go-live" class="vsc-live-server-pill" data-tip="فتح الموقع في تبويب خارجي متزامن لحظياً (Live Server Hot-Reload)">
+        <button type="button" id="btn-top-go-live" class="vsc-live-server-pill" data-tip="فتح الموقع في تبويب خارجي متزامن لحظياً ومقاوم للـ Refresh (Live Server)">
           <i class="fa-solid fa-tower-broadcast"></i>
           <span>Go Live</span>
         </button>
-        <button type="button" id="btn-win-toggle-side" class="vsc-icon-btn active-emerald" data-tip="إظهار/إخفاء القائمة الجانبية اليسرى (Toggle Primary Side Bar Ctrl+B)">
+        <button type="button" id="btn-win-toggle-side" class="vsc-icon-btn active-emerald" data-tip="إظهار/إخفاء القائمة الجانبية اليسرى">
           <i class="fa-solid fa-table-columns"></i>
         </button>
-        <button type="button" id="btn-win-toggle-panel" class="vsc-icon-btn active-emerald" data-tip="إظهار/إخفاء لوحة الـ Terminal بالأسفل (Toggle Panel Ctrl+J)">
+        <button type="button" id="btn-win-toggle-panel" class="vsc-icon-btn active-emerald" data-tip="إظهار/إخفاء لوحة الـ Terminal بالأسفل">
           <i class="fa-solid fa-window-maximize" style="transform:rotate(180deg);"></i>
         </button>
-        <button type="button" id="btn-win-toggle-preview" class="vsc-icon-btn active-emerald" data-tip="إظهار/إخفاء شاشة المعاينة اليمنى (Toggle Live Preview Pane)">
+        <button type="button" id="btn-win-toggle-preview" class="vsc-icon-btn active-emerald" data-tip="إظهار/إخفاء شاشة المعاينة اليمنى">
           <i class="fa-solid fa-desktop"></i>
         </button>
       `;
@@ -3330,13 +3409,14 @@ function openCustomThemeStudioModal() {
       });
     }
 
-    // ربط زر الفتح الخارجي الموجود في شريط المعاينة بنفس نظام الـ Live Server المتزامن
     const extBtn = document.getElementById("btn-prev-external");
     if (extBtn) {
       const clone = extBtn.cloneNode(true);
       extBtn.parentNode.replaceChild(clone, extBtn);
       clone.addEventListener("click", openPersistentExternalLiveServer);
     }
+
+    renderBottomLeftDeveloperProfile();
   }
 
   if (document.readyState === "loading") {
