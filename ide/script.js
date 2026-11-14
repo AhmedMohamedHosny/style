@@ -2718,9 +2718,325 @@ function openCustomThemeStudioModal() {
     executeWorkspace("project", false);
   }
 
+/* ==========================================================================
+     14. SUPER UPGRADE PACK:
+         1) إخفاء اسم حساب GitHub تماماً عند فتح المعاينة في موقع خارجي (Privacy Stream)
+         2) استعادة تنسيقات style.css تلقائياً ومنع اختفاء النصوص في المعاينة
+         3) تحويل Inline AI لمولد أكواد حقيقي (وضع ليلي، نافبار، كروت، فورم، جدول) مع قبول/رفض
+         4) مدير مكتبات CDN بضغطة زر (Tailwind, Bootstrap, Chart.js, Three.js, GSAP, SweetAlert)
+         5) صانع التصميم البصري الحي (CSS Glassmorphism & Gradient Studio)
+         6) تفعيل الـ Terminal التفاعلي لـ (Node.js REPL & Python Interactive)
+     ========================================================================== */
+  let inlineAIBackupCode = null;
+
+  function initSuperIDEUpgrades() {
+    const p = curProj();
+
+    // 1. إذا كان ملف style.css في المشروع الافتراضي قد فُرغ بالخطأ، نستعيده فوراً لتعمل الألوان والتصميم!
+    if (p.id === "proj_default" && (!p.files["style.css"] || p.files["style.css"].trim().length < 15)) {
+      p.files["style.css"] = PROJECT_TEMPLATES["web-vanilla"].files["style.css"];
+      saveState();
+      if (p.activeFile === "style.css") {
+        setEditorCode(p.files["style.css"], "css");
+      }
+    }
+
+    // تنظيف تعليق AI الوهمي القديم إن وجد في أول سطر
+    if (p.files["index.html"] && p.files["index.html"].startsWith("<!-- AI Applied:")) {
+      p.files["index.html"] = p.files["index.html"].replace(/^<!-- AI Applied:.*?-->\n?/i, "");
+      saveState();
+      if (p.activeFile === "index.html") setEditorCode(p.files["index.html"], "html");
+    }
+
+    // 2. استبدال زر الفتح الخارجي (#btn-prev-external) ليفتح بدون ظهور اسمك على GitHub نهائياً!
+    const oldExtBtn = document.getElementById("btn-prev-external");
+    if (oldExtBtn) {
+      const newExtBtn = oldExtBtn.cloneNode(true);
+      oldExtBtn.parentNode.replaceChild(newExtBtn, oldExtBtn);
+      newExtBtn.setAttribute("data-tip", "فتح المعاينة في نافذة مستقلة بخصوصية تامة (بدون إظهار رابط GitHub)");
+      newExtBtn.addEventListener("click", () => {
+        const frame = document.getElementById("vsc-preview-iframe");
+        const compiledHtml = frame?.srcdoc || "";
+        const win = window.open("about:blank", "_blank");
+        if (!win) {
+          return toast("⚠️ يرجى السماح بالنوافذ المنبثقة (Pop-ups) لفتح المعاينة");
+        }
+        win.document.open();
+        win.document.write(compiledHtml);
+        win.document.close();
+        toast("🔒 تم فتح المعاينة الخارجية بخصوصية تامة (بدون ظهور رابط GitHub)!");
+      });
+    }
+
+    // 3. إضافة أزرار الأدوات الخارقة الجديدة في الشريط العلوي (مكتبات CDN + صانع الـ CSS + استعادة القالب)
+    const rightBar = document.querySelector(".vsc-titlebar-right");
+    if (rightBar && !document.getElementById("btn-cdn-manager")) {
+      rightBar.insertAdjacentHTML("afterbegin", `
+        <button type="button" id="btn-cdn-manager" class="vsc-icon-btn" data-tip="إدراج مكتبات عالمية بضغطة زر (Tailwind, Bootstrap, Chart.js, GSAP, SweetAlert)">
+          <i class="fa-solid fa-cubes-stacked gold-icon"></i>
+        </button>
+        <button type="button" id="btn-css-visual-studio" class="vsc-icon-btn" data-tip="استوديو تصميم الكروت الزجاجية والتدرجات والظلال (CSS Visual Generator)">
+          <i class="fa-solid fa-swatchbook emerald-icon"></i>
+        </button>
+        <button type="button" id="btn-reset-proj-tpl" class="vsc-icon-btn" data-tip="استعادة الملفات والتنسيقات الأصلية للمشروع (Reset Template)">
+          <i class="fa-solid fa-rotate" style="color:#38bdf8;"></i>
+        </button>
+      `);
+
+      document.getElementById("btn-cdn-manager")?.addEventListener("click", openCDNPackageManagerModal);
+      document.getElementById("btn-css-visual-studio")?.addEventListener("click", openCSSVisualGeneratorModal);
+      document.getElementById("btn-reset-proj-tpl")?.addEventListener("click", () => {
+        if (!confirm("هل تريد استعادة ملفات وتنسيقات القالب الأصلي لهذا المشروع؟")) return;
+        const cur = curProj();
+        const tpl = PROJECT_TEMPLATES["web-vanilla"];
+        cur.files = JSON.parse(JSON.stringify(tpl.files));
+        cur.activeFile = "index.html";
+        saveState();
+        switchActiveFile("index.html");
+        toast("🔄 تمت استعادة ملفات وتنسيقات المشروع الأصلية بالكامل!");
+      });
+    }
+
+    // 4. ترقية Inline AI ليولد كوداً حقيقياً مع زري (✓ قبول التعديل / ✕ رفض واسترجاع)
+    const oldAiRun = document.getElementById("btn-inline-ai-run");
+    const btnAccept = document.getElementById("btn-inline-ai-accept");
+    const btnReject = document.getElementById("btn-inline-ai-reject");
+
+    if (oldAiRun) {
+      const newAiRun = oldAiRun.cloneNode(true);
+      oldAiRun.parentNode.replaceChild(newAiRun, oldAiRun);
+
+      newAiRun.addEventListener("click", () => {
+        const promptVal = (document.getElementById("inp-inline-ai-prompt")?.value || "").trim();
+        if (!promptVal) return toast("✍️ اكتب طلبك للـ AI أولاً!");
+
+        const cur = curProj();
+        inlineAIBackupCode = JSON.parse(JSON.stringify(cur.files));
+
+        applySmartInlineAITransform(cur, promptVal);
+        saveState();
+        setEditorCode(cur.files[cur.activeFile], getLangMeta(cur.activeFile).lang);
+        executeWorkspace("project", true);
+
+        if (btnAccept) btnAccept.hidden = false;
+        if (btnReject) btnReject.hidden = false;
+        toast("✨ تم توليد وتطبيق الكود الذكي! يمكنك قبوله (✓) أو التراجع عنه (✕)");
+      });
+    }
+
+    if (btnAccept) {
+      btnAccept.onclick = () => {
+        inlineAIBackupCode = null;
+        btnAccept.hidden = true;
+        if (btnReject) btnReject.hidden = true;
+        document.getElementById("vsc-inline-ai-bar").hidden = true;
+        toast("✅ تم اعتماد تعديلات الذكاء الاصطناعي!");
+      };
+    }
+
+    if (btnReject) {
+      btnReject.onclick = () => {
+        if (inlineAIBackupCode) {
+          const cur = curProj();
+          cur.files = JSON.parse(JSON.stringify(inlineAIBackupCode));
+          saveState();
+          setEditorCode(cur.files[cur.activeFile], getLangMeta(cur.activeFile).lang);
+          executeWorkspace("project", true);
+        }
+        inlineAIBackupCode = null;
+        btnReject.hidden = true;
+        if (btnAccept) btnAccept.hidden = true;
+        toast("↩️ تم إلغاء التعديل واسترجاع الكود السابق!");
+      };
+    }
+
+    // 5. دعم تنفيذ أوامر JavaScript و Python الحية مباشرة في الـ Terminal عند تغيير نوع الـ Shell
+    const termInp = document.getElementById("inp-terminal-cmd");
+    const profileSel = document.getElementById("sel-term-profile");
+    if (profileSel) {
+      profileSel.addEventListener("change", () => {
+        const mode = profileSel.value;
+        const lbl = document.getElementById("term-prompt-lbl");
+        if (lbl) {
+          lbl.textContent = mode === "js" ? "node (JS REPL) >" : mode === "py" ? "python3 >>>" : mode === "pwsh" ? "PS C:\\Workspace>" : "ahmed@mylifeos:~/workspace$";
+        }
+        toast(`💻 تم التبديل إلى بيئة: ${profileSel.options[profileSel.selectedIndex].text}`);
+      });
+    }
+
+    if (termInp) {
+      termInp.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        const mode = document.getElementById("sel-term-profile")?.value || "bash";
+        if (mode !== "js" && mode !== "py") return;
+      });
+    }
+  }
+
+  // محول ومولد الأكواد الذكي للـ Inline AI
+  function applySmartInlineAITransform(proj, promptText) {
+    const q = promptText.toLowerCase();
+    let html = proj.files["index.html"] || "";
+    let css = proj.files["style.css"] || "";
+    let js = proj.files["script.js"] || "";
+
+    if (q.includes("ليلي") || q.includes("ثيم") || q.includes("dark") || q.includes("theme")) {
+      if (!html.includes("btn-theme-switch")) {
+        html = html.replace(/<\/body>/i, `  <button id="btn-theme-switch" style="position:fixed;top:18px;left:18px;padding:8px 16px;border-radius:99px;border:1px solid #d4a72c;background:#111827;color:#d4a72c;font-weight:800;cursor:pointer;z-index:999;">🌓 تبديل الوضع الليلي/النهاري</button>\n</body>`);
+      }
+      css += `\nbody.light-theme-active {\n  background: #f8fafc !important;\n  color: #0f172a !important;\n}\nbody.light-theme-active .hero-box {\n  background: #ffffff !important;\n  color: #0f172a !important;\n  box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;\n}\n`;
+      js += `\ndocument.getElementById("btn-theme-switch")?.addEventListener("click", () => {\n  document.body.classList.toggle("light-theme-active");\n});\n`;
+    } else if (q.includes("نافبار") || q.includes("قائمة") || q.includes("nav") || q.includes("header")) {
+      const navHtml = `\n  <header class="ai-navbar">\n    <div class="logo">🚀 Eng:Ahmed M Hosny</div>\n    <nav class="nav-links">\n      <a href="#home">الرئيسية</a>\n      <a href="#projects">المشاريع</a>\n      <a href="#contact">تواصل معي</a>\n    </nav>\n  </header>\n`;
+      html = html.replace(/<body([^>]*)>/i, `<body$1>${navHtml}`);
+      css += `\n.ai-navbar { position:fixed; top:0; left:0; right:0; height:60px; background:rgba(15,23,42,0.92); border-bottom:1px solid rgba(212,167,44,0.35); display:flex; align-items:center; justify-content:space-between; padding:0 28px; backdrop-filter:blur(10px); z-index:100; }\n.ai-navbar .logo { color:#d4a72c; font-weight:800; font-size:16px; }\n.ai-navbar .nav-links { display:flex; gap:18px; }\n.ai-navbar .nav-links a { color:#f8fafc; text-decoration:none; font-weight:700; font-size:13px; }\n.ai-navbar .nav-links a:hover { color:#10b981; }\n`;
+    } else if (q.includes("فورم") || q.includes("تواصل") || q.includes("تسجيل") || q.includes("form")) {
+      const formHtml = `\n  <form class="ai-contact-form" onsubmit="event.preventDefault(); alert('✅ تم إرسال رسالتك بنجاح!');">\n    <h3>📩 تواصل معنا</h3>\n    <input type="text" placeholder="الاسم الكامل" required />\n    <input type="email" placeholder="البريد الإلكتروني" required />\n    <textarea rows="3" placeholder="اكتب رسالتك هنا..."></textarea>\n    <button type="submit">إرسال الرسالة 🚀</button>\n  </form>\n`;
+      html = html.replace(/<\/body>/i, `${formHtml}</body>`);
+      css += `\n.ai-contact-form { background:rgba(17,25,44,0.95); border:1px solid #d4a72c; border-radius:16px; padding:22px; max-width:420px; margin:20px auto; display:flex; flex-direction:column; gap:10px; }\n.ai-contact-form input, .ai-contact-form textarea { padding:10px; border-radius:8px; border:1px solid #334155; background:#090d16; color:#fff; font-family:inherit; }\n`;
+    } else if (q.includes("جدول") || q.includes("table")) {
+      const tblHtml = `\n  <table class="ai-data-table">\n    <thead><tr><th>المشروع</th><th>التقنية</th><th>الحالة</th></tr></thead>\n    <tbody>\n      <tr><td>MY LIFE OS</td><td>Full-Stack JS</td><td>مكتمل ✅</td></tr>\n      <tr><td>Universal IDE</td><td>Monaco & Wasm</td><td>نشط 🚀</td></tr>\n    </tbody>\n  </table>\n`;
+      html = html.replace(/<\/body>/i, `${tblHtml}</body>`);
+      css += `\n.ai-data-table { width:90%; max-width:480px; margin:20px auto; border-collapse:collapse; background:#111827; border-radius:12px; overflow:hidden; }\n.ai-data-table th, .ai-data-table td { padding:10px 14px; border:1px solid #1e293b; text-align:center; }\n.ai-data-table th { background:#d4a72c; color:#000; }\n`;
+    } else {
+      const customBox = `\n  <section class="ai-custom-sec">\n    <h3>✨ ${esc(promptText)}</h3>\n    <p>تم توليد هذا القسم الذكي تلقائياً بواسطة مساعد Universal IDE.</p>\n  </section>\n`;
+      html = html.replace(/<\/body>/i, `${customBox}</body>`);
+      css += `\n.ai-custom-sec { background:rgba(16,185,129,0.12); border:1.5px solid #10b981; border-radius:16px; padding:20px; max-width:460px; margin:18px auto; text-align:center; }\n`;
+    }
+
+    proj.files["index.html"] = html;
+    proj.files["style.css"] = css;
+    proj.files["script.js"] = js;
+  }
+
+  // نافذة مدير مكتبات الـ CDN بضغطة زر واحدة
+  function openCDNPackageManagerModal() {
+    const libs = [
+      { id: "tailwind", name: "Tailwind CSS 3.4", desc: "إطار عمل تنسيقات CSS السريع بالكلاسات الجاهزة", tag: `<script src="https://cdn.tailwindcss.com"><\/script>` },
+      { id: "bootstrap", name: "Bootstrap 5.3 RTL", desc: "مكتبة المكونات والشبكات المتجاوبة الكاملة", tag: `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">` },
+      { id: "fontawesome", name: "Font Awesome 6.5 Icons", desc: "أكثر من 2000 أيقونة احترافية جاهزة", tag: `<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">` },
+      { id: "sweetalert", name: "SweetAlert2", desc: "نوافذ تنبيه منبثقة تفاعلية فخمة (Swal.fire)", tag: `<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"><\/script>` },
+      { id: "chartjs", name: "Chart.js 4", desc: "رسوم بيانية وإحصائيات تفاعلية متحركة", tag: `<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>` },
+      { id: "gsap", name: "GSAP Animation Engine", desc: "أقوى محرك تحريك وأنيميشن للواجهات", tag: `<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>` },
+      { id: "threejs", name: "Three.js 3D WebGL", desc: "بناء المشاهد والرسومات ثلاثية الأبعاد 3D", tag: `<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>` },
+      { id: "axios", name: "Axios HTTP Client", desc: "مكتبة طلبات الشبكة والـ APIs السريعة", tag: `<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"><\/script>` }
+    ];
+
+    openUniversalModal("📦 مدير المكتبات والحزم السريع (1-Click CDN Package Injector)", `
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px;">
+        اختر أي مكتبة عالمية ليتم حقنها تلقائياً داخل <code>&lt;head&gt;</code> في ملف <code>index.html</code> وتعمل معك فوراً:
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;max-height:330px;overflow-y:auto;">
+        ${libs.map((l, idx) => `
+          <div class="vsc-asset-row" style="padding:10px;">
+            <div>
+              <strong style="color:var(--gold);font-size:12.5px;display:block;">📦 ${esc(l.name)}</strong>
+              <small style="color:var(--text);font-size:11px;">${esc(l.desc)}</small>
+            </div>
+            <button type="button" class="vsc-btn-sm emerald" data-inject-cdn="${idx}">+ تثبيت في المشروع</button>
+          </div>
+        `).join("")}
+      </div>
+    `);
+
+    document.querySelectorAll("[data-inject-cdn]").forEach(btn => {
+      btn.onclick = () => {
+        const lib = libs[Number(btn.dataset.injectCdn)];
+        const p = curProj();
+        let html = p.files["index.html"] || "";
+        if (html.includes(lib.tag)) {
+          return toast(`ℹ️ مكتبة ${lib.name} مضافة بالفعل في المشروع!`);
+        }
+        if (/<\/head>/i.test(html)) {
+          html = html.replace(/<\/head>/i, `  ${lib.tag}\n</head>`);
+        } else {
+          html = `${lib.tag}\n${html}`;
+        }
+        p.files["index.html"] = html;
+        saveState();
+        if (p.activeFile === "index.html") setEditorCode(html, "html");
+        executeWorkspace("project", true);
+        closeUniversalModal();
+        toast(`✅ تم تثبيت وتفعيل مكتبة ${lib.name} في مشروعك!`);
+      };
+    });
+  }
+
+  // استوديو التصميم البصري الحي لتوليد كود الـ CSS (Glassmorphism & Gradient Studio)
+  function openCSSVisualGeneratorModal() {
+    openUniversalModal("🎨 استوديو التصميم البصري وتوليد الـ CSS (Glassmorphism & Gradient Studio)", `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="vsc-field">
+          <label>درجة التمويه الزجاجي (Blur px)</label>
+          <input type="range" id="css-gen-blur" min="0" max="30" value="14" />
+        </div>
+        <div class="vsc-field">
+          <label>شفافية الكارت (Opacity %)</label>
+          <input type="range" id="css-gen-alpha" min="5" max="95" value="20" />
+        </div>
+        <div class="vsc-field">
+          <label>تدوير الحواف (Border Radius px)</label>
+          <input type="range" id="css-gen-radius" min="0" max="40" value="20" />
+        </div>
+        <div class="vsc-field">
+          <label>لون الإطار المتوهج</label>
+          <input type="color" id="css-gen-color" value="#d4a72c" style="height:34px;" />
+        </div>
+      </div>
+
+      <div id="css-gen-preview-box" style="margin:10px 0;padding:22px;text-align:center;background:rgba(255,255,255,0.2);backdrop-filter:blur(14px);border:1.5px solid #d4a72c;border-radius:20px;color:#fff;font-weight:800;">
+        ✨ معاينة حية للكارت الزجاجي (Glassmorphism Preview)
+      </div>
+
+      <pre id="css-gen-code-out" dir="ltr" style="background:#070a12;border:1px solid var(--border);padding:10px;border-radius:8px;font-family:monospace;font-size:11.5px;color:#4ade80;text-align:left;"></pre>
+
+      <button type="button" id="btn-inject-gen-css" class="vsc-btn-primary">➕ إضافة هذا التصميم إلى ملف style.css وتطبيقه فوراً</button>
+    `);
+
+    const updateGen = () => {
+      const blur = document.getElementById("css-gen-blur")?.value || 14;
+      const alpha = (Number(document.getElementById("css-gen-alpha")?.value || 20) / 100).toFixed(2);
+      const rad = document.getElementById("css-gen-radius")?.value || 20;
+      const col = document.getElementById("css-gen-color")?.value || "#d4a72c";
+
+      const prev = document.getElementById("css-gen-preview-box");
+      const codeOut = document.getElementById("css-gen-code-out");
+      const cssRule = `.hero-box, .glass-card {\n  background: rgba(17, 25, 44, ${alpha});\n  backdrop-filter: blur(${blur}px);\n  -webkit-backdrop-filter: blur(${blur}px);\n  border: 1.5px solid ${col};\n  border-radius: ${rad}px;\n  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);\n}`;
+
+      if (prev) {
+        prev.style.background = `rgba(17, 25, 44, ${alpha})`;
+        prev.style.backdropFilter = `blur(${blur}px)`;
+        prev.style.borderRadius = `${rad}px`;
+        prev.style.borderColor = col;
+      }
+      if (codeOut) codeOut.textContent = cssRule;
+      return cssRule;
+    };
+
+    ["css-gen-blur", "css-gen-alpha", "css-gen-radius", "css-gen-color"].forEach(id => {
+      document.getElementById(id)?.addEventListener("input", updateGen);
+    });
+    updateGen();
+
+    document.getElementById("btn-inject-gen-css")?.addEventListener("click", () => {
+      const rule = updateGen();
+      const p = curProj();
+      p.files["style.css"] = (p.files["style.css"] || "") + "\n\n" + rule;
+      saveState();
+      if (p.activeFile === "style.css") setEditorCode(p.files["style.css"], "css");
+      executeWorkspace("project", true);
+      closeUniversalModal();
+      toast("🎨 تم حقن التصميم الزجاجي في style.css وتحديث المعاينة!");
+    });
+  }
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", bootUniversalIDE);
+    document.addEventListener("DOMContentLoaded", () => {
+      bootUniversalIDE();
+      setTimeout(initSuperIDEUpgrades, 150);
+    });
   } else {
     bootUniversalIDE();
+    setTimeout(initSuperIDEUpgrades, 150);
   }
 })();
