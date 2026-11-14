@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CodeMasr Studio — Eng:Ahmed M Hosny</title>
+  <title>MY LIFE OS — Universal IDE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -12,242 +12,435 @@
 </head>
 <body data-ide-theme="vscode-dark">
 
-  <!-- 1. TOP TITLE BAR (PURE ICONS WITH HOVER TOOLTIPS) -->
+  <!-- ======================= A. TITLE BAR ======================= -->
   <header class="vsc-titlebar">
     <div class="vsc-titlebar-left">
       <a href="../index.html" class="vsc-icon-btn back-os-btn" data-tip="العودة إلى منظومة حياتي (MY LIFE OS)">
         <i class="fa-solid fa-arrow-left"></i>
       </a>
-      <div class="vsc-logo-badge" data-tip="Visual Studio Code Pro — Multi-Language IDE">
+      <div class="vsc-logo-badge" data-tip="MY LIFE OS — Next-Gen Universal IDE">
         <i class="fa-solid fa-code"></i>
       </div>
-      <!-- كبسولة المشروع المفتوح والتبديل السريع -->
-      <div class="vsc-project-pill" id="btn-open-project-switcher" data-tip="اضغط للتبديل بين مشاريعك أو تعديل بيانات المشروع الحالي">
+
+      <!-- Project Switcher Pill -->
+      <div class="vsc-project-pill" id="btn-title-project-switcher" data-tip="تبديل المشروع أو إنشاء مشروع جديد (Project Manager)">
         <i class="fa-solid fa-folder-tree gold-icon"></i>
-        <strong id="top-proj-name">مشروعي</strong>
+        <strong id="top-proj-name">Project</strong>
         <span id="top-proj-type" class="vsc-mini-tag">Web</span>
-        <i class="fa-solid fa-chevron-down" style="font-size:10px; opacity:0.7;"></i>
+        <i class="fa-solid fa-chevron-down" style="font-size:9px; opacity:0.7;"></i>
       </div>
-      <button type="button" id="btn-new-project-wizard" class="vsc-icon-btn" data-tip="إنشاء مشروع جديد (تحديد الاسم، النوع، والوصف)">
+
+      <button type="button" id="btn-new-project-modal" class="vsc-icon-btn" data-tip="إنشاء مشروع جديد من 14 قالباً جاهزاً (+ New Project)">
         <i class="fa-solid fa-folder-plus gold-icon"></i>
       </button>
     </div>
 
-    <!-- أزرار التحكم الوسطى: التشغيل التلقائي + التشغيل اليدوي + تقسيم الشاشة -->
+    <!-- Command Center & Execution Controls -->
     <div class="vsc-titlebar-center">
-      <button type="button" id="btn-toggle-autorun" class="vsc-icon-btn active-emerald" data-tip="التشغيل التلقائي الفوري أثناء الكتابة (Auto-Run: ON)">
-        <i class="fa-solid fa-bolt"></i>
-      </button>
-      <button type="button" id="btn-run-code" class="vsc-run-pill" data-tip="تشغيل وفحص الكود الآن (Ctrl + Enter)">
-        <i class="fa-solid fa-play"></i>
-        <span>Run</span>
+      <button type="button" id="btn-command-palette" class="vsc-command-bar" data-tip="فتح لوحة الأوامر الشاملة والبحث السريع (Ctrl+Shift+P / Ctrl+P)">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <span>Search files, symbols, or type &gt; for commands...</span>
+        <kbd>Ctrl+Shift+P</kbd>
       </button>
 
       <div class="vsc-divider-v"></div>
 
-      <button type="button" class="vsc-icon-btn layout-btn" data-layout="code" data-tip="عرض شاشة الكود فقط (Code Only)">
-        <i class="fa-solid fa-laptop-code"></i>
+      <button type="button" id="btn-toggle-autorun" class="vsc-icon-btn active-emerald" data-tip="التشغيل التلقائي الفوري أثناء الكتابة (Auto-Run: ON)">
+        <i class="fa-solid fa-bolt"></i>
       </button>
-      <button type="button" class="vsc-icon-btn layout-btn active" data-layout="split" data-tip="تقسيم الشاشة 50/50: الكود + المعاينة (Split View)">
-        <i class="fa-solid fa-table-columns"></i>
+
+      <div class="vsc-run-group">
+        <button type="button" id="btn-run-main" class="vsc-run-pill" data-tip="تشغيل الملف أو المشروع الحالي (Ctrl+Enter)">
+          <i class="fa-solid fa-play"></i>
+          <span>Run</span>
+        </button>
+        <select id="sel-run-mode" class="vsc-run-select" data-tip="خيارات التشغيل والترجمة (Execution Mode)">
+          <option value="project">▶ Run Project</option>
+          <option value="file">📄 Run Current File</option>
+          <option value="terminal">›_ Run in Terminal</option>
+          <option value="build">📦 Build & Verify</option>
+        </select>
+      </div>
+
+      <button type="button" id="btn-start-debug" class="vsc-icon-btn" data-tip="بدء التصحيح وتتبع المتغيرات والـ Breakpoints (F5 Debug)">
+        <i class="fa-solid fa-bug gold-icon"></i>
       </button>
-      <button type="button" class="vsc-icon-btn layout-btn" data-layout="preview" data-tip="عرض شاشة النتيجة والمعاينة فقط (Output Only)">
-        <i class="fa-solid fa-desktop"></i>
+      <button type="button" id="btn-stop-exec" class="vsc-icon-btn" data-tip="إيقاف التشغيل الحالي (Stop Execution)">
+        <i class="fa-solid fa-stop" style="color:#ef4444;"></i>
       </button>
     </div>
 
-    <!-- أزرار الأدوات اليمنى (رموز احترافية مع شرح عند الوقوف عليها) -->
+    <!-- Right Workspace Controls: Layouts, AI, Assets, ZIP, Themes, Settings -->
     <div class="vsc-titlebar-right">
-      <label class="vsc-icon-btn" data-tip="رفع صور أو أيقونات للمشروع (يتعرف عليها الكود تلقائياً بمجرد كتابة اسمها)">
+      <!-- 8 Workspace Layout Presets -->
+      <div class="vsc-select-pill" data-tip="تغيير نمط تخطيط مساحة العمل (8 Workspace Layouts)">
+        <i class="fa-solid fa-table-columns gold-icon"></i>
+        <select id="sel-workspace-layout">
+          <option value="web-dev">🌐 Web Dev (Split)</option>
+          <option value="classic">💻 Classic Editor</option>
+          <option value="focus">🎯 Focus Mode</option>
+          <option value="coding">⌨️ Coding + Terminal</option>
+          <option value="debugging">🐞 Debugging Mode</option>
+          <option value="full-preview">👁️ Full Preview</option>
+          <option value="ai-dev">🤖 AI Pair-Programming</option>
+          <option value="database">🗄️ Database Studio</option>
+        </select>
+      </div>
+
+      <!-- 13 Themes + Custom Theme Studio -->
+      <div class="vsc-select-pill" data-tip="اختيار الثيم من 13 ثيماً احترافياً أو تصميم ثيمك الخاص">
+        <i class="fa-solid fa-palette gold-icon"></i>
+        <select id="sel-ide-theme">
+          <option value="vscode-dark">VS Code Dark</option>
+          <option value="vscode-light">VS Code Light</option>
+          <option value="aurora-dark">Aurora Dark</option>
+          <option value="aurora-light">Aurora Light</option>
+          <option value="midnight">Midnight Gold</option>
+          <option value="dracula">Dracula Pro</option>
+          <option value="monokai">Monokai Pro</option>
+          <option value="nord">Nord Polar</option>
+          <option value="github-dark">GitHub Dark</option>
+          <option value="github-light">GitHub Light</option>
+          <option value="one-dark-pro">One Dark Pro</option>
+          <option value="cyberpunk">Cyberpunk Neon</option>
+          <option value="custom">🎨 Custom Theme...</option>
+        </select>
+      </div>
+
+      <label class="vsc-icon-btn" data-tip="رفع صور أو ملفات للمشروع (يتعرف عليها الكود تلقائياً بالاسم)">
         <i class="fa-regular fa-images gold-icon"></i>
-        <input type="file" id="inp-upload-assets" accept="image/*" multiple hidden />
+        <input type="file" id="inp-upload-assets" accept="image/*,.svg,.json,.csv,.md,.pdf" multiple hidden />
       </label>
 
-      <button type="button" id="btn-open-snippets" class="vsc-icon-btn" data-tip="موسوعة الاختصارات والأكواد الجاهزة لكل اللغات (Snippets)">
-        <i class="fa-solid fa-wand-magic-sparkles gold-icon"></i>
+      <button type="button" id="btn-split-editor" class="vsc-icon-btn" data-tip="تقسيم محرر الأكواد إلى نافذتين جنباً إلى جنب (Split Editor)">
+        <i class="fa-solid fa-columns"></i>
       </button>
 
-      <button type="button" id="btn-format-code" class="vsc-icon-btn" data-tip="تنظيف وتنسيق المسافات والأقواس تلقائياً (Clean Code)">
-        <i class="fa-solid fa-broom"></i>
+      <button type="button" id="btn-format-code" class="vsc-icon-btn" data-tip="تنسيق الكود تلقائياً (Format Document Alt+Shift+F)">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
       </button>
 
-      <button type="button" id="btn-toggle-intellisense" class="vsc-icon-btn active" data-tip="تفعيل/إيقاف الاقتراحات الذكية وتكملة الكود (IntelliSense)">
-        <i class="fa-regular fa-lightbulb"></i>
-      </button>
-
-      <button type="button" id="btn-download-zip" class="vsc-icon-btn emerald-icon" data-tip="تحميل ملفات المشروع بالكامل مع الصور في ملف مضغوط واحد (.ZIP)">
+      <button type="button" id="btn-download-zip" class="vsc-icon-btn emerald-icon" data-tip="تحميل المشروع بالكامل مع الصور كملف مضغوط (.ZIP)">
         <i class="fa-solid fa-file-zipper"></i>
       </button>
 
-      <div class="vsc-theme-box" data-tip="تغيير ثيم بيئة VS Code Studio">
-        <i class="fa-solid fa-palette gold-icon"></i>
-        <select id="sel-ide-theme" aria-label="Theme">
-          <option value="vscode-dark">VS Code Dark+</option>
-          <option value="cyberpunk-neon">Cyberpunk Neon</option>
-          <option value="dracula-pro">Dracula Pro</option>
-          <option value="emerald-matrix">Emerald Matrix</option>
-          <option value="aurora-light">Aurora Light</option>
-        </select>
-      </div>
+      <button type="button" id="btn-open-ai-side" class="vsc-icon-btn" data-tip="فتح مساعد الذكاء الاصطناعي البرمجي (AI Coding Assistant)">
+        <i class="fa-solid fa-robot gold-icon"></i>
+      </button>
+
+      <button type="button" id="btn-open-settings" class="vsc-icon-btn" data-tip="مركز الإعدادات والاختصارات والثيم المخصص (Settings Ctrl+,)">
+        <i class="fa-solid fa-gear"></i>
+      </button>
     </div>
   </header>
 
-  <!-- 2. MAIN WORKSPACE BODY -->
+  <!-- ======================= B. MAIN WORKSPACE ======================= -->
   <div class="vsc-main-body">
 
-    <!-- A. ACTIVITY BAR (FAR LEFT ICON STRIP) -->
+    <!-- 1. ACTIVITY BAR (10 WORKSPACE MODULES) -->
     <aside class="vsc-activity-bar">
-      <button type="button" class="vsc-act-btn active" data-sidebar-tab="explorer" data-tip="مستكشف ملفات وصور المشروع (Explorer)">
+      <button type="button" class="vsc-act-btn active" data-act="explorer" data-tip="مستكشف الملفات والمجلدات والموارد (Explorer Ctrl+Shift+E)">
         <i class="fa-regular fa-copy"></i>
       </button>
-      <button type="button" class="vsc-act-btn" data-sidebar-tab="projects" data-tip="إدارة مشاريعي والتبديل بينها (Projects Manager)">
+      <button type="button" class="vsc-act-btn" data-act="search" data-tip="البحث الشامل والاستبدال عبر الملفات (Search & Regex Ctrl+Shift+F)">
+        <i class="fa-solid fa-magnifying-glass"></i>
+      </button>
+      <button type="button" class="vsc-act-btn" data-act="git" data-tip="إدارة المصدر وفروقات الكود (Source Control & Git)">
+        <i class="fa-solid fa-code-branch"></i>
+        <span id="git-badge-count" class="act-badge">0</span>
+      </button>
+      <button type="button" class="vsc-act-btn" data-act="debug" data-tip="مصحح الأخطاء ومراقب المتغيرات (Run & Debug)">
+        <i class="fa-solid fa-bug-slash"></i>
+      </button>
+      <button type="button" class="vsc-act-btn" data-act="ai" data-tip="مساعد الذكاء الاصطناعي وتحليل الكود (AI Coding Assistant)">
+        <i class="fa-solid fa-brain gold-icon"></i>
+      </button>
+      <button type="button" class="vsc-act-btn" data-act="database" data-tip="مستكشف قواعد البيانات ومشغل استعلامات SQL (Database Explorer)">
+        <i class="fa-solid fa-database"></i>
+      </button>
+      <button type="button" class="vsc-act-btn" data-act="testing" data-tip="اختبارات الكود وفحص الجودة (Unit & Integration Testing)">
+        <i class="fa-solid fa-flask-vial"></i>
+      </button>
+      <button type="button" class="vsc-act-btn" data-act="extensions" data-tip="متجر الإضافات والمترجمات (Extensions Marketplace)">
+        <i class="fa-solid fa-puzzle-piece"></i>
+      </button>
+      <button type="button" class="vsc-act-btn" data-act="projects" data-tip="مدير المشاريع والقوالب الـ 14 (Project Manager)">
         <i class="fa-solid fa-layer-group"></i>
       </button>
-      <button type="button" class="vsc-act-btn" data-sidebar-tab="assets" data-tip="مكتبة صور ووسائط المشروع (Uploaded Assets)">
-        <i class="fa-regular fa-image"></i>
-      </button>
-      <button type="button" class="vsc-act-btn" data-sidebar-tab="snippets" data-tip="قوالب وأكواد جاهزة للإدراج الفوري (Code Snippets)">
-        <i class="fa-solid fa-bolt-lightning"></i>
+      <button type="button" class="vsc-act-btn" data-act="deploy" data-tip="مركز النشر والـ DevOps و Docker (Deployment Center)">
+        <i class="fa-solid fa-rocket"></i>
       </button>
 
       <div class="vsc-act-spacer"></div>
 
-      <button type="button" id="btn-code-zoom-in" class="vsc-act-btn" data-tip="تكبير خط الكود (Zoom In Code)">
-        <i class="fa-solid fa-magnifying-glass-plus"></i>
+      <button type="button" id="btn-act-terminal" class="vsc-act-btn" data-tip="إظهار/إخفاء الطرفية والكونسول (Toggle Terminal Ctrl+`)">
+        <i class="fa-solid fa-terminal"></i>
       </button>
-      <button type="button" id="btn-code-zoom-out" class="vsc-act-btn" data-tip="تصغير خط الكود (Zoom Out Code)">
-        <i class="fa-solid fa-magnifying-glass-minus"></i>
+      <button type="button" id="btn-act-settings" class="vsc-act-btn" data-tip="إعدادات البيئة واختصارات لوحة المفاتيح">
+        <i class="fa-solid fa-Sliders"></i>
       </button>
-      <a href="../index.html" class="vsc-act-btn" data-tip="الرجوع إلى منظومة حياتي (MY LIFE OS)">
-        <i class="fa-solid fa-house"></i>
-      </a>
     </aside>
 
-    <!-- B. COLLAPSIBLE SIDEBAR (EXPLORER / PROJECTS / ASSETS / SNIPPETS) -->
+    <!-- 2. DYNAMIC SIDEBAR PANEL -->
     <aside class="vsc-sidebar" id="vsc-sidebar">
       <div class="vsc-sidebar-header">
-        <span id="sidebar-title-lbl">EXPLORER</span>
+        <span id="sidebar-header-title">EXPLORER</span>
         <div class="vsc-sidebar-actions">
-          <button type="button" id="btn-side-new-file" class="vsc-mini-icon" data-tip="إضافة ملف كود جديد (+ New File)">
+          <button type="button" id="btn-side-new-file" class="vsc-mini-icon" data-tip="ملف جديد (+ New File)">
             <i class="fa-solid fa-file-circle-plus"></i>
           </button>
-          <button type="button" id="btn-side-upload-img" class="vsc-mini-icon" data-tip="رفع صورة للمشروع (+ Upload Image)">
-            <i class="fa-solid fa-image"></i>
+          <button type="button" id="btn-side-new-folder" class="vsc-mini-icon" data-tip="مجلد جديد (+ New Folder)">
+            <i class="fa-solid fa-folder-plus"></i>
           </button>
-          <button type="button" id="btn-side-zip" class="vsc-mini-icon" data-tip="تحميل المشروع كملف ZIP">
-            <i class="fa-solid fa-download"></i>
+          <button type="button" id="btn-side-restore-tab" class="vsc-mini-icon" data-tip="استعادة آخر ملف مغلق (Restore Closed Tab)">
+            <i class="fa-solid fa-rotate-left"></i>
+          </button>
+          <button type="button" id="btn-side-collapse" class="vsc-mini-icon" data-tip="طي القائمة الجانبية">
+            <i class="fa-solid fa-angles-left"></i>
           </button>
         </div>
       </div>
-
-      <div class="vsc-sidebar-content" id="vsc-sidebar-content"></div>
+      <div class="vsc-sidebar-body" id="vsc-sidebar-body"></div>
     </aside>
 
-    <!-- C. SPLIT WORKBENCH: CODE EDITOR + LIVE PREVIEW / TERMINAL -->
-    <main class="vsc-workbench" id="vsc-workbench">
+    <!-- 3. CENTER WORKBENCH (EDITORS + PREVIEW + BOTTOM TERMINAL/DEBUG DOCK) -->
+    <main class="vsc-center-stage">
+      <div class="vsc-upper-workbench" id="vsc-upper-workbench">
 
-      <!-- LEFT PANE: MONACO / CODE EDITOR -->
-      <section class="vsc-editor-pane" id="vsc-editor-pane">
-        <div class="vsc-tabs-bar" id="vsc-tabs-bar"></div>
+        <!-- EDITOR AREA (SUPPORTS SINGLE OR SPLIT DUAL EDITOR) -->
+        <section class="vsc-editor-pane" id="vsc-editor-pane">
+          <!-- Tabs Row -->
+          <div class="vsc-tabs-header">
+            <div class="vsc-tabs-bar" id="vsc-tabs-bar"></div>
+            <div class="vsc-tab-tools">
+              <button type="button" id="btn-pin-active-tab" class="vsc-mini-icon" data-tip="تثبيت/إلغاء تثبيت التبويب الحالي (Pin Tab)">
+                <i class="fa-solid fa-thumbtack"></i>
+              </button>
+              <button type="button" id="btn-close-other-tabs" class="vsc-mini-icon" data-tip="إغلاق التبويبات الأخرى (Close Others)">
+                <i class="fa-solid fa-Rectangle-xmark"></i>
+              </button>
+              <button type="button" id="btn-toggle-minimap" class="vsc-mini-icon" data-tip="إظهار/إخفاء الخريطة المصغرة للكود (Minimap)">
+                <i class="fa-regular fa-map"></i>
+              </button>
+              <button type="button" id="btn-toggle-wordwrap" class="vsc-mini-icon" data-tip="التفاف الأسطر الطويلة (Word Wrap)">
+                <i class="fa-solid fa-align-left"></i>
+              </button>
+            </div>
+          </div>
 
-        <div class="vsc-breadcrumbs">
-          <span id="crumb-proj-name">Project</span>
-          <i class="fa-solid fa-chevron-right" style="font-size:9px; opacity:0.5;"></i>
-          <strong id="crumb-file-name" class="gold-icon">index.html</strong>
-          <span id="crumb-lang-badge" class="vsc-lang-pill">HTML5</span>
+          <!-- Breadcrumbs & Inline AI Bar -->
+          <div class="vsc-breadcrumbs">
+            <span id="crumb-proj">Workspace</span>
+            <i class="fa-solid fa-chevron-right" style="font-size:8px; opacity:0.5;"></i>
+            <span id="crumb-folder">root</span>
+            <i class="fa-solid fa-chevron-right" style="font-size:8px; opacity:0.5;"></i>
+            <strong id="crumb-file" class="gold-icon">index.html</strong>
+
+            <div class="crumb-right-tools">
+              <button type="button" id="btn-inline-ai-edit" class="vsc-inline-ai-btn" data-tip="تعديل ذكي للكود بالـ AI مع مقارنة Before/After">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Inline AI
+              </button>
+              <span id="crumb-lang-tag" class="vsc-lang-pill">HTML5</span>
+            </div>
+          </div>
+
+          <!-- Inline AI Diff Bar (Hidden unless active) -->
+          <div id="vsc-inline-ai-bar" class="vsc-inline-ai-bar" hidden>
+            <input type="text" id="inp-inline-ai-prompt" placeholder="اطلب من الـ AI تعديل الكود (مثال: أضف وضع ليلي، حسّن الأداء، صلح الأخطاء، حوله لـ React)..." dir="rtl" />
+            <button type="button" id="btn-inline-ai-run" class="vsc-btn-sm gold">توليد التعديل ✨</button>
+            <button type="button" id="btn-inline-ai-accept" class="vsc-btn-sm emerald" hidden>✓ قبول التعديل</button>
+            <button type="button" id="btn-inline-ai-reject" class="vsc-btn-sm danger" hidden>✕ رفض واسترجاع</button>
+            <button type="button" id="btn-inline-ai-close" class="vsc-mini-icon"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+
+          <!-- Primary & Secondary Split Editors -->
+          <div class="vsc-editors-split-wrap" id="vsc-editors-split-wrap">
+            <div class="vsc-editor-host" id="vsc-editor-host-1">
+              <div id="monaco-mount-1" class="monaco-mount"></div>
+              <textarea id="fallback-editor-1" class="fallback-editor" spellcheck="false" hidden></textarea>
+            </div>
+            <div class="vsc-editor-host secondary-split" id="vsc-editor-host-2" hidden>
+              <div class="split-header-bar">
+                <span id="split-2-title">Split Editor: style.css</span>
+                <select id="sel-split-2-file" class="vsc-run-select"></select>
+              </div>
+              <textarea id="fallback-editor-2" class="fallback-editor" spellcheck="false"></textarea>
+            </div>
+          </div>
+        </section>
+
+        <!-- VERTICAL RESIZER -->
+        <div class="vsc-resizer-v" id="vsc-resizer-v" data-tip="اسحب لتغيير عرض الكود والمعاينة">
+          <span>⋮</span>
         </div>
 
-        <div class="vsc-editor-host" id="vsc-editor-host">
-          <div id="monaco-mount"></div>
-          <textarea id="fallback-code-area" spellcheck="false" hidden></textarea>
-        </div>
-      </section>
+        <!-- LIVE PREVIEW & DEVICE SIMULATOR PANE -->
+        <section class="vsc-preview-pane" id="vsc-preview-pane">
+          <div class="vsc-preview-header">
+            <div class="vsc-address-pill">
+              <span class="pulse-green"></span>
+              <i class="fa-solid fa-shield-halved" style="color:#10b981; font-size:10px;"></i>
+              <span id="preview-address-text">localhost:3000/index.html</span>
+            </div>
 
-      <!-- DRAGGABLE SPLITTER -->
-      <div class="vsc-resizer" id="vsc-resizer" data-tip="اسحب بالماوس يميناً ويساراً لتغيير مساحة الكود والمعاينة">
-        <span>⋮</span>
+            <!-- Responsive Viewport Switcher (Desktop / Tablet / Mobile / Inspect) -->
+            <div class="vsc-preview-actions">
+              <button type="button" class="vsc-mini-icon vp-btn active" data-vp="100%" data-tip="عرض شاشة كمبيوتر كاملة (Desktop Preview)">
+                <i class="fa-solid fa-desktop"></i>
+              </button>
+              <button type="button" class="vsc-mini-icon vp-btn" data-vp="768px" data-tip="عرض شاشة تابلت (Tablet 768px)">
+                <i class="fa-solid fa-tablet-screen-button"></i>
+              </button>
+              <button type="button" class="vsc-mini-icon vp-btn" data-vp="375px" data-tip="عرض شاشة موبايل (Mobile 375px)">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+              </button>
+              <button type="button" id="btn-inspect-element" class="vsc-mini-icon" data-tip="فاحص العناصر وأبعاد الـ DOM داخل المعاينة (Inspect Element)">
+                <i class="fa-solid fa-arrow-pointer"></i>
+              </button>
+              <button type="button" id="btn-prev-zoom-out" class="vsc-mini-icon" data-tip="تصغير المعاينة (-)">
+                <i class="fa-solid fa-minus"></i>
+              </button>
+              <span id="prev-zoom-lbl" class="vsc-zoom-txt">100%</span>
+              <button type="button" id="btn-prev-zoom-in" class="vsc-mini-icon" data-tip="تكبير المعاينة (+)">
+                <i class="fa-solid fa-plus"></i>
+              </button>
+              <button type="button" id="btn-prev-reload" class="vsc-mini-icon" data-tip="إعادة تحميل المعاينة">
+                <i class="fa-solid fa-rotate-right"></i>
+              </button>
+              <button type="button" id="btn-prev-external" class="vsc-mini-icon" data-tip="فتح المعاينة في تبويب متصفح خارجي">
+                <i class="fa-solid fa-up-right-from-square"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="vsc-iframe-stage" id="vsc-iframe-stage">
+            <div class="vsc-device-frame" id="vsc-device-frame">
+              <iframe id="vsc-preview-iframe" sandbox="allow-scripts allow-forms allow-modals allow-same-origin allow-popups"></iframe>
+            </div>
+          </div>
+        </section>
+
       </div>
 
-      <!-- RIGHT PANE: LIVE BROWSER PREVIEW + SMART DEBUGGER CONSOLE -->
-      <section class="vsc-preview-pane" id="vsc-preview-pane">
-        <div class="vsc-preview-header">
-          <div class="vsc-address-pill">
-            <span class="pulse-green"></span>
-            <i class="fa-solid fa-lock" style="font-size:10px; color:#10b981;"></i>
-            <span id="preview-url-lbl">localhost:3000/index.html</span>
+      <!-- HORIZONTAL RESIZER FOR BOTTOM PANEL -->
+      <div class="vsc-resizer-h" id="vsc-resizer-h" data-tip="اسحب لتكبير أو تصغير لوحة الطرفية والمشكلات"></div>
+
+      <!-- 4. BOTTOM PANEL: PROBLEMS | OUTPUT | DEBUG CONSOLE | TERMINAL -->
+      <section class="vsc-bottom-panel" id="vsc-bottom-panel">
+        <div class="vsc-bottom-header">
+          <div class="vsc-bottom-tabs">
+            <button type="button" class="vsc-btab" data-btab="problems">
+              PROBLEMS <span id="badge-problems" class="vsc-count-pill">0</span>
+            </button>
+            <button type="button" class="vsc-btab" data-btab="output">
+              OUTPUT
+            </button>
+            <button type="button" class="vsc-btab" data-btab="debug-console">
+              DEBUG CONSOLE
+            </button>
+            <button type="button" class="vsc-btab active" data-btab="terminal">
+              TERMINAL <span id="badge-terms" class="vsc-count-pill">1</span>
+            </button>
           </div>
 
-          <div class="vsc-preview-actions">
-            <button type="button" id="btn-prev-zoom-out" class="vsc-mini-icon" data-tip="تصغير شاشة المعاينة">
-              <i class="fa-solid fa-minus"></i>
-            </button>
-            <span id="prev-zoom-lbl" class="vsc-zoom-txt">100%</span>
-            <button type="button" id="btn-prev-zoom-in" class="vsc-mini-icon" data-tip="تكبير شاشة المعاينة">
+          <div class="vsc-bottom-actions">
+            <select id="sel-term-profile" class="vsc-run-select" data-tip="اختيار نوع الصدفة (Terminal Profile)">
+              <option value="bash">bash — Linux/Git</option>
+              <option value="pwsh">pwsh — PowerShell</option>
+              <option value="js">node — JS REPL</option>
+              <option value="py">python — Py Interactive</option>
+            </select>
+            <button type="button" id="btn-new-terminal" class="vsc-mini-icon" data-tip="فتح جلسة طرفية جديدة (+ New Terminal)">
               <i class="fa-solid fa-plus"></i>
             </button>
-            <button type="button" id="btn-prev-reload" class="vsc-mini-icon" data-tip="تحديث المعاينة الحية">
-              <i class="fa-solid fa-rotate-right"></i>
+            <button type="button" id="btn-clear-bottom" class="vsc-mini-icon" data-tip="مسح المخرجات الحالية (Clear)">
+              <i class="fa-solid fa-ban"></i>
             </button>
-            <button type="button" id="btn-prev-ext" class="vsc-mini-icon" data-tip="فتح النتيجة في نافذة متصفح كاملة">
-              <i class="fa-solid fa-up-right-from-square"></i>
+            <button type="button" id="btn-max-bottom" class="vsc-mini-icon" data-tip="تكبير/تصغير اللوحة السفلية">
+              <i class="fa-solid fa-chevron-up"></i>
+            </button>
+            <button type="button" id="btn-close-bottom" class="vsc-mini-icon" data-tip="إخفاء اللوحة السفلية">
+              <i class="fa-solid fa-xmark"></i>
             </button>
           </div>
         </div>
 
-        <div class="vsc-iframe-container" id="vsc-iframe-container">
-          <iframe id="vsc-preview-iframe" sandbox="allow-scripts allow-forms allow-modals allow-same-origin allow-popups"></iframe>
-        </div>
-
-        <!-- SMART CONSOLE & DIAGNOSTICS DRAWER -->
-        <div class="vsc-console-drawer" id="vsc-console-drawer">
-          <div class="vsc-console-header">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <i class="fa-solid fa-terminal gold-icon"></i>
-              <strong>CONSOLE & SMART AUTO-FIX DEBUGGER</strong>
-              <span id="console-badge-count" class="vsc-count-pill">0</span>
-            </div>
-            <div style="display:flex; gap:6px;">
-              <button type="button" id="btn-clear-console" class="vsc-mini-icon" data-tip="مسح الكونسول">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
-              <button type="button" id="btn-toggle-console-height" class="vsc-mini-icon" data-tip="تكبير/تصغير لوحة الكونسول">
-                <i class="fa-solid fa-chevron-up"></i>
-              </button>
+        <div class="vsc-bottom-body">
+          <!-- Problems Pane -->
+          <div class="vsc-bpane" id="bpane-problems" hidden></div>
+          <!-- Output Pane -->
+          <div class="vsc-bpane" id="bpane-output" hidden></div>
+          <!-- Debug Console REPL -->
+          <div class="vsc-bpane" id="bpane-debug-console" hidden>
+            <div id="debug-console-logs" class="term-logs"></div>
+            <div class="term-input-row">
+              <span class="gold-icon">debug&gt;</span>
+              <input type="text" id="inp-debug-eval" placeholder="اكتب أي تعبير برمجي أو اسم متغير لفحص قيمته فوراً..." />
             </div>
           </div>
-          <div class="vsc-console-body" id="vsc-console-body"></div>
+          <!-- Interactive Real Workspace Terminal -->
+          <div class="vsc-bpane active" id="bpane-terminal">
+            <div id="term-logs" class="term-logs"></div>
+            <div class="term-input-row">
+              <span id="term-prompt-lbl" class="emerald-icon">ahmed@mylifeos:~/workspace$</span>
+              <input type="text" id="inp-terminal-cmd" autocomplete="off" spellcheck="false" placeholder="اكتب أمراً (مثل: help, ls, cat index.html, touch app.js, mkdir src, git status, run, python, clear)..." />
+            </div>
+          </div>
         </div>
       </section>
-
     </main>
+
   </div>
 
-  <!-- 3. NEON GLOWING FOOTER STATUS BAR -->
+  <!-- ======================= C. STATUS BAR ======================= -->
   <footer class="vsc-statusbar">
     <div class="vsc-status-left">
-      <span class="status-item"><span class="pulse-cyan"></span> READY</span>
-      <span class="status-item" id="status-cursor">Ln 1, Col 1</span>
-      <span class="status-item" id="status-lang">HTML5</span>
+      <button type="button" class="status-btn" id="st-btn-branch" data-tip="الفرع النشط في Git (اضغط لفتح Source Control)">
+        <i class="fa-solid fa-code-branch"></i> <span id="st-branch-name">main*</span>
+      </button>
+      <button type="button" class="status-btn" id="st-btn-problems" data-tip="عدد الأخطاء والتحذيرات في المشروع">
+        <i class="fa-regular fa-circle-xmark" style="color:#f87171;"></i> <span id="st-err-count">0</span>
+        <i class="fa-solid fa-triangle-exclamation" style="color:#fbbf24; margin-left:4px;"></i> <span id="st-warn-count">0</span>
+      </button>
+      <span class="status-item" id="st-runtime-status"><span class="pulse-cyan"></span> Runtime: Ready</span>
     </div>
 
     <div class="vsc-status-center">
       <span class="neon-spark">✦</span>
-      <span class="neon-label">ENGINEERED & DEVELOPED BY</span>
+      <span class="neon-label">UNIVERSAL IDE ENGINEERED BY</span>
       <strong class="neon-eng-name">Eng:Ahmed M Hosny</strong>
       <span class="neon-spark">✦</span>
     </div>
 
     <div class="vsc-status-right">
-      <span class="status-item" id="status-autorun">⚡ Auto-Run: ON</span>
+      <button type="button" class="status-btn" id="st-cursor-pos" data-tip="السطر والعمود الحالي">Ln 1, Col 1</button>
+      <button type="button" class="status-btn" id="st-indent" data-tip="حجم المسافة البادئة">Spaces: 2</button>
       <span class="status-item">UTF-8</span>
+      <button type="button" class="status-btn gold-icon" id="st-lang-mode" data-tip="لغة الملف الحالي">HTML5</button>
+      <button type="button" class="status-btn emerald-icon" id="st-autorun-lbl" data-tip="حالة التشغيل التلقائي">⚡ Auto-Run: ON</button>
     </div>
   </footer>
 
-  <!-- UNIVERSAL MODAL FOR PROJECT WIZARD & NEW FILE -->
+  <!-- ======================= D. COMMAND PALETTE (Ctrl+Shift+P) ======================= -->
+  <div class="vsc-palette-backdrop" id="vsc-palette-modal" hidden>
+    <div class="vsc-palette-box">
+      <div class="vsc-palette-input-wrap">
+        <i class="fa-solid fa-terminal gold-icon"></i>
+        <input type="text" id="inp-palette-search" placeholder="اكتب اسم أمر أو ملف للبحث والتنفيذ الفوري..." autocomplete="off" />
+        <kbd>ESC</kbd>
+      </div>
+      <div class="vsc-palette-list" id="vsc-palette-list"></div>
+    </div>
+  </div>
+
+  <!-- ======================= E. CONTEXT MENU (RIGHT CLICK) ======================= -->
+  <div id="vsc-context-menu" class="vsc-context-menu" hidden></div>
+
+  <!-- ======================= F. UNIVERSAL MODAL (PROJECTS / SETTINGS / DIFF) ======================= -->
   <div class="vsc-modal-backdrop" id="vsc-modal" hidden>
     <div class="vsc-modal-card" dir="rtl">
       <div class="vsc-modal-header">
-        <h3 id="vsc-modal-title">مشروع جديد</h3>
+        <h3 id="vsc-modal-title">إعدادات النظام</h3>
         <button type="button" id="btn-close-vsc-modal" class="vsc-mini-icon"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div id="vsc-modal-body" class="vsc-modal-body"></div>
