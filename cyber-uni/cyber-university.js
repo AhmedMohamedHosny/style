@@ -150,59 +150,83 @@ export function getOverallAnalytics() {
   };
 }
 
-/* ============================================================================
-   2. SCOPED STYLES MATCHING MY LIFE OS (DARK + GOLD + CYAN + RTL)
-   ============================================================================ */
 function injectCyberUniStyles() {
   if (document.getElementById("cyber-uni-v2-styles")) return;
   const st = document.createElement("style");
   st.id = "cyber-uni-v2-styles";
   st.textContent = `
+    /* إصلاح تلاصق العربي والإنجليزي في الكروت */
+    .d-block { display: block !important; }
+    .mb-1 { margin-bottom: 0.35rem !important; }
+    .mb-2 { margin-bottom: 0.75rem !important; }
+    .mb-4 { margin-bottom: 1.25rem !important; }
+    .mt-1 { margin-top: 0.35rem !important; }
+
+    /* إصلاح تباين كروت الـ 3 مسارات العلوية في الثيم النهاري والليلي */
+    .track-domain-pill {
+      background: var(--bg-card) !important;
+      color: var(--text-primary) !important;
+      border: 1.5px solid var(--border-color) !important;
+    }
+    .track-domain-pill.active {
+      background: linear-gradient(135deg, rgba(212,167,44,0.22), rgba(6,182,212,0.16)) !important;
+      border-color: var(--gold-primary) !important;
+    }
+
+    /* بانر الجامعة المتجاوب مع الثيم النهاري والليلي */
     .cu-hero {
-      background: linear-gradient(135deg, rgba(9,13,25,0.96), rgba(6,182,212,0.12), rgba(212,167,44,0.14));
-      border: 1px solid rgba(212,167,44,0.42);
+      background: linear-gradient(135deg, var(--bg-card) 0%, rgba(6,182,212,0.12) 55%, rgba(212,167,44,0.16) 100%);
+      border: 1.5px solid var(--border-color);
       border-radius: 20px;
       padding: 22px 24px;
       margin-bottom: 18px;
-      box-shadow: 0 18px 45px rgba(0,0,0,0.65);
+      box-shadow: var(--shadow-luxury);
     }
+
+    /* شريط التبويبات بتباين ممتاز في Light و Dark */
     .cu-tabs-bar {
       display: flex;
       flex-wrap: wrap;
       gap: 7px;
       margin-bottom: 18px;
-      background: rgba(15,20,34,0.85);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
       padding: 8px;
       border-radius: 14px;
+      box-shadow: var(--shadow-luxury);
     }
     .cu-tab-btn {
       background: transparent;
       border: 1px solid transparent;
       color: var(--text-secondary);
-      padding: 7px 13px;
+      padding: 8px 14px;
       border-radius: 10px;
       font-family: inherit;
-      font-size: 0.82rem;
+      font-size: 0.84rem;
       font-weight: 700;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
       transition: all 0.2s ease;
     }
-    .cu-tab-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+    .cu-tab-btn:hover {
+      color: var(--text-primary);
+      background: rgba(212,167,44,0.1);
+    }
     .cu-tab-btn.active {
-      background: linear-gradient(135deg, rgba(212,167,44,0.22), rgba(6,182,212,0.18));
+      background: linear-gradient(135deg, rgba(212,167,44,0.25), rgba(6,182,212,0.16));
       border-color: var(--gold-primary);
       color: var(--gold-primary);
     }
+
+    /* الخريطة التفاعلية النظيفة بدون تشابك خطوط */
     .cu-map-viewport {
       position: relative;
       width: 100%;
-      height: 580px;
-      background: radial-gradient(circle at center, #0e1628 0%, #060912 100%);
-      border: 1.5px solid rgba(6,182,212,0.35);
+      height: 620px;
+      background: radial-gradient(circle at 50% 35%, #0f172a 0%, #050811 100%);
+      border: 1.5px solid rgba(6,182,212,0.45);
       border-radius: 18px;
       overflow: hidden;
       cursor: grab;
@@ -220,57 +244,96 @@ function injectCyberUniStyles() {
       position: absolute;
       top: 0;
       left: 0;
-      width: 1850px;
-      height: 860px;
+      width: 2050px;
+      height: 1320px;
       transform-origin: 0 0;
+    }
+    .cu-col-header {
+      position: absolute;
+      top: 14px;
+      width: 245px;
+      text-align: center;
+      padding: 6px 12px;
+      border-radius: 99px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      background: rgba(15,23,42,0.92);
+      border: 1px solid rgba(255,255,255,0.14);
+      color: #f8fafc;
+      letter-spacing: 0.3px;
+    }
+    .cu-map-edge {
+      fill: none;
+      stroke: rgba(148, 163, 184, 0.22);
+      stroke-width: 1.5;
+      transition: opacity 0.2s ease, stroke 0.2s ease, stroke-width 0.2s ease;
+    }
+    .cu-map-stage.has-focus .cu-map-edge { opacity: 0.05; }
+    .cu-map-stage.has-focus .cu-map-edge.edge-prereq {
+      opacity: 1 !important;
+      stroke: #06b6d4 !important;
+      stroke-width: 3 !important;
+    }
+    .cu-map-stage.has-focus .cu-map-edge.edge-unlocks {
+      opacity: 1 !important;
+      stroke: #10b981 !important;
+      stroke-width: 3 !important;
     }
     .cu-map-node {
       position: absolute;
-      width: 210px;
-      padding: 10px 12px;
+      width: 245px;
+      min-height: 92px;
+      padding: 11px 14px;
       border-radius: 14px;
-      background: rgba(14,20,36,0.95);
+      background: rgba(15, 23, 42, 0.96);
       border: 2px solid var(--node-color, #06b6d4);
-      color: #f8fafc;
+      color: #f8fafc !important;
       cursor: pointer;
       box-shadow: 0 10px 26px rgba(0,0,0,0.65);
-      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.2s ease;
       text-align: right;
+    }
+    .cu-map-node strong { color: #f8fafc !important; }
+    .cu-map-node small.cu-node-ar { color: #cbd5e1 !important; }
+    .cu-map-stage.has-focus .cu-map-node { opacity: 0.28; }
+    .cu-map-stage.has-focus .cu-map-node.node-focus,
+    .cu-map-stage.has-focus .cu-map-node.node-related {
+      opacity: 1 !important;
+      z-index: 6;
     }
     .cu-map-node:hover {
       transform: translateY(-3px) scale(1.03);
-      box-shadow: 0 0 24px var(--node-color, #06b6d4);
-      z-index: 5;
+      box-shadow: 0 0 26px var(--node-color, #06b6d4);
+      z-index: 10;
     }
-    .cu-map-node.locked {
-      opacity: 0.58;
-      border-style: dashed;
-    }
+    .cu-map-node.locked { border-style: dashed; }
     .cu-map-node.mastered {
-      box-shadow: 0 0 20px rgba(16,185,129,0.45);
+      box-shadow: 0 0 20px rgba(16,185,129,0.5);
       border-color: #10b981;
     }
     .cu-zone-pill {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: 0.72rem;
-      padding: 3px 9px;
+      font-size: 0.74rem;
+      padding: 4px 10px;
       border-radius: 99px;
-      background: rgba(255,255,255,0.06);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
     }
     .cu-legal-strip {
-      background: rgba(245,158,11,0.1);
-      border: 1px solid rgba(245,158,11,0.4);
-      color: #fde68a;
+      background: rgba(245,158,11,0.14);
+      border: 1px solid rgba(245,158,11,0.45);
+      color: var(--text-primary);
       border-radius: 12px;
       padding: 10px 14px;
-      font-size: 0.82rem;
+      font-size: 0.84rem;
       margin-bottom: 14px;
     }
     .cu-code-box {
       background: #050811;
-      border: 1px solid rgba(6,182,212,0.3);
+      border: 1px solid rgba(6,182,212,0.35);
       border-radius: 10px;
       padding: 10px 12px;
       font-family: monospace;
@@ -391,8 +454,9 @@ function openNodeDossierModal(nodeId, rootContainer) {
     </div>
   `).join("");
 
-  const lessonsHtml = (node.lessons || []).length
-    ? node.lessons.map((ls, idx) => `
+const allLessons = getMergedLessonsForNode(node);
+const lessonsHtml = allLessons.length
+  ? allLessons.map((ls, idx) => `
         <div class="prayer-row">
           <div>
             <strong>📘 ${esc(ls.titleAr)}</strong>
@@ -417,6 +481,8 @@ function openNodeDossierModal(nodeId, rootContainer) {
     ${node.category === "Offensive" ? `<div class="cu-legal-strip">⚖️ <strong>سياسة المختبرات القانونية:</strong> ${esc(UNIVERSITY_META.legalPolicy)}</div>` : ""}
 
     ${node.tracks ? `
+    <h4 class="gold-text mt-2">📖 الدروس التفاعلية الكاملة في هذه الأكاديمية (${allLessons.length} دروس بـ 19 عنصراً):</h4>
+   <div class="mt-1">${lessonsHtml}</div>
       <h4 class="gold-text mt-2">📚 التخصصات الفرعية داخل الأكاديمية (${node.tracks.length} مساراً):</h4>
       <div style="max-height:220px; overflow-y:auto;" class="mt-1">${tracksListHtml}</div>
       <h4 class="gold-text mt-2">🏆 المراحل الأربعة للاحتراف داخل الأكاديمية:</h4>
@@ -461,7 +527,7 @@ function openNodeDossierModal(nodeId, rootContainer) {
 
   document.querySelectorAll("[data-open-lesson-idx]").forEach(btn => {
     btn.onclick = () => {
-      const ls = node.lessons[Number(btn.dataset.openLessonIdx)];
+const ls = allLessons[Number(btn.dataset.openLessonIdx)];
       if (ls) openFull19PartLessonModal(node, ls, rootContainer);
     };
   });
@@ -570,40 +636,73 @@ function renderInteractiveKnowledgeMap(container) {
     return matchLevel && matchSpec && matchSearch;
   });
 
+  // توزيع نظيف في 5 أعمدة متباعدة بدون أي تداخل رأسي بين الكروت
+  const colDefs = [
+    { key: "L0", label: "LEVEL 0 • Absolute Zero", x: 40, color: "#06b6d4" },
+    { key: "L1", label: "LEVEL 1 • IT Foundations", x: 380, color: "#3b82f6" },
+    { key: "L2", label: "LEVEL 2 • Core Security", x: 720, color: "#d4af37" },
+    { key: "SPEC", label: "LEVEL 3–4 • Core Academies", x: 1080, color: "#10b981" },
+    { key: "ADV", label: "LEVEL 4 • Advanced & Expert", x: 1440, color: "#a855f7" }
+  ];
+
+  const getColKey = (n) => {
+    if (n.level === 0) return "L0";
+    if (n.level === 1) return "L1";
+    if (n.level === 2) return "L2";
+    if (n.zone === "Advanced Zone" || n.zone === "Expert Zone") return "ADV";
+    return "SPEC";
+  };
+
+  const colBuckets = { L0: [], L1: [], L2: [], SPEC: [], ADV: [] };
+  filteredNodes.forEach(n => colBuckets[getColKey(n)].push(n));
+
+  const layoutPos = {};
+  colDefs.forEach(c => {
+    colBuckets[c.key].forEach((n, idx) => {
+      layoutPos[n.id] = { x: c.x, y: 68 + idx * 124 };
+    });
+  });
+
   const visibleIds = new Set(filteredNodes.map(n => n.id));
   const edgesSvg = [];
   filteredNodes.forEach(n => {
     (n.prerequisites || []).forEach(preId => {
       if (!visibleIds.has(preId)) return;
-      const src = nodes.find(x => x.id === preId);
-      if (!src || !src.mapPos || !n.mapPos) return;
-      const x1 = src.mapPos.x + 210;
-      const y1 = src.mapPos.y + 38;
-      const x2 = n.mapPos.x;
-      const y2 = n.mapPos.y + 38;
+      const src = layoutPos[preId];
+      const dst = layoutPos[n.id];
+      if (!src || !dst) return;
+      const x1 = src.x + 245;
+      const y1 = src.y + 46;
+      const x2 = dst.x;
+      const y2 = dst.y + 46;
       const cx = (x1 + x2) / 2;
-      const isDone = deriveMasteryState(src, getNodeProgress(src.id)) === MASTERY_STATES.MASTERED;
-      edgesSvg.push(`<path d="M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}" fill="none" stroke="${isDone ? "#10b981" : "rgba(212,167,44,0.38)"}" stroke-width="${isDone ? 2.6 : 1.7}" />`);
+      edgesSvg.push(`<path class="cu-map-edge" data-from="${preId}" data-to="${n.id}" d="M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}" />`);
     });
   });
 
+  const colHeadersHtml = colDefs.map(c =>
+    `<div class="cu-col-header" style="left:${c.x}px; border-color:${c.color}; color:${c.color};">${c.label}</div>`
+  ).join("");
+
   const nodesHtml = filteredNodes.map(n => {
+    const pos = layoutPos[n.id];
     const p = getNodeProgress(n.id);
     const score = computeWeightedScore(n, p);
     const st = deriveMasteryState(n, p);
     const unlocked = isNodeUnlocked(n);
     const col = zoneColors[n.zone] || "#06b6d4";
+    const lessonsCount = getMergedLessonsForNode(n).length;
     return `
       <div class="cu-map-node ${!unlocked ? "locked" : ""} ${st === MASTERY_STATES.MASTERED ? "mastered" : ""}"
-           style="left:${n.mapPos.x}px; top:${n.mapPos.y}px; --node-color:${col};"
+           style="left:${pos.x}px; top:${pos.y}px; --node-color:${col};"
            data-map-node-id="${n.id}">
         <div class="flex-between">
           <small style="color:${col}; font-weight:800;">L${n.level} ${!unlocked ? "🔒" : st === MASTERY_STATES.MASTERED ? "✅" : "⚡"}</small>
-          <small class="gold-text">${score}%</small>
+          <small class="gold-text">${score}% • ${lessonsCount} درس</small>
         </div>
-        <strong style="font-size:0.79rem; display:block; margin-top:3px;">${esc(n.title)}</strong>
-        <small class="small-muted" style="font-size:0.7rem; display:block;">${esc(n.titleAr || "")}</small>
-        <div class="progress-bar-track" style="height:4px; margin-top:5px;">
+        <strong style="font-size:0.82rem; display:block; margin-top:4px;">${esc(n.title)}</strong>
+        <small class="cu-node-ar d-block" style="font-size:0.72rem; margin-top:2px;">${esc(n.titleAr || "")}</small>
+        <div class="progress-bar-track" style="height:4px; margin-top:6px;">
           <div class="progress-bar-fill" style="width:${score}%; background:${col};"></div>
         </div>
       </div>
@@ -632,6 +731,7 @@ function renderInteractiveKnowledgeMap(container) {
         </select>
       </div>
       <div class="filters-row">
+        <span class="small-muted">💡 مرّر الماوس على أي كارت لإضاءة مساره فقط</span>
         <button type="button" id="cu-zoom-in" class="btn btn-xs btn-outline"><i class="fa-solid fa-plus"></i></button>
         <button type="button" id="cu-zoom-out" class="btn btn-xs btn-outline"><i class="fa-solid fa-minus"></i></button>
         <button type="button" id="cu-map-reset" class="btn btn-xs btn-outline">إعادة الضبط</button>
@@ -641,11 +741,14 @@ function renderInteractiveKnowledgeMap(container) {
 
     <div class="filters-row mb-2">
       ${Object.entries(zoneColors).map(([z, c]) => `<span class="cu-zone-pill"><span style="width:9px;height:9px;border-radius:50%;background:${c};display:inline-block;"></span>${z}</span>`).join("")}
+      <span class="cu-zone-pill"><span style="width:12px;height:3px;background:#06b6d4;display:inline-block;"></span>متطلب سابق</span>
+      <span class="cu-zone-pill"><span style="width:12px;height:3px;background:#10b981;display:inline-block;"></span>يفتح لك لاحقاً</span>
     </div>
 
     <div id="cu-map-viewport" class="cu-map-viewport">
       <div id="cu-map-stage" class="cu-map-stage" style="transform:translate(${ms.panX}px, ${ms.panY}px) scale(${ms.zoom});">
-        <svg width="1850" height="860" style="position:absolute; inset:0; pointer-events:none;">${edgesSvg.join("")}</svg>
+        <svg width="2050" height="1320" style="position:absolute; inset:0; pointer-events:none;">${edgesSvg.join("")}</svg>
+        ${colHeadersHtml}
         ${nodesHtml}
       </div>
     </div>
@@ -696,6 +799,33 @@ export function mountCybersecurityUniversity(container) {
       </div>
     `;
   } else if (activeTab === "map") {
+    // إضاءة المتطلبات السابقة والمسارات التالية فقط عند تمرير الماوس على أي عقدة
+    const mapNodes = container.querySelectorAll(".cu-map-node");
+    const mapEdges = container.querySelectorAll(".cu-map-edge");
+    const clearFocus = () => {
+      stage?.classList.remove("has-focus");
+      mapNodes.forEach(el => el.classList.remove("node-focus", "node-related"));
+      mapEdges.forEach(ed => ed.classList.remove("edge-prereq", "edge-unlocks"));
+    };
+
+    mapNodes.forEach(nodeEl => {
+      nodeEl.onmouseenter = () => {
+        const id = nodeEl.dataset.mapNodeId;
+        clearFocus();
+        stage?.classList.add("has-focus");
+        nodeEl.classList.add("node-focus");
+        mapEdges.forEach(ed => {
+          if (ed.dataset.to === id) {
+            ed.classList.add("edge-prereq");
+            stage?.querySelector(`[data-map-node-id="${ed.dataset.from}"]`)?.classList.add("node-related");
+          } else if (ed.dataset.from === id) {
+            ed.classList.add("edge-unlocks");
+            stage?.querySelector(`[data-map-node-id="${ed.dataset.to}"]`)?.classList.add("node-related");
+          }
+        });
+      };
+      nodeEl.onmouseleave = clearFocus;
+    });
     bodyHtml = renderInteractiveKnowledgeMap(container);
   } else if (activeTab === "foundations") {
     bodyHtml = [0, 1, 2].map(lv => {
