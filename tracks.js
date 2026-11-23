@@ -13,7 +13,64 @@
  * - Global Anti-Copy Protection (Blocks Text Selection, Copy, Cut & ContextMenu)
  * ============================================================================
  */
+import {
+  mountCybersecurityUniversity,
+  getOverallAnalytics
+} from "./cyber-uni/cyber-university.js";
 
+// ترحيل آمن لتقدم الطالب من كورس الأمن السيبراني القديم إلى الجامعة الجديدة (يعمل مرة واحدة فقط)
+function migrateLegacyCyberProgress() {
+  const NEW_KEY = "MY_LIFE_OS_CYBER_UNI_V2";
+  try {
+    const existingNew = JSON.parse(localStorage.getItem(NEW_KEY) || "null");
+    if (existingNew?.migratedFromTracksV3) return;
+
+    const oldPillars = JSON.parse(localStorage.getItem("MY_LIFE_OS_NODE_PILLARS_V2") || "{}");
+    const legacyMap = {
+      n_net: "L1_M3",
+      n_lin: "L1_M2",
+      n_win: "L1_M2",
+      n_code: "L1_M4",
+      n_secplus: "L2_M1",
+      n_websec: "ACAD_01",
+      n_netpen: "ACAD_01",
+      n_siem: "ACAD_02",
+      n_cloudsec: "ACAD_04",
+      n_dfir: "ACAD_07",
+      n_grc: "ACAD_06"
+    };
+
+    const nextState = existingNew || {
+      activeTab: "dashboard",
+      selectedCareerId: "CAR_SOC1",
+      selectedAcademyId: "ACAD_02",
+      placementBypassIds: [],
+      progress: {},
+      portfolio: [],
+      streakDays: 1,
+      lastActiveDate: new Date().toISOString().split("T")[0],
+      mapState: { zoom: 0.92, panX: 20, panY: 15, filterLevel: "all", filterSpec: "all", search: "" }
+    };
+
+    Object.entries(legacyMap).forEach(([oldId, newId]) => {
+      const p = oldPillars[oldId];
+      if (!p) return;
+      const prev = nextState.progress[newId] || { theory: 0, practical: 0, labs: 0, projects: 0, reporting: 0 };
+      nextState.progress[newId] = {
+        theory: Math.max(prev.theory, p.theory ? 85 : 0),
+        practical: Math.max(prev.practical, p.lab ? 80 : 0),
+        labs: Math.max(prev.labs, p.lab ? 80 : 0),
+        projects: Math.max(prev.projects, p.project ? 85 : 0),
+        reporting: Math.max(prev.reporting, p.interview ? 80 : 0),
+        lastStudied: new Date().toISOString().split("T")[0]
+      };
+    });
+
+    nextState.migratedFromTracksV3 = true;
+    localStorage.setItem(NEW_KEY, JSON.stringify(nextState));
+  } catch (e) {}
+}
+migrateLegacyCyberProgress();
 function B() {
   return window.MyLifeOSBridge || {};
 }
@@ -633,242 +690,7 @@ const DEEP_NODE_SYLLABUS = {
     project: "إطلاق مشروع التخرج النهائي (Production SaaS Platform) كاملاً بالأكواد النظيفة، الاختبارات، الدفع الإلكتروني، والنشر السحابي."
   },
 
-  /* ---------------- B. CYBERSECURITY (ALL 17 NODES IN DETAIL) ---------------- */
-  n_net: {
-    phase: "Phase 1 • التأسيس الشبكي الإجباري",
-    hours: "45 ساعة",
-    alternatives: "المسارات التعليمية للشبكات: كورس CCNA 200-301 (الأعمق عملياً) | شهادة CompTIA Network+ (ممتازة ومختصرة للسايبر)",
-    modules: [
-      "1. معمارية الشبكات وطبقات OSI الـ 7 ونموذج TCP/IP وكيف تنتقل البيانات (Encapsulation)",
-      "2. العنونة وتقسيم الشبكات: IPv4، IPv6، الـ Subnetting اليدوي، CIDR، والـ NAT/PAT",
-      "3. بروتوكولات النقل والشبكة: TCP 3-Way Handshake (SYN, SYN-ACK, ACK)، UDP، ICMP، وبروتوكول ARP",
-      "4. بروتوكولات التطبيقات الحساسة أمنياً: HTTP/HTTPS، DNS، DHCP، SMB، SSH، FTP، و SMTP",
-      "5. أجهزة الشبكة والدفاع: Switches (VLANs)، Routers، Firewalls (Stateful/Stateless)، VPNs، وأنظمة IDS/IPS",
-      "6. التحليل العملي للحزم: إتقان برنامج Wireshark لقراءة وتصفية ملفات الـ PCAP وتتبع الهجمات"
-    ],
-    criteria: "تقسيم أي شبكة فرعية بدون آلة حاسبة، وتحليل ملف ترافيك داخل Wireshark لاستخراج البيانات المرسلة وكشف جلسات الاتصال المشبوهة.",
-    project: "بناء شبكة شركة مقسمة لـ 3 VLANs على Packet Tracer أو GNS3 مع ضبط قوانين Firewall وتحليل الحزم بـ Wireshark."
-  },
-  n_lin: {
-    phase: "Phase 1 • التأسيس الإجباري في أنظمة لينكس",
-    hours: "35 ساعة",
-    alternatives: "التوزيعات المقترحة: Ubuntu / Debian (للسيرفرات والـ Blue Team) | Kali Linux / Parrot OS (لاختبار الاختراق والـ Red Team)",
-    modules: [
-      "1. هيكلية نظام الملفات في لينكس (`/etc`, `/var/log`, `/proc`, `/tmp`) وإتقان سطر الأوامر CLI",
-      "2. إدارة المستخدمين والمجموعات والصلاحيات (`chmod`, `chown`, والصلاحيات الخاصة الخطيرة `SUID / SGID` و `sudoers`)",
-      "3. إدارة العمليات والخدمات (`ps`, `top`, `systemctl`, `journalctl`) والمهام المجدولة `cronjobs`",
-      "4. أوامر الشبكات والجدار الناري في لينكس (`ip`, `ss`, `netstat`, `ufw`, `iptables`, وإعداد مفتاح SSH)",
-      "5. برمجة سكربتات Bash لأتمتة مهام الفحص وتصفية البيانات باستخدام `grep`, `awk`, `sed`, `cut`, والـ Pipes"
-    ],
-    criteria: "إدارة وتأمين سيرفر لينكس بالكامل من الشاشة السوداء، وكتابة سكربتات Bash تؤتمت عمليات البحث والفحص.",
-    project: "كتابة أداة Bash أوتوماتيكية تفحص السيرفر وتكشف الملفات ذات صلاحيات SUID غير الطبيعية وتستخرج محاولات اختراق SSH من السجلات."
-  },
-  n_win: {
-    phase: "Phase 1 • التأسيس الإجباري في ويندوز والدومين",
-    hours: "40 ساعة",
-    alternatives: "بيئة التطبيق: بناء المختبر محلياً على VMware / VirtualBox أو استخدام مختبرات TryHackMe (Active Directory Basics)",
-    modules: [
-      "1. معمارية Windows من الداخل (Windows Internals): العمليات، الـ Threads، الـ Services، الـ Registry، ومكتبات DLLs",
-      "2. هندسة بيئة الشركات Active Directory (AD): الدومين، Domain Controllers، الأشجار والغابات، والـ Organizational Units",
-      "3. بروتوكولات التوثيق في الدومين: كيف يعمل Kerberos (تذاكر TGT و TGS) مقابل بروتوكول NTLM Hashes",
-      "4. سياسات المجموعات (Group Policy Objects - GPOs) وقوائم التحكم في الوصول (ACLs & DACLs)",
-      "5. إتقان PowerShell للإدارة الأمنية، الفحص، وقراءة سجلات Windows Event Logs"
-    ],
-    criteria: "فهم كيف تدار أجهزة الشركات داخل Active Directory، وإعداد دومين كامل محلياً مع مستخدمين وصلاحيات.",
-    project: "بناء مختبر Active Directory على جهازك (Windows Server DC + جهازين Windows 10) وتطبيق سياسات تأمين عبر GPO."
-  },
-  n_code: {
-    phase: "Phase 1 • البرمجة التطبيقية للأمن السيبراني",
-    hours: "45 ساعة",
-    alternatives: "لغات السايبر: Python (إجبارية للأتمتة) + JavaScript/SQL (لفهم ثغرات الويب) + Go أو C/C++ (للمستوى المتقدم وتطوير الأدوات)",
-    modules: [
-      "1. إتقان لغة Python: المتغيرات، القواميس، الملفات، التعامل مع الأخطاء، والبرمجة متعددة الخيوط (Multi-threading)",
-      "2. برمجة الشبكات والويب بـ Python: مكتبة `socket`، مكتبة `requests` للتعامل مع الويب، ومكتبة `scapy` لصناعة الحزم",
-      "3. لغة JavaScript للأمن السيبراني: كيف يتعامل المتصفح مع الكود، الـ DOM، الكوكيز، والـ LocalStorage (أساس ثغرات XSS)",
-      "4. قواعد البيانات ولغة SQL: كتابة الاستعلامات ودمج الجداول بـ `JOIN` و `UNION` (الأساس الجوهري لفهم ثغرات SQL Injection)",
-      "5. قراءة الأكواد المصدرية (Source Code Review) بلغات PHP و Node.js و Python لاكتشاف الأخطاء المنطقية والأمنية"
-    ],
-    criteria: "القدرة على قراءة أي كود استغلال (Exploit) وتعديله ليناسب هدفك، وبناء أدوات فحص خاصة بك من الصفر.",
-    project: "برمجة أداة فحص أمني متكاملة بـ Python تشمل Port Scanner سريع + فاحص مسارات خفية (Directory Brute-forcer)."
-  },
-  n_secplus: {
-    phase: "Phase 2 • القاعدة الأمنية الشاملة (Security+ Core)",
-    hours: "40 ساعة",
-    alternatives: "الشهادات والمناهج الموازية: CompTIA Security+ SY0-701 | شهادة ISC2 CC (مجانية للمبتدئين) | Google Cybersecurity Certificate",
-    modules: [
-      "1. علم التشفير التطبيقي (Cryptography): التشفير المتماثل (AES)، غير المتماثل (RSA/ECC)، الهاش (SHA-256)، والشهادات الرقمية PKI",
-      "2. إدارة الهوية والصلاحيات (IAM): المصادقة متعددة العوامل MFA، الدخول الموحد SSO، ومبدأ أقل صلاحية (Least Privilege)",
-      "3. تشريح التهديدات والهجمات: البرمجيات الخبيثة، الهندسة الاجتماعية، التصيد الاحتيالي، وهجمات الشبكات والتطبيقات",
-      "4. معمارية الدفاع العميق (Defense in Depth)، نموذج عدم الثقة (Zero Trust)، وأساسيات تأمين السحابة",
-      "5. مبادئ الاستجابة للحوادث الأمنية، إدارة المخاطر، واستمرارية الأعمال"
-    ],
-    criteria: "إتقان المفاهيم القياسية للأمن السيبراني والقدرة على اجتياز اختبارات CompTIA Security+ التجريبية بنسبة تتجاوز 85%.",
-    project: "تصميم خطة تأمين شاملة (Security Architecture Blueprint) لشركة ناشئة تشمل الشبكة، الخوادم، الهوية، والنسخ الاحتياطي."
-  },
-  n_websec: {
-    phase: "Phase 2 • أمن تطبيقات الويب والـ APIs (OWASP)",
-    hours: "65 ساعة",
-    alternatives: "أدوات الفحص: Burp Suite Community/Pro | Caido (بديل حديث وسريع جداً) | OWASP ZAP (مجاني ومفتوح المصدر)",
-    modules: [
-      "1. احتراف اعتراض وتعديل الطلبات باستخدام Burp Suite / Caido (Proxy, Repeater, Intruder, Decoder)",
-      "2. ثغرات الحقن من طرف السيرفر: SQL Injection (Union, Error, Blind, Time-based)، Command Injection، و SSTI",
-      "3. ثغرات طرف العميل والمتصفح: XSS (Reflected, Stored, DOM-based)، CSRF، Clickjacking، وأخطاء إعداد CORS",
-      "4. كسر الصلاحيات والتوثيق: ثغرات IDOR، رفع الصلاحيات، تلاعب بتوكن JWT، وثغرات OAuth 2.0",
-      "5. الثغرات المتقدمة في السيرفر والـ APIs: SSRF، XXE، رفع الملفات الخبيثة (Unrestricted File Upload RCE)، و Race Conditions"
-    ],
-    criteria: "حل أكثر من 50 مختبراً عملياً على منصة PortSwigger Web Security Academy المجانية وفهم السبب البرمجي لكل ثغرة وكيفية ترقيعها.",
-    project: "فحص تطبيق ويب تدريبي كامل (مثل OWASP Juice Shop أو DVWA) وكتابة تقرير اختبار اختراق احترافي (Pentest Report) بالثغرات والحلول."
-  },
-  n_netpen: {
-    phase: "Phase 2 • اختبار اختراق الشبكات والدومين (Network & AD PenTesting)",
-    hours: "70 ساعة",
-    alternatives: "المعاهد والشهادات العملية: eJPTv2 (ممتازة كبداية) ➔ PNPT (TCM Security) أو HTB CPTS ➔ شهادة OSCP",
-    modules: [
-      "1. الفحص والاستطلاع الداخلي (Enumeration): إتقان Nmap المتقدم وفحص خدمات SMB, SNMP, NFS, LDAP, WinRM",
-      "2. الاستغلال والحصول على موطئ قدم (Initial Foothold): استخدام Metasploit وتعديل استغلالات الثغرات العامة (Exploit-DB)",
-      "3. رفع الصلاحيات في لينكس وويندوز (Privilege Escalation): استغلال الكيرنل، المهام المجدولة، الأذونات الخاطئة، و WinPEAS/LinPEAS",
-      "4. اختراق بيئة Active Directory: هجمات LLMNR Poisoning، Kerberoasting، AS-REP Roasting، Pass-the-Hash، وتحليل المسارات بـ BloodHound",
-      "5. التنقل الجانبي والأنفاق داخل الشبكة (Pivoting & Tunneling) باستخدام Ligolo-ng و Chisel و Proxychains"
-    ],
-    criteria: "القدرة على الدخول لشبكة متعددة الأجهزة، التنقل بينها عبر Pivoting، والوصول لصلاحيات Domain Admin بالكامل.",
-    project: "اختراق مختبر شبكة Active Directory متعدد الأجهزة (مثل GOAD - Game of Active Directory) وتوثيق كل خطوة."
-  },
-  n_siem: {
-    phase: "Phase 2 • عمليات المركز الأمني وتحليل السجلات (SOC & SIEM)",
-    hours: "60 ساعة",
-    alternatives: "أنظمة الـ SIEM: Splunk (الأشهر في الشركات الكبرى) | Wazuh (مفتوح المصدر ومجاني بالكامل) | Elastic ELK Stack | Microsoft Sentinel",
-    modules: [
-      "1. هيكلية مركز العمليات الأمنية (SOC Tiers L1, L2, L3)، فرز التنبيهات (Alert Triage)، وخطط الاستجابة Playbooks",
-      "2. تشريح سجلات ويندوز ولينكس: أهم معرفات الأحداث (Event IDs 4624, 4625, 4688, 4720) وتثبيت وتكوين Sysmon",
-      "3. إتقان البحث والتحليل في SIEM: لغة استعلام Splunk (SPL) ولغة Elastic (KQL) لبناء لوحات مراقبة لحظية",
-      "4. أنظمة كشف ومنع التسلل الشبكي (NIDS): كتابة قواعد Suricata و Snort وتحليل سجلات Zeek",
-      "5. هندسة الكشف (Detection Engineering): كتابة قواعد Sigma و YARA لرصد سلوك البرمجيات الخبيثة"
-    ],
-    criteria: "تحليل السجلات لاكتشاف هجوم كامل وتحديد كيف دخل المهاجم وماذا نفذ على الجهاز والتمييز بين التنبيه الحقيقي والإنذار الكاذب (False Positive).",
-    project: "بناء مختبر Home SOC متكامل باستخدام Wazuh + Sysmon وتنفيذ هجمات حقيقية عليه وبناء قواعد كشف وتنبيهات مخصصة."
-  },
-  n_cloudsec: {
-    phase: "Phase 2 • أمن السحابة والأتمتة الآمنة (CloudSec & DevSecOps)",
-    hours: "50 ساعة",
-    alternatives: "المنصات السحابية: AWS Security | Microsoft Azure Security (AZ-500) | Kubernetes Security (CKS)",
-    modules: [
-      "1. نموذج المسؤولية المشتركة في السحابة وتأمين صلاحيات الهوية السحابية (AWS IAM / Azure AD Least Privilege)",
-      "2. تأمين التخزين والشبكات السحابية (S3 Buckets، VPC Security Groups، WAF، وتشفير البيانات KMS)",
-      "3. أمن الحاويات و Kubernetes: فحص صور Docker بـ Trivy، تأمين الـ Pods، ومراقبة وقت التشغيل بـ Falco",
-      "4. بناء خط إنتاج برمجي آمن (DevSecOps Pipeline): دمج الفحص الثابت للكود SAST (Semgrep/SonarQube) وفحص المكتبات SCA (Snyk)",
-      "5. إدارة الأسرار والمفاتيح بـ HashiCorp Vault وفحص أكواد البنية التحتية Terraform بـ Checkov"
-    ],
-    criteria: "بناء خط أنابيب CI/CD يفحص الكود والحاويات تلقائياً ويمنع نشر أي كود يحتوي على ثغرة أمنية أو مفتاح مسرب.",
-    project: "بناء خط أنابيب DevSecOps كامل على GitHub Actions يدمج SAST + Secret Scanning + Docker Image Scanning + DAST."
-  },
-  n_bounty: {
-    phase: "Phase 3 • صيد الثغرات والاستطلاع الواسع (Bug Bounty & Recon)",
-    hours: "55 ساعة",
-    alternatives: "منصات صيد الثغرات العالمية: HackerOne | Bugcrowd | Intigriti | YesWeHack",
-    modules: [
-      "1. منهجية الاستطلاع الواسع (Large-Scale Reconnaissance): جمع النطاقات الفرعية بـ Subfinder, Amass, crt.sh وفحص الأصول الحية بـ httpx",
-      "2. أتمتة الفحص الذكي: كتابة قوالب مخصصة لأداة Nuclei واكتشاف الملفات الحساسة والـ Endpoints المخفية في ملفات JavaScript",
-      "3. فحص ثغرات الـ APIs الحديثة (REST & GraphQL) وثغرات تطبيقات الموبايل (Android APK Decompilation & SSL Pinning Bypass)",
-      "4. اكتشاف الثغرات المنطقية المعقدة (Business Logic Flaws) وثغرات الدفع الإلكتروني والسباق الزمني Race Conditions",
-      "5. فن كتابة تقارير الثغرات الاحترافية التي تُقبل بسرعة وتحصل على أعلى مكافأة (CVSS Scoring & PoC)"
-    ],
-    criteria: "بناء نظام استطلاع مؤتمت خاص بك (Recon Pipeline) والبدء الفعلي في فحص برامج حقيقية على منصات Bug Bounty.",
-    project: "برمجة إطار أتمتة Recon خاص بك بـ Bash/Python يربط أدوات الفحص ويرسل التنبيهات الفورية عند ظهور نطاق أو ثغرة جديدة."
-  },
-  n_redops: {
-    phase: "Phase 3 • عمليات الفريق الأحمر وتخطي الدفاعات (Red Team & Evasion)",
-    hours: "70 ساعة",
-    alternatives: "أطر القيادة والسيطرة (C2): Sliver / Havoc / Mythic (مفتوحة المصدر) | Cobalt Strike (المعيار التجاري)",
-    modules: [
-      "1. الفرق بين اختبار الاختراق التقليدي وعمليات الفريق الأحمر الشاملة (Adversary Simulation)",
-      "2. إعداد وتشغيل أطر القيادة والسيطرة (Command & Control - C2) وإخفاء الاتصالات عبر Redirectors",
-      "3. فهم كيف تعمل برامج الحماية الحديثة (AV & EDR): الـ Hooking، فحص الذاكرة، وتحليل السلوك",
-      "4. تقنيات التمويه وتخطي الدفاعات (Payload Development, Encryption, Process Injection & Direct Syscalls)",
-      "5. استغلال الثغرات المتقدمة في غابات Active Directory (Cross-Forest Trusts, ADCS Certificate Abuse)"
-    ],
-    criteria: "القدرة على محاكاة هجوم متقدم داخل بيئة محمية بـ EDR دون إثارة التنبيهات مع الحفاظ على البقاء الآمن (Persistence).",
-    project: "تطوير Payload مخصص بلغة C/C# أو Nim يقوم بتشفير الـ Shellcode وحقنه في الذاكرة وتوثيق طرق كشفه للدفاع."
-  },
-  n_dfir: {
-    phase: "Phase 3 • التحقيق الجنائي الرقمي وصيد التهديدات (DFIR & Threat Hunting)",
-    hours: "60 ساعة",
-    alternatives: "أدوات التحقيق الجنائي: Volatility 3 (للذاكرة) | Autopsy & KAPE (للقرص) | Velociraptor (للشبكة والفحص عن بُعد)",
-    modules: [
-      "1. الأدلة الجنائية في نظام ويندوز (Windows Forensics Artifacts): Registry Hives, Prefetch, Amcache, Shimcache, Event Logs, $MFT",
-      "2. التحقيق الجنائي في الذاكرة العشوائية (Memory Forensics) باستخدام Volatility 3 لكشف العمليات المخفية والحقن في الذاكرة",
-      "3. خطوات الاستجابة للحوادث الكبرى وهجمات الفدية (Ransomware Incident Response: التحضير، الاحتواء، الاستئصال، والاستعادة)",
-      "4. صيد التهديدات الاستباقي (Proactive Threat Hunting) بالاعتماد على مصفوفة MITRE ATT&CK",
-      "5. جمع الأدلة على مستوى مئات الأجهزة في الشبكة بسرعة فائقة باستخدام KAPE و Velociraptor"
-    ],
-    criteria: "تحليل صورة قرص وذاكرة لجهاز تعرض للاختراق وتحديد الجدول الزمني الكامل للهجمة (Timeline Analysis) من أول ثانية.",
-    project: "حل 5 تحديات تحقيق جنائي كاملة على منصة CyberDefenders وكتابة تقرير جنائي رسمي يوضح خط سير المهاجم."
-  },
-  n_grc: {
-    phase: "Phase 3 • الحوكمة وإدارة المخاطر والامتثال (GRC & Security Auditing)",
-    hours: "40 ساعة",
-    alternatives: "الأطر والمعايير: ISO/IEC 27001 | NIST Cybersecurity Framework 2.0 | PCI-DSS (للبنوك والدفع) | إطار البنك المركزي والـ NCA",
-    modules: [
-      "1. بناء برنامج أمن معلومات مؤسسي وكتابة السياسات والإجراءات الأمنية (Information Security Policies)",
-      "2. منهجية تقييم وإدارة المخاطر السيبرانية (Risk Identification, Assessment, Mitigation & Risk Register)",
-      "3. تطبيق وتدقيق المعيار الدولي لنظام إدارة أمن المعلومات ISO/IEC 27001",
-      "4. الامتثال للمعايير التنظيمية والمالية (NIST CSF، PCI-DSS لبطاقات الدفع، وحماية البيانات الشخصية GDPR)",
-      "5. خطط استمرارية الأعمال والتعافي من الكوارث (BCP & DRP) وتقييم مخاطر الموردين (Third-Party Risk)"
-    ],
-    criteria: "القدرة على إجراء تدقيق أمني (Security Audit) لأي مؤسسة وبناء سجل مخاطر متكامل وخطة امتثال لمعيار ISO 27001.",
-    project: "إعداد ملف حوكمة كامل لشركة تقنية مالية (FinTech) يشمل السياسات الأمنية، سجل المخاطر، ومصفوفة ضوابط ISO 27001."
-  },
-  n_oswe: {
-    phase: "Phase 4 • الإتقان والشهادات العليا في أمن التطبيقات",
-    hours: "60 ساعة",
-    alternatives: "مسار الشهادات: PortSwigger Practitioner ➔ HTB CBBH (Certified Bug Bounty Hunter) ➔ OffSec OSWE (Web Expert)",
-    modules: [
-      "1. مراجعة الكود المصدري المتقدمة (White-Box Source Code Review) لاكتشاف الثغرات المعقدة في تطبيقات ضخمة",
-      "2. دمج عدة ثغرات بسيطة معاً للوصول إلى تنفيذ أوامر عن بُعد بدون تسجيل دخول (Unauthenticated RCE Chains)",
-      "3. ثغرات فك التسلل غير الآمن (Insecure Deserialization) في Java و PHP و .NET و Python",
-      "4. كتابة سكربتات استغلال كاملة المؤتمتة (Full Exploit Scripts) بـ Python تنتقل من الصفر حتى السيطرة على السيرفر"
-    ],
-    criteria: "القدرة على قراءة الكود المصدري لأي تطبيق ويب كبير، استخراج ثغراته، وكتابة سكربت Python يستغلها بضغطة زر.",
-    project: "مراجعة الكود المصدري لتطبيق مفتوح المصدر وبناء سكربت استغلال آلي (Auto-Pwn Script) وتوثيق الترقيع البرمجي."
-  },
-  n_oscp: {
-    phase: "Phase 4 • الإتقان والشهادات العليا في اختبار الاختراق",
-    hours: "80 ساعة",
-    alternatives: "مسار الشهادات: eJPTv2 ➔ PNPT ➔ HTB CPTS (قوية جداً وعملية) ➔ OffSec OSCP (الأشهر في الموارد البشرية والشركات)",
-    modules: [
-      "1. منهجية إدارة الوقت والاختراق تحت الضغط في بيئات تحاكي الامتحانات العملية ذات الـ 24 ساعة و الـ 10 أيام",
-      "2. اختراق بيئات هجينة تجمع بين خوادم Linux وبيئات Active Directory مع وجود أنفاق متعددة",
-      "3. كتابة تقارير اختبار الاختراق التنفيذية والتقنية (Executive & Technical Reporting) المعتمدة دولياً",
-      "4. التحضير لمقابلات العمل كـ Penetration Tester / Red Team Operator"
-    ],
-    criteria: "إتمام مسار كامل من الأجهزة المتقدمة (مثل قائمة TJnull's OSCP/CPTS List) في وقت قياسي وبدون النظر للحلول.",
-    project: "محاكاة امتحان عملي كامل (اختراق شبكة AD + 3 خوادم مستقلة خلال 24 ساعة) وإصدار التقرير النهائي."
-  },
-  n_btl1: {
-    phase: "Phase 4 • الإتقان والشهادات العليا في الدفاع والتحقيق الجنائي",
-    hours: "65 ساعة",
-    alternatives: "مسار الشهادات: Security+ ➔ BTL1 (Blue Team Level 1) ➔ CCD (Certified CyberDefender) ➔ شهادات SANS (GCIH / GCFA)",
-    modules: [
-      "1. إدارة حادث اختراق حي كامل من لحظة رصد التنبيه في SIEM حتى العزل والتحقيق الجنائي واستعادة النظام",
-      "2. تحليل البرمجيات الخبيثة المتقدمة في الذاكرة وفك تشفير اتصالات الـ C2 في ملفات الشبكة",
-      "3. بناء قواعد كشف استباقية تمنع تكرار الهجوم على مستوى المؤسسة",
-      "4. التحضير لمقابلات مهندسي SOC ومحققي الـ DFIR"
-    ],
-    criteria: "اجتياز سيناريوهات حوادث أمنية معقدة متعددة المراحل وكتابة تقرير تحقيق جنائي متكامل يصلح للعرض على إدارة الشركة.",
-    project: "إتمام معمل استجابة لحوادث شامل (Full Incident Response Lab) وكتابة Playbook دفاعي متكامل."
-  },
-  n_cissp: {
-    phase: "Phase 4 • الإتقان في أمن السحابة وقيادة الأمن السيبراني",
-    hours: "60 ساعة",
-    alternatives: "مسار الشهادات: AWS/Azure Security Specialty & CKS (للمهندسين التقنيين) | CISM & CISSP (لمديري ومعماريي الأمن السيبراني)",
-    modules: [
-      "1. تصميم المعماريات الأمنية المؤسسية والسحابية الكبرى (Enterprise & Cloud Security Architecture)",
-      "2. قيادة فرق الأمن السيبراني، إدارة ميزانيات الأمن، والتواصل مع مجلس الإدارة",
-      "3. تأمين سلاسل الإمداد البرمجية (Software Supply Chain Security) ومجموعات Kubernetes الإنتاجية",
-      "4. الاستعداد لاختبارات القيادة الأمنية والهندسة السحابية"
-    ],
-    criteria: "القدرة على تصميم استراتيجية ومعمارية الأمن السيبراني الكاملة لمنظمة كبرى على السحابة.",
-    project: "تصميم وتنفيذ بنية سحابية مؤمنة بالكامل (Zero-Trust Cloud Cluster) مع سياسات الحوكمة والمراقبة."
-  },
+
 
   /* ---------------- C. AI, DATA SCIENCE & GEN-AI (ALL 12 NODES IN DETAIL) ---------------- */
   a_py: {
@@ -1171,136 +993,22 @@ const CAREER_TRACKS_DB = [
     ]
   },
 
-  /* ==========================================================================
-     TRACK 2: CYBERSECURITY UNIVERSITY (17 DEEP NODES & 6 SPECIALIZATIONS)
+/* ==========================================================================
+     TRACK 2: CYBERSECURITY UNIVERSITY (POWERED BY /cyber-uni/ ARCHITECTURE)
      ========================================================================== */
   {
     id: "cybersecurity",
-    name: "2. جامعة الأمن السيبراني (Cybersecurity)",
-    shortTag: "Red Team / Blue Team & SOC / Bug Bounty / CloudSec / Malware / GRC",
+    name: "2. جامعة الأمن السيبراني (CYBERSECURITY UNIVERSITY)",
+    shortTag: "From Absolute Zero (L0–L2) to 15 Specialized Academies (L3–L4)",
     icon: "fa-shield-halved",
-    accent: "#EF4444",
-    introTitle: "🛡️ جامعة الأمن السيبراني الشاملة: من التأسيس الشبكي والبرمجي إلى الاحتراف العالمي",
-    introText: "دليل هندسي متكامل يغطي الأمن السيبراني من جذوره الحقيقية؛ يبدأ بالركائز الخمس الإجبارية (الشبكات، لينكس، ويندوز و Active Directory، البرمجة، و Security+)، ثم يفصّل التخصصات الـ 6 الكبرى مع المسارات البديلة للشهادات والمعامل العملية المجانية والمدفوعة.",
-    whyPoints: [
-      { title: "🧱 تأسيس هندسي قبل أدوات الاختراق", desc: "يفهمك كيف تعمل البروتوكولات والأنظمة والكود من الداخل لتصبح مهندس أمن حقيقي وليس مجرد مشغل أدوات." },
-      { title: "⚔️ تغطية كاملة للهجوم والدفاع والحوكمة", desc: "يقارن لك بوضوح بين وظائف Red Team و Blue Team/SOC و Bug Bounty و CloudSec لتختار تخصصك بثقة." },
-      { title: "🔄 مسارات بديلة للشهادات والتدريب", desc: "يوفر لك البدائل العملية منخفضة التكلفة (مثل CPTS و PNPT و BTL1) بجانب الشهادات التقليدية (OSCP و SANS)." }
-    ],
-    alternativePaths: [
-      {
-        title: "🔴 المسار الهجومي البديل والأقوى عملياً: HTB CPTS & PNPT بدلاً من التكلفة الباهظة",
-        badge: "أقوى بديل عملي لـ OSCP بتكلفة أقل ومحتوى أعمق",
-        desc: "يمكنك تأسيس نفسك مجاناً عبر PortSwigger و TryHackMe، ثم خوض مسار Penetration Tester على HackTheBox Academy للحصول على شهادة CPTS أو شهادة PNPT العملية.",
-        stack: ["eJPTv2 (بداية عملية)", "TCM PNPT (اختبار اختراق شبكة واقعي + تقرير)", "HTB CPTS (منهج عميق جداً)", "OffSec OSCP (المعيار الكلاسيكي للشركات)"],
-        yt: "IppSec + The Cyber Mentor (TCM) + Rana Khalil (Web Security)"
-      },
-      {
-        title: "🔵 المسار الدفاعي والتحقيق الجنائي (SOC & DFIR Alternative Path)",
-        badge: "أعلى نسبة وظائف متاحة لحديثي التخرج في الشركات والبنوك",
-        desc: "مراكز العمليات الأمنية (SOC) تطلب مهندسين يومياً. يمكنك بناء مختبرك مجاناً بـ Wazuh و ELK والتدرب على منصة CyberDefenders.",
-        stack: ["CompTIA Security+", "BTL1 (Blue Team Level 1)", "CCD (Certified CyberDefender — عملية وقوية جداً)", "CompTIA CySA+", "SANS GCIH / GCFA"],
-        yt: "John Hammond + 13Cubed (الأفضل عالمياً في التحقيق الجنائي DFIR) + CyberDefenders"
-      },
-      {
-        title: "🐞 مسار العمل الحر وصيد الجوائز المالية (Bug Bounty & AppSec Path)",
-        badge: "دخل بالدولار من المنزل بدون انتظار وظيفة تقليدية",
-        desc: "يركز بالكامل على إتقان برمجة الويب والـ APIs والموبايل واكتشاف الثغرات في الشركات العالمية على منصات HackerOne و Bugcrowd.",
-        stack: ["PortSwigger Web Security Academy (مجاني 100%)", "Burp Suite Pro / Caido", "Recon Automation (Nuclei / Subfinder)", "HTB CBBH", "Source Code Review"],
-        yt: "Ebrahim Hegazy (Zigoo0) + NahamSec + InsiderPhD + STÖK"
-      }
-    ],
-    foundations: [
-      { id: "cy_f1", title: "1. هندسة الشبكات (CCNA 200-301 / CompTIA Network+)", desc: "OSI, TCP/IP, Subnetting, DNS, HTTP/S, Routing, Switching, Firewalls, Wireshark.", yt: "Eng. Ahmed Nazmy / Jeremy's IT Lab" },
-      { id: "cy_f2", title: "2. إدارة نظام لينكس والـ Bash Scripting", desc: "File System, Permissions (SUID), Processes, Networking, SSH & Bash Automation.", yt: "NetworkChuck / الدسوقي / Elzero" },
-      { id: "cy_f3", title: "3. أنظمة ويندوز و Active Directory Internals", desc: "Domain Controllers, Kerberos, NTLM, GPOs, PowerShell & Windows Registry.", yt: "The Cyber Mentor (TCM) / John Hammond" },
-      { id: "cy_f4", title: "4. البرمجة للأمن السيبراني (Python, Bash, JS & SQL)", desc: "أتمتة الفحص بـ Python وفهم الكود البرمجي وراء ثغرات XSS و SQL Injection.", yt: "Elzero Web School / freeCodeCamp" },
-      { id: "cy_f5", title: "5. القاعدة الأمنية الشاملة (CompTIA Security+ SY0-701)", desc: "التشفير التطبيقي، إدارة الهوية IAM، تحليل التهديدات، ومعمارية الدفاع.", yt: "Professor Messer Security+ SY0-701" }
-    ],
-    roles: [
-      {
-        id: "red_team",
-        title: "🔴 الفريق الأحمر واختبار الاختراق (Red Team & Penetration Testing)",
-        mission: "محاكاة الهجمات السيبرانية لاكتشاف الثغرات في الشبكات والـ Active Directory والتطبيقات قبل المهاجمين.",
-        skills: ["Network PenTesting", "Active Directory Exploitation", "Web & API PenTesting", "Privilege Escalation", "Pivoting & Tunneling", "C2 & EDR Evasion"],
-        tools: ["Nmap", "Burp Suite Pro", "Metasploit", "BloodHound", "Impacket", "NetExec", "Ligolo-ng", "Hashcat"],
-        certs: ["eJPTv2", "PNPT", "HTB CPTS", "OSCP", "OSEP"]
-      },
-      {
-        id: "blue_team",
-        title: "🔵 الفريق الأزرق والتحقيق الجنائي (Blue Team / SOC & DFIR)",
-        mission: "مراقبة الشبكات على مدار الساعة، تحليل السجلات عبر SIEM، صيد التهديدات، والاستجابة للحوادث الجنائية.",
-        skills: ["SIEM Engineering (Splunk/Wazuh/ELK)", "Sysmon & Event Logs", "Packet Analysis (PCAP)", "Memory & Disk Forensics", "Incident Response", "YARA & Sigma Rules"],
-        tools: ["Splunk", "Wazuh", "ELK Stack", "Wireshark", "Volatility 3", "Velociraptor", "KAPE", "Autopsy"],
-        certs: ["Security+", "BTL1", "CySA+", "CCD (CyberDefender)", "GCFA / GCIH"]
-      },
-      {
-        id: "bug_bounty",
-        title: "🐞 صيد الثغرات وأمن التطبيقات (Bug Bounty & AppSec Engineer)",
-        mission: "اكتشاف الثغرات الأمنية في منصات الويب والـ APIs والموبايل ومراجعة الكود المصدري.",
-        skills: ["OWASP Top 10 & API Top 10", "SQLi / XSS / SSRF / IDOR", "JWT & OAuth Flaws", "Large-Scale Recon", "Secure Code Review"],
-        tools: ["Burp Suite / Caido", "Subfinder", "Nuclei", "FFUF", "SQLMap", "Postman", "Semgrep"],
-        certs: ["PortSwigger Academy", "eWPTXv2", "HTB CBBH", "OSWE"]
-      },
-      {
-        id: "cloud_devsecops",
-        title: "☁️ أمن السحابة و DevSecOps (Cloud & Container Security)",
-        mission: "تأمين بيئات AWS/Azure وحاويات Docker/Kubernetes ودمج الفحص الأمني في خطوط CI/CD.",
-        skills: ["Cloud IAM Hardening", "Kubernetes Security", "SAST / DAST / SCA", "Secrets Management", "Terraform IaC Scanning"],
-        tools: ["Trivy", "Snyk", "SonarQube", "Checkov", "Falco", "HashiCorp Vault", "AWS Security Hub"],
-        certs: ["AWS Security Specialty", "AZ-500", "CKS (Kubernetes Security)"]
-      },
-      {
-        id: "malware_rev",
-        title: "🧬 تحليل البرمجيات الخبيثة والهندسة العكسية (Malware & Reverse Eng)",
-        mission: "تفكيك الفيروسات وبرامج الفدية بالهندسة العكسية لفهم سلوكها واستخراج بصمات الكشف.",
-        skills: ["x86/x64 Assembly", "Static & Dynamic Malware Analysis", "Unpacking & Deobfuscation", "Windows Kernel APIs", "Exploit Dev"],
-        tools: ["Ghidra", "IDA Pro", "x64dbg", "ProcMon", "PEStudio", "Any.Run"],
-        certs: ["GREM (SANS)", "OSED", "Zero2Automated"]
-      },
-      {
-        id: "grc",
-        title: "⚖️ الحوكمة وإدارة المخاطر والامتثال (GRC & Cyber Audit)",
-        mission: "بناء السياسات الأمنية، تقييم المخاطر، وضمان الامتثال لمعايير ISO 27001 و NIST والبنك المركزي.",
-        skills: ["Risk Assessment", "ISO 27001 Auditing", "NIST CSF", "PCI-DSS & GDPR", "Business Continuity"],
-        tools: ["RSA Archer", "OneTrust", "ServiceNow GRC", "Risk Matrix"],
-        certs: ["ISO 27001 Lead Auditor", "CRISC", "CISM", "CISSP"]
-      }
-    ],
-    resources: [
-      { name: "PortSwigger Web Security Academy", type: "معامل أمن ويب مجانية بالكامل (الأفضل عالمياً)", url: "https://portswigger.net/web-security" },
-      { name: "TryHackMe & HackTheBox Academy", type: "معامل Red Team & Blue Team متدرجة من الصفر", url: "https://tryhackme.com" },
-      { name: "CyberDefenders (Blue Team & DFIR Labs)", type: "أقوى منصة عملية لتحديات الفريق الأزرق والتحقيق الجنائي", url: "https://cyberdefenders.org" }
-    ],
-    nodes: [
-      { id: "n_net", label: "Networking (CCNA/N+)", tier: 0, row: 0, role: "foundation", desc: "بروتوكولات الشبكات، التقسيم، وتحليل الحزم" },
-      { id: "n_lin", label: "Linux & Bash CLI", tier: 0, row: 1, role: "foundation", desc: "إدارة لينكس والصلاحيات وأتمتة الـ Bash" },
-      { id: "n_win", label: "Windows & Active Directory", tier: 0, row: 2, role: "foundation", desc: "معمارية ويندوز و Kerberos و الدومين" },
-      { id: "n_code", label: "Python, JS & SQL", tier: 0, row: 3, role: "foundation", desc: "البرمجة لأتمتة الاختراق وفهم ثغرات الويب" },
-      { id: "n_secplus", label: "CompTIA Security+ Core", tier: 1, row: 1.5, role: "foundation", desc: "التشفير، الهجمات، إدارة الهوية، وتأمين الشبكات" },
-      { id: "n_websec", label: "Web & API Security (OWASP)", tier: 2, row: 0, role: "bug_bounty", desc: "ثغرات SQLi, XSS, IDOR, SSRF & Burp Suite" },
-      { id: "n_netpen", label: "Network & AD PenTesting", tier: 2, row: 1, role: "red_team", desc: "اختراق الشبكات ورفع الصلاحيات و Active Directory" },
-      { id: "n_siem", label: "SIEM & Log Analysis (SOC)", tier: 2, row: 2, role: "blue_team", desc: "مراقبة السجلات بـ Splunk/Wazuh وكشف الاختراق" },
-      { id: "n_cloudsec", label: "Cloud & DevSecOps", tier: 2, row: 3, role: "cloud_devsecops", desc: "تأمين السحابة والحاويات وخطوط CI/CD" },
-      { id: "n_bounty", label: "Bug Bounty & Recon", tier: 3, row: 0, role: "bug_bounty", desc: "الفحص الواسع بـ Nuclei وصيد الثغرات" },
-      { id: "n_redops", label: "Red Team, C2 & Malware RE", tier: 3, row: 1, role: "red_team", desc: "عمليات الفريق الأحمر وتخطي الـ EDR والهندسة العكسية" },
-      { id: "n_dfir", label: "DFIR & Threat Hunting", tier: 3, row: 2, role: "blue_team", desc: "التحقيق الجنائي للذاكرة والقرص وصيد التهديدات" },
-      { id: "n_grc", label: "GRC (ISO 27001 & NIST)", tier: 3, row: 3, role: "grc", desc: "الحوكمة وإدارة المخاطر والتدقيق الأمني" },
-      { id: "n_oswe", label: "🏆 CBBH / OSWE", tier: 4, row: 0, role: "bug_bounty", desc: "الاحتراف العالمي في أمن الويب" },
-      { id: "n_oscp", label: "🏆 CPTS / OSCP / OSEP", tier: 4, row: 1, role: "red_team", desc: "الاحتراف العالمي في اختبار الاختراق" },
-      { id: "n_btl1", label: "🏆 BTL1 / CCD / GCFA", tier: 4, row: 2, role: "blue_team", desc: "الاحتراف العالمي في الدفاع والتحقيق الجنائي" },
-      { id: "n_cissp", label: "🏆 CKS / CISSP / CISM", tier: 4, row: 3, role: "cloud_devsecops", desc: "الاحتراف في أمن السحابة وقيادة الأمن" }
-    ],
-    edges: [
-      ["n_net", "n_secplus"], ["n_lin", "n_secplus"], ["n_win", "n_secplus"], ["n_code", "n_secplus"],
-      ["n_secplus", "n_websec"], ["n_secplus", "n_netpen"], ["n_secplus", "n_siem"], ["n_secplus", "n_cloudsec"],
-      ["n_code", "n_websec"], ["n_win", "n_netpen"], ["n_win", "n_siem"], ["n_lin", "n_cloudsec"],
-      ["n_websec", "n_bounty"], ["n_websec", "n_netpen"],
-      ["n_netpen", "n_redops"], ["n_siem", "n_dfir"], ["n_cloudsec", "n_grc"],
-      ["n_bounty", "n_oswe"], ["n_redops", "n_oscp"], ["n_dfir", "n_btl1"], ["n_cloudsec", "n_cissp"], ["n_grc", "n_cissp"]
-    ]
+    accent: "#06b6d4",
+    isExternalUniversity: true,
+    foundations: [],
+    nodes: [],
+    edges: [],
+    roles: [],
+    resources: []
   },
-
   /* ==========================================================================
      TRACK 3: AI, DATA SCIENCE & GEN-AI UNIVERSITY (12 DEEP NODES)
      ========================================================================== */
@@ -1523,6 +1231,9 @@ function getActiveTrack() {
 }
 
 function calculateTrackOverallProgress(track) {
+  if (track.id === "cybersecurity") {
+    return getOverallAnalytics().overallMastery;
+  }
   const fullTrack = getTrackWithCustomNodes(track.id);
   const totalFound = (fullTrack.foundations || []).length;
   const doneFoundScore = (fullTrack.foundations || []).reduce((acc, f) => acc + (TracksState.masteredFoundations[f.id] ? 100 : 0), 0);
@@ -1571,6 +1282,44 @@ function renderCareerTracksEncyclopedia() {
   document.body.classList.toggle("tracks-network-fullscreen", TracksState.isFullscreenGraph);
 
   const track = getActiveTrack();
+  // تشغيل جامعة الأمن السيبراني الجديدة المعزولة عند اختيار تراك السايبر
+  if (track.id === "cybersecurity") {
+    if (TracksState.animFrame) cancelAnimationFrame(TracksState.animFrame);
+    TracksState.isFullscreenGraph = false;
+    document.body.classList.remove("tracks-network-fullscreen");
+
+    sec.innerHTML = `
+      <div class="tracks-domain-bar">
+        ${CAREER_TRACKS_DB.map(t => {
+          const tPct = calculateTrackOverallProgress(t);
+          return `
+            <button type="button" class="track-domain-pill ${t.id === track.id ? "active" : ""}" data-select-track="${esc(t.id)}">
+              <div class="track-domain-icon"><i class="fa-solid ${esc(t.icon)}"></i></div>
+              <div style="flex:1; overflow:hidden;">
+                <strong style="display:block; font-size:0.95rem;">${esc(t.name)}</strong>
+                <small class="small-muted" style="font-size:0.76rem; display:block; margin-top:2px;">${esc(t.shortTag)}</small>
+                <span class="badge badge-gold mt-1">إتقان المسار: ${tPct}%</span>
+              </div>
+            </button>
+          `;
+        }).join("")}
+      </div>
+      <div id="cyber-university-mount"></div>
+    `;
+
+    sec.querySelectorAll("[data-select-track]").forEach(btn => {
+      btn.onclick = () => {
+        TracksState.activeTrackId = btn.dataset.selectTrack;
+        TracksState.activeRoleFilter = "all";
+        TracksState.selectedNodeId = null;
+        localStorage.setItem("MY_LIFE_OS_ACTIVE_TRACK_V3", TracksState.activeTrackId);
+        renderCareerTracksEncyclopedia();
+      };
+    });
+
+    mountCybersecurityUniversity(document.getElementById("cyber-university-mount"));
+    return;
+  }
   const overallPct = calculateTrackOverallProgress(track);
   const masteredCount = track.nodes.filter(n => isNodeMastered(n.id)).length;
 
